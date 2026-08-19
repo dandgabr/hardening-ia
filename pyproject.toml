@@ -7,7 +7,7 @@ name = "hardening-ia"
 version = "0.1.0"
 description = "Enterprise framework for automating security hardening, DLP, and runtime containment for AI tools"
 readme = "README.md"
-license = {text = "GPL-3.0-only"}
+license = {text = "MIT"}
 requires-python = ">=3.9"
 dependencies = [
     "textual>=0.50.0",
