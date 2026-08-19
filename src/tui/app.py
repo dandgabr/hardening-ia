@@ -3,9 +3,11 @@
 import logging
 from typing import List, Optional
 from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Button, Static, Label, ListView, ListItem, RichLog, Checkbox
+from textual.screen import ModalScreen
 from textual.reactive import reactive
 
 from src.core.config_loader import ConfigLoader
@@ -30,6 +32,45 @@ class TextualLogHandler(logging.Handler):
             pass
 
 
+class HelpModal(ModalScreen):
+    """Interactive Help and Usage Guide Dialog."""
+
+    def compose(self) -> ComposeResult:
+        help_text = """
+[bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]
+[bold cyan]║                     Hardening IA - User Guide & Controls                  ║[/]
+[bold cyan]╚═══════════════════════════════════════════════════════════════════════════╝[/]
+
+[bold yellow]Navigation & Selection:[/]
+  • [bold white]Up / Down Arrow Keys[/]: Scroll through the list of 14 supported AI tools.
+  • [bold white]Click on any tool[/]: Instantly inspect its full security policy and pending changes.
+  • [bold white]F1 or ?[/]: Toggle this Help screen.
+
+[bold yellow]Core Action Buttons:[/]
+  • [bold green]Apply to Selected[/]: Applies hardening policy directly to the highlighted tool.
+  • [bold blue]Apply Installed[/]: Hardens only tools detected and installed on this host.
+  • [bold orange3]Apply All[/]: Provisions hardened baselines across all 14 supported tools.
+  • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement without altering host files.
+
+[bold yellow]Extras & SAST Scanner:[/]
+  • [bold cyan]ai-jail[/]: Installs Rust/Bubblewrap runtime sandbox container for AI agents.
+  • [bold cyan]OpenGrep[/]: Installs open-source static analysis security scanner and rule packs.
+  • [bold red]Scan Code[/]: Scans workspace for OWASP Web/API/Mobile, CWE Top 25 & secret leaks.
+
+[bold yellow]Security Hardening Pillars Enforced:[/]
+  1. [bold green]Zero-Telemetry Lockdown[/]: Enforces DO_NOT_TRACK and disables cloud telemetry/crash logs.
+  2. [bold green]Runtime Sandboxing[/]: Restricts agent tools and subagents to project workspaces.
+  3. [bold green]Multi-OS Command Risk Matrix[/]: LOW commands auto-execute; MEDIUM+ require approval.
+  4. [bold green]DLP Secret Exclusions[/]: Blocks ~/.ssh, ~/.aws, ~/.kube, .env, and API keys.
+  5. [bold green]OS ACL Lockdown[/]: Applies NTFS ACLs (Windows) or chmod 700/600 (Linux/macOS).
+
+[dim]Press Escape or Click Close to return to the dashboard.[/dim]
+"""
+        with VerticalScroll(id="help-container"):
+            yield Static(help_text, id="help-text")
+            yield Button("Close Help (Esc)", id="btn-close-help", variant="primary")
+
+
 class ToolItem(ListItem):
     def __init__(self, policy: HardeningPolicy):
         super().__init__()
@@ -43,6 +84,12 @@ class ToolItem(ListItem):
 
 
 class HardeningApp(App):
+    BINDINGS = [
+        ("f1", "toggle_help", "Help"),
+        ("question_mark", "toggle_help", "Help"),
+        ("q", "quit", "Quit")
+    ]
+
     CSS = """
     Screen {
         background: #1e1e2e;
@@ -94,6 +141,20 @@ class HardeningApp(App):
         padding: 1;
         border: solid #45475a;
     }
+    #help-container {
+        width: 80%;
+        height: 80%;
+        background: #181825;
+        border: thick #89b4fa;
+        padding: 1;
+        align: center middle;
+    }
+    #help-text {
+        margin-bottom: 1;
+    }
+    #btn-close-help {
+        width: 100%;
+    }
     """
 
     selected_policy: reactive[Optional[HardeningPolicy]] = reactive(None)
@@ -115,6 +176,7 @@ class HardeningApp(App):
                 with Horizontal(id="action-buttons"):
                     yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
                     yield Button("Apply All", id="btn-apply-all", variant="warning")
+                    yield Button("Help (F1)", id="btn-help", variant="default")
                 yield Label("[b]Security Extras & SAST Scanner[/b]", classes="panel-title")
                 with Horizontal(id="extras-buttons"):
                     yield Button("ai-jail", id="btn-install-jail")
@@ -151,6 +213,9 @@ class HardeningApp(App):
         log_view.write(f"[bold cyan][*] OS Detected: {OSDetector.get_os_type().upper()}[/]")
         log_view.write(f"[*] Discovered {len(self.policies)} policies ({installed_count} tools detected on host).")
 
+    def action_toggle_help(self) -> None:
+        self.push_screen(HelpModal())
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
             self.selected_policy = event.item.policy
@@ -167,27 +232,45 @@ class HardeningApp(App):
         settings_path = path_info.settings_file if path_info else "N/A"
         rules_path = path_info.rules_dir if path_info and path_info.rules_dir else "N/A"
 
-        status_str = "[bold green]DETECTED ON HOST[/]" if p.is_installed else "[dim]NOT INSTALLED ON HOST[/]"
-        dlp_count = len(p.policies.get("dlp", {}).get("block_sensitive_paths", []))
+        status_badge = "[bold green]● INSTALLED ON HOST[/]" if p.is_installed else "[dim]○ NOT DETECTED ON HOST[/]"
+        dlp_list = p.policies.get("dlp", {}).get("block_sensitive_paths", [])
+        dlp_count = len(dlp_list)
         sandbox_enforced = p.policies.get("sandbox", {}).get("enforce_sandbox", False)
-        approvals_enforced = p.policies.get("approvals", {}).get("require_approval_for_terminal", False)
         telemetry_off = not p.policies.get("telemetry", {}).get("enable_telemetry", True)
+        native_overrides = p.policies.get("native_settings_override", {})
 
-        text = f"""[bold yellow]Tool:[/] {p.tool.name}
-[bold yellow]Vendor:[/] {p.tool.vendor}
-[bold yellow]Host Status:[/] {status_str}
-[bold yellow]Category:[/] {p.tool.category.upper()}
-[bold yellow]Description:[/] {p.tool.description}
+        overrides_lines = []
+        for k, v in native_overrides.items():
+            overrides_lines.append(f"  [cyan]•[/] [bold white]{k}[/bold white] [green]➔[/green] [bold yellow]{v}[/bold yellow]")
+        overrides_text = "\n".join(overrides_lines) if overrides_lines else "  [dim]Standard baseline configuration[/dim]"
 
-[bold cyan]Configuration Path ({os_type}):[/] {settings_path}
-[bold cyan]Agent Rules Directory:[/] {rules_path}
+        dlp_sample = ", ".join([f"`{pat}`" for pat in dlp_list[:6]])
+        if dlp_count > 6:
+            dlp_sample += f" [dim](+{dlp_count - 6} more patterns)[/dim]"
 
-[bold green]Security Controls Enforced:[/]
-• Command Risk Matrix: Active (Low=Auto, Medium/High/Critical=Approval)
-• Runtime Sandbox Enforced: {sandbox_enforced}
-• Human Approval Required: {approvals_enforced}
-• Sensitive File DLP Blocks: {dlp_count} patterns
-• Telemetry & Crash Tracking: {'Disabled' if telemetry_off else 'Enabled'}
+        text = f"""[bold yellow]═══════════════════════════════════════════════════════════════════════[/]
+[bold cyan]TOOL:[/] [bold white]{p.tool.vendor}/{p.tool.name.upper()}[/]  |  [bold cyan]CATEGORY:[/] [bold]{p.tool.category.upper()}[/]  |  {status_badge}
+[dim]{p.tool.description}[/dim]
+[bold yellow]═══════════════════════════════════════════════════════════════════════[/]
+
+[bold green]📁 TARGET FILE PATHS & RULES LOCATION ({os_type.upper()}):[/]
+  [cyan]• Settings File:[/] [white]{settings_path}[/]
+  [cyan]• Agent Rules Dir:[/] [white]{rules_path}[/]
+
+[bold green]⚙️ NATIVE CONFIGURATION OVERRIDES TO BE APPLIED ({len(native_overrides)} settings):[/]
+{overrides_text}
+
+[bold green]🛡️ SECURITY CONTROLS & COMPLIANCE ENFORCEMENT:[/]
+  [cyan]• Multi-OS Command Risk Matrix:[/] [bold green]ACTIVE[/bold green]
+    - [green]LOW Risk Commands[/] (ls, pwd, git status): [bold green]Auto-Executable[/bold green]
+    - [yellow]MEDIUM Risk Commands[/] (mkdir, touch, npm build): [bold yellow]Requires Approval[/bold yellow]
+    - [red]HIGH / CRITICAL Risk Commands[/] (rm -rf, sudo, chmod): [bold red]Strict Human Approval Required[/bold red]
+
+  [cyan]• Runtime Sandbox Isolation:[/] {'[bold green]ENFORCED (Bypass Disallowed)[/bold green]' if sandbox_enforced else '[yellow]Optional[/yellow]'}
+  [cyan]• Zero-Telemetry & Crash Reporting:[/] {'[bold green]SHUTDOWN (DO_NOT_TRACK=1)[/bold green]' if telemetry_off else '[yellow]Enabled[/yellow]'}
+  [cyan]• Data Loss Prevention (DLP):[/] [bold green]{dlp_count} Protected Secret Patterns[/bold green]
+    Excluding: {dlp_sample}
+  [cyan]• OS Filesystem ACL Lockdown:[/] [bold green]Owner Exclusive (chmod 700/600 or Windows NTFS ACL)[/bold green]
 """
         info_widget.update(text)
 
@@ -195,9 +278,15 @@ class HardeningApp(App):
         log_view = self.query_one("#log-view", RichLog)
         dry_run = self.query_one("#chk-dry-run", Checkbox).value
 
-        if event.button.id == "btn-apply-selected":
+        if event.button.id == "btn-close-help":
+            self.pop_screen()
+
+        elif event.button.id == "btn-help":
+            self.push_screen(HelpModal())
+
+        elif event.button.id == "btn-apply-selected":
             if not self.selected_policy:
-                log_view.write("[bold red][!] Please select a tool first.[/]")
+                log_view.write("[bold red][!] Please select a tool from the catalog first.[/]")
                 return
             res = self.engine.apply_policy(self.selected_policy, dry_run=dry_run)
             status_style = "bold green" if res.success else "bold red"

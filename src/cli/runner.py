@@ -9,6 +9,7 @@ from typing import List
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from rich.markdown import Markdown
 
 from src.core.config_loader import ConfigLoader
 from src.core.engine import HardeningEngine
@@ -19,23 +20,49 @@ from src.core.code_analyzer import CodeVulnerabilityScanner
 
 logger = get_logger("cli")
 
+HELP_EPILOG = """
+[bold cyan]Practical Usage Examples:[/]
+  [green]python main.py[/]                              Launch interactive Textual Control Interface (TUI)
+  [green]python main.py --list[/]                       List all 14 supported AI tools and host detection status
+  [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
+  [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
+  [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
+  [green]python main.py --apply --dry-run[/]            Simulate policy enforcement without writing files
+  [green]python main.py --scan-code[/]                  Run OpenGrep SAST & SCA scan on current workspace
+  [green]python main.py --scan-code ./src[/]            Scan a specific directory for code vulnerabilities
+  [green]python main.py --check-command "ls -la"[/]     Evaluate command risk tier (LOW/MEDIUM/HIGH/CRITICAL)
+  [green]python main.py --install-extra all[/]          Install runtime sandboxes (ai-jail) and OpenGrep
+"""
+
 
 def run_cli(args: List[str]):
     parser = argparse.ArgumentParser(
         prog="hardening-ia",
-        description="Enterprise AI Hardening Framework with Multi-OS Command Risk Matrix, SAST Code Analyzer & Host Discovery."
+        description="Enterprise AI Hardening Framework: Multi-OS Command Risk Matrix, SAST/SCA Code Analyzer & Tool Discovery.",
+        epilog=HELP_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--tool", type=str, help="Filter by tool or vendor name (e.g. google/antigravity, cursor)")
-    parser.add_argument("--apply", action="store_true", help="Apply security hardening policies to matching tools")
+    parser.add_argument("--tool", type=str, metavar="NAME", help="Filter by tool or vendor name (e.g. google/antigravity, cursor, claude-code)")
+    parser.add_argument("--apply", action="store_true", help="Apply declarative security hardening policies to matching tools")
     parser.add_argument("--list", action="store_true", help="List all available tools and their host installation status")
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
-    parser.add_argument("--check-command", type=str, help="Evaluate terminal command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
+    parser.add_argument("--check-command", type=str, metavar="CMD", help="Evaluate terminal command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
     parser.add_argument("--dry-run", action="store_true", help="Simulate policy application without modifying configuration files")
-    parser.add_argument("--install-extra", type=str, help="Install extra security isolation tool: 'ai-jail', 'opengrep', or 'all'")
-    parser.add_argument("--scan-code", type=str, nargs="?", const=".", help="Scan target workspace or file for AI-generated code vulnerabilities")
+    parser.add_argument("--install-extra", type=str, metavar="TOOL", help="Install extra security isolation tool: 'ai-jail', 'opengrep', or 'all'")
+    parser.add_argument("--scan-code", type=str, nargs="?", const=".", metavar="PATH", help="Scan workspace or directory for AI-generated code vulnerabilities")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose debug logging")
     parser.add_argument("--cli", action="store_true", help="Explicitly force CLI mode")
     parser.add_argument("-gui", "--gui", action="store_true", help="Launch interactive Terminal User Interface (TUI)")
+
+    # Print custom formatted help if -h or --help is requested
+    if "-h" in args or "--help" in args:
+        console = Console()
+        console.print(Panel.fit(
+            "[bold cyan]Hardening IA[/bold cyan] - Enterprise AI Security Hardening Framework",
+            subtitle="CLI Automation & Security Auditing"
+        ))
+        parser.print_help()
+        return
 
     parsed = parser.parse_args(args)
 
@@ -73,7 +100,7 @@ def run_cli(args: List[str]):
     # 2. SAST Code Vulnerability Scan
     if parsed.scan_code:
         scan_target = Path(parsed.scan_code)
-        console.print(f"\n[bold cyan][*] Running OpenGrep SAST Vulnerability Analysis on:[/] {scan_target.resolve()}\n")
+        console.print(f"\n[bold cyan][*] Running OpenGrep SAST & SCA Analysis on:[/] {scan_target.resolve()}\n")
         scanner = CodeVulnerabilityScanner()
         findings = scanner.scan_path(scan_target)
 
@@ -171,6 +198,6 @@ def run_cli(args: List[str]):
             summary_table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, status_badge, details)
 
         console.print(summary_table)
-        console.print("\n[bold green][OK] Hardening execution completed. Audit logs written to logs/audit.jsonl[/bold green]\\n")
+        console.print("\n[bold green][OK] Hardening execution completed. Audit logs written to logs/audit.jsonl[/bold green]\n")
     else:
         parser.print_help()
