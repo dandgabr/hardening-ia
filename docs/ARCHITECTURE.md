@@ -17,36 +17,36 @@ The framework supports **Windows**, **Linux**, and **macOS**, providing:
 
 ```mermaid
 flowchart TD
-    Operator([User / CI Automation]) -->|CLI Arguments| CLI[CLI Runner (src/cli/runner.py)]
-    Operator -->|No Args / -gui| TUI[Textual TUI (src/tui/app.py)]
+    Operator(["User / CI Automation"]) -->|CLI Arguments| CLI["CLI Runner (src/cli/runner.py)"]
+    Operator -->|No Args / -gui| TUI["Textual TUI (src/tui/app.py)"]
 
     subgraph Logging_Subsystem ["Logging & Audit Subsystem"]
-        LogMgr[setup_logging / get_logger] --> LogFile[logs/hardening.log - Rotating]
-        LogMgr --> AuditSink[logs/audit.jsonl - Structured]
-        LogMgr --> RichStream[Console / TUI RichLog Stream]
+        LogMgr["setup_logging / get_logger"] --> LogFile["logs/hardening.log - Rotating"]
+        LogMgr --> AuditSink["logs/audit.jsonl - Structured"]
+        LogMgr --> RichStream["Console / TUI RichLog Stream"]
     end
 
     subgraph Core_Engine ["Core Engine (src/core/)"]
-        CLI --> Engine[HardeningEngine]
+        CLI --> Engine["HardeningEngine"]
         TUI --> Engine
-        ConfigLoader[ConfigLoader] --> Engine
-        OSDetector[OSDetector] --> Engine
-        Engine --> Merger[Deep Settings Merger]
-        Engine --> ScriptExec[OS Script Executor]
+        ConfigLoader["ConfigLoader"] --> Engine
+        OSDetector["OSDetector"] --> Engine
+        Engine --> Merger["Deep Settings Merger"]
+        Engine --> ScriptExec["OS Script Executor"]
     end
 
     subgraph Declarative_Layer ["Declarative Policies (configs/tools/)"]
-        YAMLs[YAML Policy Files: Google, Anthropic, OpenAI, GitHub, Cursor, etc.] --> ConfigLoader
+        YAMLs["YAML Policy Files: Google, Anthropic, OpenAI, GitHub, Cursor, etc."] --> ConfigLoader
     end
 
     subgraph OS_Execution_Layer ["OS Platform Layer (scripts/os/)"]
-        ScriptExec --> WinPS[Windows: PowerShell .ps1]
-        ScriptExec --> LinuxBash[Linux: Bash .sh]
-        ScriptExec --> MacBash[macOS: Zsh / Bash .sh]
+        ScriptExec --> WinPS["Windows: PowerShell .ps1"]
+        ScriptExec --> LinuxBash["Linux: Bash .sh"]
+        ScriptExec --> MacBash["macOS: Zsh / Bash .sh"]
     end
 
     subgraph Extra_Tools_Layer ["Containment Tools (scripts/extra-tools/)"]
-        ScriptExec --> ExtraInstaller[Installers: ai-jail sandbox runtime]
+        ScriptExec --> ExtraInstaller["Installers: ai-jail sandbox runtime"]
     end
 
     Engine -.->|Audit Events| AuditSink
