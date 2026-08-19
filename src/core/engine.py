@@ -1,8 +1,9 @@
-"""Hardening Engine orchestrating policy enforcement, rollback/removal, deep configuration merging, rules deployment, and script execution."""
+"""Hardening Engine orchestrating policy enforcement, surgical backup & restore, deep configuration merging, rules deployment, and script execution."""
 
 import sys
 import json
 import shutil
+import time
 import subprocess
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -18,9 +19,16 @@ class HardeningEngine:
     def __init__(self, repo_root: Optional[Path] = None):
         self.repo_root = repo_root or Path(__file__).resolve().parent.parent.parent
         self.os_type = OSDetector.get_os_type()
+        self.backups_dir = self.repo_root / "backups"
+
+    def _get_tool_backup_dir(self, vendor: str, tool_name: str) -> Path:
+        """Returns the isolated backup directory for a specific tool."""
+        b_dir = self.backups_dir / vendor.lower() / tool_name.lower()
+        b_dir.mkdir(parents=True, exist_ok=True)
+        return b_dir
 
     def apply_policy(self, policy: HardeningPolicy, dry_run: bool = False) -> ExecutionResult:
-        """Applies hardening policy controls for a target tool according to its YAML definition."""
+        """Applies hardening policy controls with automatic full backup and differential tracking."""
         tool_name = policy.tool.name
         vendor = policy.tool.vendor
         modified_paths: List[str] = []
@@ -38,7 +46,7 @@ class HardeningEngine:
                     native_overrides = policy.policies.get("native_settings_override", {})
 
                     if native_overrides:
-                        tool_diffs = self._apply_json_settings(settings_path, native_overrides, dry_run)
+                        tool_diffs = self._apply_json_settings(settings_path, native_overrides, dry_run, vendor, tool_name)
                         diffs.extend(tool_diffs)
                         modified_paths.append(str(settings_path))
                         logger.info(f"Applied {len(tool_diffs)} configuration overrides to {settings_path}")
@@ -115,30 +123,33 @@ class HardeningEngine:
             )
 
     def remove_policy(self, policy: HardeningPolicy, dry_run: bool = False) -> ExecutionResult:
-        """Removes/reverts hardening policy controls and deployed rules for a target tool."""
+        """
+        Surgically reverts hardening policy controls and restores previous user values
+        without affecting other user settings, custom extensions, or configured AI providers.
+        """
         tool_name = policy.tool.name
         vendor = policy.tool.vendor
         modified_paths: List[str] = []
         errors: List[str] = []
         diffs: List[SettingDiff] = []
 
-        logger.info(f"Starting policy removal for {vendor}/{tool_name} (dry_run={dry_run})")
+        logger.info(f"Starting policy rollback for {vendor}/{tool_name} (dry_run={dry_run})")
 
         try:
             os_paths = policy.paths.get(self.os_type)
             if os_paths:
-                # 1. Remove overrides from target settings file
+                # 1. Surgically revert overrides in settings file
                 if os_paths.settings_file:
                     settings_path = OSDetector.expand_path(os_paths.settings_file)
                     native_overrides = policy.policies.get("native_settings_override", {})
 
                     if settings_path.exists() and native_overrides:
-                        tool_diffs = self._remove_json_settings(settings_path, native_overrides, dry_run)
+                        tool_diffs = self._remove_json_settings(settings_path, native_overrides, dry_run, vendor, tool_name)
                         diffs.extend(tool_diffs)
                         modified_paths.append(str(settings_path))
-                        logger.info(f"Removed {len(tool_diffs)} hardening overrides from {settings_path}")
+                        logger.info(f"Surgically restored {len(tool_diffs)} settings in {settings_path}")
 
-                # 2. Remove deployed rule files
+                # 2. Clean up deployed rule files
                 if os_paths.rules_dir:
                     rules_path = OSDetector.expand_path(os_paths.rules_dir)
                     target_rule_file = rules_path / "linux_command_risk_policy.md"
@@ -148,7 +159,7 @@ class HardeningEngine:
                             logger.info(f"Removed deployed rule file: {target_rule_file}")
                         modified_paths.append(str(target_rule_file))
 
-            message = f"Hardening configurations successfully removed for {vendor}/{tool_name}"
+            message = f"Hardening configurations successfully reverted for {vendor}/{tool_name}"
             log_audit_event(
                 event_type="POLICY_REMOVED",
                 tool_name=tool_name,
@@ -173,7 +184,7 @@ class HardeningEngine:
             )
 
         except Exception as e:
-            error_msg = f"Failed to remove hardening for {vendor}/{tool_name}: {str(e)}"
+            error_msg = f"Failed to revert hardening for {vendor}/{tool_name}: {str(e)}"
             logger.error(error_msg, exc_info=True)
             errors.append(str(e))
 
@@ -209,16 +220,58 @@ class HardeningEngine:
                 base[key] = value
         return diffs
 
-    def _apply_json_settings(self, path: Path, overrides: dict, dry_run: bool) -> List[SettingDiff]:
-        """Loads target JSON configuration, merges overrides, and saves state if not dry-run."""
+    def _apply_json_settings(self, path: Path, overrides: dict, dry_run: bool, vendor: str = "", tool_name: str = "") -> List[SettingDiff]:
+        """Loads target JSON, saves full backup & restore manifest, merges overrides, and saves state."""
         current_data: Dict[str, Any] = {}
-        if path.exists():
+        file_existed = path.exists()
+
+        if file_existed:
             try:
                 with open(path, "r", encoding="utf-8") as f:
                     current_data = json.load(f)
             except Exception as e:
                 logger.warning(f"Could not parse existing settings at {path}: {e}. Creating new file.")
                 current_data = {}
+
+        # Save Backup & Manifest of original values before altering
+        if not dry_run and vendor and tool_name:
+            b_dir = self._get_tool_backup_dir(vendor, tool_name)
+            timestamp = int(time.time())
+
+            # Full file backup
+            if file_existed:
+                backup_file = b_dir / f"settings_backup_{timestamp}.json"
+                latest_backup = b_dir / "settings_backup_latest.json"
+                try:
+                    shutil.copy2(path, backup_file)
+                    shutil.copy2(path, latest_backup)
+                    logger.debug(f"Created configuration backup at: {backup_file}")
+                except Exception as e:
+                    logger.warning(f"Could not write backup file: {e}")
+
+            # Manifest recording exact previous values of target keys
+            manifest_file = b_dir / "restore_manifest.json"
+            manifest = {
+                "file": str(path),
+                "created_at": timestamp,
+                "file_existed_before": file_existed,
+                "original_keys": {}
+            }
+            for k in overrides.keys():
+                if k in current_data:
+                    manifest["original_keys"][k] = {
+                        "existed": True,
+                        "value": current_data[k]
+                    }
+                else:
+                    manifest["original_keys"][k] = {
+                        "existed": False,
+                        "value": None
+                    }
+            try:
+                manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+            except Exception as e:
+                logger.warning(f"Could not write restore manifest: {e}")
 
         diffs = self._deep_merge(current_data, overrides)
 
@@ -229,8 +282,11 @@ class HardeningEngine:
 
         return diffs
 
-    def _remove_json_settings(self, path: Path, overrides: dict, dry_run: bool) -> List[SettingDiff]:
-        """Removes hardening override keys from target JSON configuration."""
+    def _remove_json_settings(self, path: Path, overrides: dict, dry_run: bool, vendor: str = "", tool_name: str = "") -> List[SettingDiff]:
+        """
+        Surgically restores original settings from restore manifest or removes newly added keys.
+        All other settings (e.g. OpenAI keys, Anthropic keys, custom themes) remain strictly untouched.
+        """
         diffs: List[SettingDiff] = []
         if not path.exists():
             return diffs
@@ -242,25 +298,42 @@ class HardeningEngine:
             logger.warning(f"Could not parse settings for removal at {path}: {e}")
             return diffs
 
+        manifest_data = {}
+        if vendor and tool_name:
+            manifest_file = self._get_tool_backup_dir(vendor, tool_name) / "restore_manifest.json"
+            if manifest_file.exists():
+                try:
+                    manifest_data = json.loads(manifest_file.read_text(encoding="utf-8")).get("original_keys", {})
+                except Exception as e:
+                    logger.debug(f"Could not read restore manifest: {e}")
+
         for key in overrides.keys():
-            # Check direct key
-            if key in data:
-                old_val = data.pop(key)
-                diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
+            orig_info = manifest_data.get(key)
+            if orig_info and orig_info.get("existed"):
+                # Restore exact original value
+                orig_val = orig_info.get("value")
+                current_val = data.get(key)
+                if current_val != orig_val:
+                    data[key] = orig_val
+                    diffs.append(SettingDiff(key=key, old_value=current_val, new_value=orig_val))
             else:
-                # Check dotted path
-                parts = key.split(".")
-                curr = data
-                found = True
-                for p in parts[:-1]:
-                    if isinstance(curr, dict) and p in curr:
-                        curr = curr[p]
-                    else:
-                        found = False
-                        break
-                if found and isinstance(curr, dict) and parts[-1] in curr:
-                    old_val = curr.pop(parts[-1])
+                # Key was injected by hardening: delete only this key
+                if key in data:
+                    old_val = data.pop(key)
                     diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
+                else:
+                    parts = key.split(".")
+                    curr = data
+                    found = True
+                    for p in parts[:-1]:
+                        if isinstance(curr, dict) and p in curr:
+                            curr = curr[p]
+                        else:
+                            found = False
+                            break
+                    if found and isinstance(curr, dict) and parts[-1] in curr:
+                        old_val = curr.pop(parts[-1])
+                        diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
 
         if not dry_run and diffs:
             with open(path, "w", encoding="utf-8") as f:

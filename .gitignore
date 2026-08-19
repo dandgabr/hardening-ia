@@ -44,9 +44,11 @@ venv.bak/
 *.pfx
 secrets/
 
-# Logs and databases
+# Logs, backups and databases
 *.log
 logs/
+backups/
+*.bak
 audit/
 *.sqlite3
 *.db
