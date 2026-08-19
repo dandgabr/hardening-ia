@@ -34,7 +34,10 @@ def _ensure_environment():
 
     for venv_python in venv_pythons:
         if venv_python.is_file() and os.path.abspath(sys.executable) != os.path.abspath(str(venv_python)):
-            os.execv(str(venv_python), [str(venv_python)] + sys.argv)
+            try:
+                os.execv(str(venv_python), [str(venv_python)] + sys.argv)
+            except Exception:
+                pass
 
     # If re-exec is not possible or dependencies are still missing:
     print("\n" + "=" * 65)
