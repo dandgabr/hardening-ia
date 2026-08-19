@@ -48,7 +48,7 @@ class HelpModal(ModalScreen):
 
 [bold yellow]Core Action Buttons:[/]
   • [bold green]Apply to Selected[/]: Applies hardening policy directly to the highlighted tool.
-  • [bold blue]View DLP Config[/]: Inspect the complete Data Loss Prevention rules and secret exclusions.
+  • [bold blue]View DLP Config[/]: Appears only when a tool with DLP support is selected.
   • [bold blue]Apply Installed[/]: Hardens only tools detected and installed on this host.
   • [bold orange3]Apply All[/]: Provisions hardened baselines across all 14 supported tools.
   • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement without altering host files.
@@ -176,6 +176,9 @@ class HardeningApp(App):
         margin-right: 1;
         margin-bottom: 1;
     }
+    #btn-view-dlp {
+        display: none;
+    }
     #log-view {
         height: 11;
         border: solid #45475a;
@@ -261,15 +264,21 @@ class HardeningApp(App):
         log_view.write(f"[bold cyan][*] OS Detected: {OSDetector.get_os_type().upper()}[/]")
         log_view.write(f"[*] Discovered {len(self.policies)} policies ({installed_count} tools detected on host).")
 
+    def _supports_dlp(self, policy: Optional[HardeningPolicy]) -> bool:
+        if not policy:
+            return False
+        dlp = policy.policies.get("dlp", {})
+        return bool(dlp.get("block_sensitive_paths") or dlp.get("disable_code_training_sharing") or dlp.get("mask_secrets"))
+
     def action_toggle_help(self) -> None:
         self.push_screen(HelpModal())
 
     def action_view_dlp(self) -> None:
-        if self.selected_policy and "dlp" in self.selected_policy.policies:
+        if self._supports_dlp(self.selected_policy):
             self.push_screen(DlpModal(self.selected_policy))
         else:
             log_view = self.query_one("#log-view", RichLog)
-            log_view.write("[bold yellow][!] Please select a tool with active DLP policies first.[/]")
+            log_view.write("[bold yellow][!] Selected tool does not have active DLP configurations.[/]")
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
@@ -281,6 +290,10 @@ class HardeningApp(App):
             return
         p = self.selected_policy
         info_widget = self.query_one("#policy-info", Static)
+        btn_dlp = self.query_one("#btn-view-dlp", Button)
+
+        has_dlp = self._supports_dlp(p)
+        btn_dlp.display = has_dlp
 
         os_type = OSDetector.get_os_type()
         path_info = p.paths.get(os_type)
@@ -303,6 +316,8 @@ class HardeningApp(App):
         if dlp_count > 6:
             dlp_sample += f" [dim](+{dlp_count - 6} more patterns)[/dim]"
 
+        dlp_badge = f"[bold green]{dlp_count} Protected Secret Patterns (Click 'View DLP Config' button to inspect)[/bold green]" if has_dlp else "[dim]No DLP rules defined for this tool category[/dim]"
+
         text = f"""[bold yellow]═══════════════════════════════════════════════════════════════════════[/]
 [bold cyan]TOOL:[/] [bold white]{p.tool.vendor}/{p.tool.name.upper()}[/]  |  [bold cyan]CATEGORY:[/] [bold]{p.tool.category.upper()}[/]  |  {status_badge}
 [dim]{p.tool.description}[/dim]
@@ -323,8 +338,8 @@ class HardeningApp(App):
 
   [cyan]• Runtime Sandbox Isolation:[/] {'[bold green]ENFORCED (Bypass Disallowed)[/bold green]' if sandbox_enforced else '[yellow]Optional[/yellow]'}
   [cyan]• Zero-Telemetry & Crash Reporting:[/] {'[bold green]SHUTDOWN (DO_NOT_TRACK=1)[/bold green]' if telemetry_off else '[yellow]Enabled[/yellow]'}
-  [cyan]• Data Loss Prevention (DLP):[/] [bold green]{dlp_count} Protected Secret Patterns (Click 'View DLP Config' to inspect)[/bold green]
-    Excluding: {dlp_sample}
+  [cyan]• Data Loss Prevention (DLP):[/] {dlp_badge}
+    {('Excluding: ' + dlp_sample) if has_dlp else ''}
   [cyan]• OS Filesystem ACL Lockdown:[/] [bold green]Owner Exclusive (chmod 700/600 or Windows NTFS ACL)[/bold green]
 """
         info_widget.update(text)
@@ -340,7 +355,7 @@ class HardeningApp(App):
             self.push_screen(HelpModal())
 
         elif event.button.id == "btn-view-dlp":
-            if self.selected_policy and "dlp" in self.selected_policy.policies:
+            if self._supports_dlp(self.selected_policy):
                 self.push_screen(DlpModal(self.selected_policy))
             elif self.selected_policy:
                 log_view.write(f"[bold yellow][!] No DLP configuration defined for {self.selected_policy.tool.name}.[/]")
