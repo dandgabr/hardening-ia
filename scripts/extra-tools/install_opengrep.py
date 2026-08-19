@@ -26,12 +26,36 @@ def log(msg: str):
     print(f"[opengrep installer] {msg}")
 
 
+def is_admin() -> bool:
+    """Checks if the installer is executing with root/administrator privileges."""
+    try:
+        if platform.system().lower() == "windows":
+            import ctypes
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        else:
+            return os.geteuid() == 0
+    except Exception:
+        return False
+
+
 def get_target_bin_dir() -> Path:
-    """Returns local bin directory in the framework workspace."""
-    repo_root = Path(__file__).resolve().parent.parent.parent
-    bin_dir = repo_root / "scripts" / "extra-tools" / "bin"
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    return bin_dir
+    """Returns target bin directory (global system directory if admin, local repository otherwise)."""
+    sys_name = platform.system().lower()
+    if is_admin():
+        if sys_name == "windows":
+            program_data = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin"
+            program_data.mkdir(parents=True, exist_ok=True)
+            return program_data
+        else:
+            usr_local_bin = Path("/usr/local/bin")
+            if usr_local_bin.exists():
+                return usr_local_bin
+            return Path("/usr/bin")
+    else:
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        bin_dir = repo_root / "scripts" / "extra-tools" / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        return bin_dir
 
 
 def download_file(url: str, dest: Path) -> bool:
@@ -53,18 +77,28 @@ def is_opengrep_installed() -> bool:
     """Checks if OpenGrep is already installed and available in PATH or local bin."""
     bin_dir = get_target_bin_dir()
     target_bin = bin_dir / ("opengrep.exe" if platform.system().lower() == "windows" else "opengrep")
-    return bool(shutil.which("opengrep") or target_bin.exists())
+    global_bin = Path("/usr/local/bin/opengrep")
+    return bool(shutil.which("opengrep") or target_bin.exists() or global_bin.exists())
 
 
 def install_unix(sys_platform: str) -> bool:
-    log(f"Checking existing installation on {sys_platform.upper()}...")
+    admin_tag = "[ADMIN / SYSTEM-WIDE MODE] " if is_admin() else ""
+    log(f"{admin_tag}Checking existing installation on {sys_platform.upper()}...")
     bin_dir = get_target_bin_dir()
     target_bin = bin_dir / "opengrep"
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    local_bin = repo_root / "scripts" / "extra-tools" / "bin" / "opengrep"
 
     # Fast Path: Check if already installed
     if is_opengrep_installed():
         bin_loc = shutil.which("opengrep") or str(target_bin)
-        log(f"[INFO] OpenGrep is already installed and available at: {bin_loc}. Skipping download.")
+        log(f"[INFO] OpenGrep is already installed at: {bin_loc}. Ensuring global availability if elevated...")
+        if is_admin() and not Path("/usr/local/bin/opengrep").exists() and shutil.which("opengrep"):
+            try:
+                shutil.copy2(shutil.which("opengrep"), "/usr/local/bin/opengrep")
+                Path("/usr/local/bin/opengrep").chmod(0o755)
+            except Exception:
+                pass
         return True
 
     # 1. Try official shell install script
@@ -73,6 +107,11 @@ def install_unix(sys_platform: str) -> bool:
         cmd = ["curl", "-fsSL", INSTALL_SCRIPT_UNIX, "|", "bash"]
         res = subprocess.run("curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash", shell=True, text=True, capture_output=True)
         if res.returncode == 0:
+            if is_admin():
+                installed_loc = shutil.which("opengrep")
+                if installed_loc and not Path("/usr/local/bin/opengrep").exists():
+                    shutil.copy2(installed_loc, "/usr/local/bin/opengrep")
+                    Path("/usr/local/bin/opengrep").chmod(0o755)
             log("[OK] OpenGrep official installer completed successfully.")
             return True
     except Exception as e:
@@ -117,7 +156,13 @@ def install_unix(sys_platform: str) -> bool:
                     with tarfile.open(tar_path, "r:*") as tar:
                         tar.extractall(path=bin_dir)
                 target_bin.chmod(0o755)
-                log(f"[OK] OpenGrep binary installed to: {target_bin}")
+
+                local_bin.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(target_bin, local_bin)
+                local_bin.chmod(0o755)
+
+                scope_tag = "System-Wide / All Users" if is_admin() else "User-Local"
+                log(f"[OK] OpenGrep binary installed to: {target_bin} ({scope_tag}) with permissions 0755.")
                 return True
     except Exception as e:
         log(f"Binary release download notice: {e}")
@@ -131,7 +176,8 @@ def install_unix(sys_platform: str) -> bool:
 
 
 def install_windows() -> bool:
-    log("Checking existing installation on Windows...")
+    admin_tag = "[ADMIN / SYSTEM-WIDE MODE] " if is_admin() else ""
+    log(f"{admin_tag}Checking existing installation on Windows...")
     bin_dir = get_target_bin_dir()
     target_exe = bin_dir / "opengrep.exe"
 
@@ -157,18 +203,36 @@ def install_windows() -> bool:
         log("[OK] OpenGrep is already installed and available in PATH.")
         return True
 
-    # 3. Create Windows Bridge Wrappers
-    cmd_wrapper = bin_dir / "opengrep.cmd"
-    with open(cmd_wrapper, "w", encoding="utf-8") as f:
-        f.write("@echo off\r\nwhere opengrep >nul 2>nul && opengrep %* || python -m src.core.code_analyzer %*\r\n")
+    # 3. Create Windows Bridge Wrappers in target and repo bin
+    repo_root = Path(__file__).resolve().parent.parent.parent
+    local_bin_dir = repo_root / "scripts" / "extra-tools" / "bin"
+    local_bin_dir.mkdir(parents=True, exist_ok=True)
 
-    ps1_wrapper = bin_dir / "opengrep.ps1"
-    with open(ps1_wrapper, "w", encoding="utf-8") as f:
-        f.write("if (Get-Command opengrep -ErrorAction SilentlyContinue) { opengrep @args } else { python -m src.core.code_analyzer @args }\r\n")
+    target_dirs = [local_bin_dir]
+    if is_admin():
+        global_bin_dir = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin"
+        global_bin_dir.mkdir(parents=True, exist_ok=True)
+        target_dirs.append(global_bin_dir)
 
-    log(f"[OK] Created OpenGrep Windows bridge wrappers in {bin_dir}:")
-    log(f"  - {cmd_wrapper}")
-    log(f"  - {ps1_wrapper}")
+    for bdir in target_dirs:
+        cmd_wrapper = bdir / "opengrep.cmd"
+        with open(cmd_wrapper, "w", encoding="utf-8") as f:
+            f.write("@echo off\r\nwhere opengrep >nul 2>nul && opengrep %* || python -m src.core.code_analyzer %*\r\n")
+
+        ps1_wrapper = bdir / "opengrep.ps1"
+        with open(ps1_wrapper, "w", encoding="utf-8") as f:
+            f.write("if (Get-Command opengrep -ErrorAction SilentlyContinue) { opengrep @args } else { python -m src.core.code_analyzer @args }\r\n")
+
+    if is_admin():
+        try:
+            ps_path_cmd = f'[Environment]::SetEnvironmentVariable("Path", $env:Path + ";{global_bin_dir}", "Machine")'
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_path_cmd], check=False, capture_output=True)
+            subprocess.run(["icacls", str(global_bin_dir.parent), "/grant", "Users:(OI)(CI)(RX)", "/T", "/Q"], check=False, capture_output=True)
+            log(f"[OK] System-wide Machine PATH and Read-Only permissions configured for all users in {global_bin_dir}.")
+        except Exception as e:
+            log(f"System PATH configuration notice: {e}")
+
+    log(f"[OK] Created OpenGrep Windows bridge wrappers in {[str(d) for d in target_dirs]}")
     return True
 
 
@@ -220,6 +284,27 @@ def setup_default_security_rules():
     with open(default_rules_file, "w", encoding="utf-8") as f:
         f.write(rules_content)
     log(f"[OK] Deployed OpenGrep AI Security Ruleset: {default_rules_file}")
+
+    if is_admin():
+        sys_name = platform.system().lower()
+        if sys_name == "windows":
+            global_rules_dir = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "opengrep-rules"
+            global_rules_dir.mkdir(parents=True, exist_ok=True)
+            global_rules_file = global_rules_dir / "ai_code_security.yaml"
+            with open(global_rules_file, "w", encoding="utf-8") as f:
+                f.write(rules_content)
+            log(f"[OK] Deployed Global OpenGrep Security Ruleset for all users: {global_rules_file}")
+        else:
+            global_rules_dir = Path("/etc/opengrep-rules")
+            try:
+                global_rules_dir.mkdir(parents=True, exist_ok=True)
+                global_rules_file = global_rules_dir / "ai_code_security.yaml"
+                with open(global_rules_file, "w", encoding="utf-8") as f:
+                    f.write(rules_content)
+                global_rules_file.chmod(0o644)
+                log(f"[OK] Deployed Global OpenGrep Security Ruleset for all users: {global_rules_file} (0644)")
+            except Exception as e:
+                log(f"Global rules deployment notice: {e}")
 
 
 def run_post_install_diagnostics() -> bool:

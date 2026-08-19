@@ -26,11 +26,49 @@ def run_cmd(cmd: list, check: bool = True, capture: bool = False, cwd: str = Non
     return subprocess.run(cmd, check=check, text=True, capture_output=capture, cwd=cwd)
 
 
+def is_admin() -> bool:
+    """Checks if the installer is executing with root/administrator privileges."""
+    try:
+        if platform.system().lower() == "windows":
+            import ctypes
+            return bool(ctypes.windll.shell32.IsUserAnAdmin())
+        else:
+            return os.geteuid() == 0
+    except Exception:
+        return False
+
+
+def get_target_bin_dir() -> Path:
+    """Returns the target binary installation directory (global system directory if admin, user-local otherwise)."""
+    sys_name = platform.system().lower()
+    if is_admin():
+        if sys_name == "windows":
+            program_data = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin"
+            program_data.mkdir(parents=True, exist_ok=True)
+            return program_data
+        else:
+            usr_local_bin = Path("/usr/local/bin")
+            if usr_local_bin.exists():
+                return usr_local_bin
+            return Path("/usr/bin")
+    else:
+        if sys_name == "windows":
+            repo_root = Path(__file__).resolve().parent.parent.parent
+            local_bin = repo_root / "scripts" / "extra-tools" / "bin"
+            local_bin.mkdir(parents=True, exist_ok=True)
+            return local_bin
+        else:
+            local_bin = Path.home() / ".local" / "bin"
+            local_bin.mkdir(parents=True, exist_ok=True)
+            return local_bin
+
+
 def is_ai_jail_installed() -> bool:
     """Checks if ai-jail is already installed and available in the environment."""
     cargo_bin = Path.home() / ".cargo" / "bin" / ("ai-jail.exe" if platform.system().lower() == "windows" else "ai-jail")
     local_bin = Path.home() / ".local" / "bin" / "ai-jail"
-    return bool(shutil.which("ai-jail") or cargo_bin.exists() or local_bin.exists())
+    global_bin = Path("/usr/local/bin/ai-jail")
+    return bool(shutil.which("ai-jail") or cargo_bin.exists() or local_bin.exists() or global_bin.exists())
 
 
 def are_linux_dependencies_installed() -> bool:
@@ -42,11 +80,19 @@ def are_linux_dependencies_installed() -> bool:
 
 
 def install_linux() -> bool:
-    log("Checking existing installation and prerequisites on Linux...")
+    admin_tag = "[ADMIN / SYSTEM-WIDE MODE] " if is_admin() else ""
+    log(f"{admin_tag}Checking existing installation and prerequisites on Linux...")
 
     # Fast Path: Tool already installed
     if is_ai_jail_installed():
-        log("[INFO] ai-jail executable is already installed on this host. Skipping dependency installation & build.")
+        log(f"[INFO] ai-jail executable is already installed. Ensuring global accessibility if elevated...")
+        if is_admin() and not Path("/usr/local/bin/ai-jail").exists() and shutil.which("ai-jail"):
+            try:
+                shutil.copy2(shutil.which("ai-jail"), "/usr/local/bin/ai-jail")
+                Path("/usr/local/bin/ai-jail").chmod(0o755)
+                log("[OK] Global symlink/binary created in /usr/local/bin/ai-jail for all users.")
+            except Exception:
+                pass
         return True
 
     # 1. Dependency Resolution
@@ -55,10 +101,10 @@ def install_linux() -> bool:
     else:
         log("Resolving system dependencies on Linux via package manager...")
         pkg_managers = [
-            ("apt-get", ["sudo", "apt-get", "update"], ["sudo", "apt-get", "install", "-y", "bubblewrap", "git", "curl", "build-essential"]),
-            ("pacman", None, ["sudo", "pacman", "-S", "--noconfirm", "bubblewrap", "git", "curl", "base-devel"]),
-            ("dnf", None, ["sudo", "dnf", "install", "-y", "bubblewrap", "git", "curl", "gcc"]),
-            ("zypper", None, ["sudo", "zypper", "install", "-y", "bubblewrap", "git", "curl"])
+            ("apt-get", ["sudo", "apt-get", "update"] if not is_admin() else ["apt-get", "update"], ["sudo", "apt-get", "install", "-y", "bubblewrap", "git", "curl", "build-essential"] if not is_admin() else ["apt-get", "install", "-y", "bubblewrap", "git", "curl", "build-essential"]),
+            ("pacman", None, ["sudo", "pacman", "-S", "--noconfirm", "bubblewrap", "git", "curl", "base-devel"] if not is_admin() else ["pacman", "-S", "--noconfirm", "bubblewrap", "git", "curl", "base-devel"]),
+            ("dnf", None, ["sudo", "dnf", "install", "-y", "bubblewrap", "git", "curl", "gcc"] if not is_admin() else ["dnf", "install", "-y", "bubblewrap", "git", "curl", "gcc"]),
+            ("zypper", None, ["sudo", "zypper", "install", "-y", "bubblewrap", "git", "curl"] if not is_admin() else ["zypper", "install", "-y", "bubblewrap", "git", "curl"])
         ]
 
         for mgr, prep_cmd, install_cmd in pkg_managers:
@@ -78,6 +124,11 @@ def install_linux() -> bool:
             log("Attempting installation via Homebrew tap...")
             run_cmd(["brew", "tap", "akitaonrails/tap"])
             run_cmd(["brew", "install", "ai-jail"])
+            if is_admin():
+                brew_bin = shutil.which("ai-jail")
+                if brew_bin and not Path("/usr/local/bin/ai-jail").exists():
+                    shutil.copy2(brew_bin, "/usr/local/bin/ai-jail")
+                    Path("/usr/local/bin/ai-jail").chmod(0o755)
             log("[OK] ai-jail installed successfully via Homebrew.")
             return True
         except Exception as e:
@@ -88,7 +139,13 @@ def install_linux() -> bool:
         try:
             log("Attempting installation via Cargo (crates.io)...")
             run_cmd(["cargo", "install", "--locked", "ai-jail"])
-            log("[OK] ai-jail installed successfully via Cargo.")
+            cargo_bin = Path.home() / ".cargo" / "bin" / "ai-jail"
+            target_bin_dir = get_target_bin_dir()
+            target_bin = target_bin_dir / "ai-jail"
+            if cargo_bin.exists():
+                shutil.copy2(cargo_bin, target_bin)
+                target_bin.chmod(0o755)
+                log(f"[OK] ai-jail installed globally to: {target_bin} (0755 for all users).")
             return True
         except Exception as e:
             log(f"Cargo install notice: {e}. Falling back to building from source...")
@@ -114,13 +171,20 @@ def install_linux() -> bool:
         run_cmd(["cargo", "build", "--release"], cwd=str(build_dir))
 
         bin_src = build_dir / "target" / "release" / "ai-jail"
-        target_bin_dir = Path.home() / ".local" / "bin"
-        target_bin_dir.mkdir(parents=True, exist_ok=True)
+        target_bin_dir = get_target_bin_dir()
         target_bin = target_bin_dir / "ai-jail"
 
         shutil.copy2(bin_src, target_bin)
         target_bin.chmod(0o755)
-        log(f"[OK] ai-jail binary installed to {target_bin}")
+
+        # Also place in repo local bin
+        repo_bin = Path(__file__).resolve().parent.parent.parent / "scripts" / "extra-tools" / "bin" / "ai-jail"
+        repo_bin.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(bin_src, repo_bin)
+        repo_bin.chmod(0o755)
+
+        scope_tag = "System-Wide / All Users" if is_admin() else "User-Local"
+        log(f"[OK] ai-jail binary installed to {target_bin} ({scope_tag}) with permissions 0755.")
         return True
     except Exception as e:
         log(f"Build from source notice: {e}")
@@ -128,9 +192,16 @@ def install_linux() -> bool:
 
 
 def install_macos() -> bool:
-    log("Checking existing installation and prerequisites on macOS...")
+    admin_tag = "[ADMIN / SYSTEM-WIDE MODE] " if is_admin() else ""
+    log(f"{admin_tag}Checking existing installation and prerequisites on macOS...")
     if is_ai_jail_installed():
         log("[INFO] ai-jail executable is already installed on macOS. Skipping build.")
+        if is_admin() and not Path("/usr/local/bin/ai-jail").exists() and shutil.which("ai-jail"):
+            try:
+                shutil.copy2(shutil.which("ai-jail"), "/usr/local/bin/ai-jail")
+                Path("/usr/local/bin/ai-jail").chmod(0o755)
+            except Exception:
+                pass
         return True
 
     # 1. Prefer Homebrew
@@ -139,6 +210,11 @@ def install_macos() -> bool:
             log("Installing ai-jail via Homebrew tap (akitaonrails/tap)...")
             run_cmd(["brew", "tap", "akitaonrails/tap"])
             run_cmd(["brew", "install", "ai-jail"])
+            if is_admin():
+                brew_bin = shutil.which("ai-jail")
+                if brew_bin and not Path("/usr/local/bin/ai-jail").exists():
+                    shutil.copy2(brew_bin, "/usr/local/bin/ai-jail")
+                    Path("/usr/local/bin/ai-jail").chmod(0o755)
             log("[OK] ai-jail installed successfully via Homebrew.")
             return True
         except Exception as e:
@@ -149,7 +225,13 @@ def install_macos() -> bool:
         try:
             log("Installing ai-jail via Cargo...")
             run_cmd(["cargo", "install", "--locked", "ai-jail"])
-            log("[OK] ai-jail installed successfully via Cargo.")
+            cargo_bin = Path.home() / ".cargo" / "bin" / "ai-jail"
+            target_bin_dir = get_target_bin_dir()
+            target_bin = target_bin_dir / "ai-jail"
+            if cargo_bin.exists():
+                shutil.copy2(cargo_bin, target_bin)
+                target_bin.chmod(0o755)
+            log(f"[OK] ai-jail installed successfully via Cargo to: {target_bin}")
             return True
         except Exception as e:
             log(f"Cargo install notice: {e}")
@@ -173,12 +255,18 @@ def install_macos() -> bool:
 
         run_cmd(["cargo", "build", "--release"], cwd=str(build_dir))
 
-        target_bin_dir = Path.home() / ".local" / "bin"
-        target_bin_dir.mkdir(parents=True, exist_ok=True)
+        target_bin_dir = get_target_bin_dir()
         target_bin = target_bin_dir / "ai-jail"
         shutil.copy2(build_dir / "target" / "release" / "ai-jail", target_bin)
         target_bin.chmod(0o755)
-        log(f"[OK] ai-jail binary installed to {target_bin}")
+
+        repo_bin = Path(__file__).resolve().parent.parent.parent / "scripts" / "extra-tools" / "bin" / "ai-jail"
+        repo_bin.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(build_dir / "target" / "release" / "ai-jail", repo_bin)
+        repo_bin.chmod(0o755)
+
+        scope_tag = "System-Wide / All Users" if is_admin() else "User-Local"
+        log(f"[OK] ai-jail binary installed to {target_bin} ({scope_tag}) with permissions 0755.")
         return True
     except Exception as e:
         log(f"Source build notice: {e}")
@@ -186,7 +274,8 @@ def install_macos() -> bool:
 
 
 def install_windows() -> bool:
-    log("Resolving dependencies on Windows...")
+    admin_tag = "[ADMIN / SYSTEM-WIDE MODE] " if is_admin() else ""
+    log(f"{admin_tag}Resolving dependencies on Windows...")
     log("Note: ai-jail sandboxing relies on Linux bubblewrap (bwrap). Configuring WSL2 / Windows wrappers...")
 
     # 1. Check for WSL
@@ -205,22 +294,36 @@ def install_windows() -> bool:
         except Exception as e:
             log(f"WSL invocation notice: {e}")
 
-    # 2. Create Windows bridge scripts in local repository directory
+    # 2. Create Windows bridge scripts in target directories
     repo_root = Path(__file__).resolve().parent.parent.parent
     local_bin_dir = repo_root / "scripts" / "extra-tools" / "bin"
     local_bin_dir.mkdir(parents=True, exist_ok=True)
 
-    cmd_wrapper = local_bin_dir / "ai-jail.cmd"
-    with open(cmd_wrapper, "w", encoding="utf-8") as f:
-        f.write("@echo off\r\nwsl.exe ai-jail %*\r\n")
+    target_dirs = [local_bin_dir]
+    if is_admin():
+        global_bin_dir = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin"
+        global_bin_dir.mkdir(parents=True, exist_ok=True)
+        target_dirs.append(global_bin_dir)
 
-    ps1_wrapper = local_bin_dir / "ai-jail.ps1"
-    with open(ps1_wrapper, "w", encoding="utf-8") as f:
-        f.write("& wsl.exe ai-jail $args\r\n")
+    for bdir in target_dirs:
+        cmd_wrapper = bdir / "ai-jail.cmd"
+        with open(cmd_wrapper, "w", encoding="utf-8") as f:
+            f.write("@echo off\r\nwsl.exe ai-jail %*\r\n")
 
-    log(f"[OK] Created Windows bridge wrappers in {local_bin_dir}:")
-    log(f"  - {cmd_wrapper}")
-    log(f"  - {ps1_wrapper}")
+        ps1_wrapper = bdir / "ai-jail.ps1"
+        with open(ps1_wrapper, "w", encoding="utf-8") as f:
+            f.write("& wsl.exe ai-jail $args\r\n")
+
+    if is_admin():
+        try:
+            ps_path_cmd = f'[Environment]::SetEnvironmentVariable("Path", $env:Path + ";{global_bin_dir}", "Machine")'
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_path_cmd], check=False, capture_output=True)
+            subprocess.run(["icacls", str(global_bin_dir.parent), "/grant", "Users:(OI)(CI)(RX)", "/T", "/Q"], check=False, capture_output=True)
+            log(f"[OK] System-wide Machine PATH and Read-Only permissions configured for all users in {global_bin_dir}.")
+        except Exception as e:
+            log(f"System PATH configuration notice: {e}")
+
+    log(f"[OK] Created Windows bridge wrappers in {[str(d) for d in target_dirs]}")
 
     # 3. If native cargo is present on Windows, try native build
     if shutil.which("cargo"):

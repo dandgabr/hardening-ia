@@ -1,5 +1,6 @@
 """Hardening Engine orchestrating policy enforcement, surgical backup & restore, deep configuration merging, rules deployment, and script execution."""
 
+import os
 import sys
 import json
 import shutil
@@ -612,34 +613,42 @@ class HardeningEngine:
         return results
 
     def is_extra_tool_installed(self, tool_id: str) -> bool:
-        """Checks if a security extra component (e.g. ai-jail, opengrep) is currently installed on the host."""
+        """Checks if a security extra component (e.g. ai-jail, opengrep) is currently installed on the host (locally or globally)."""
         local_bin = self.repo_root / "scripts" / "extra-tools" / "bin"
         if tool_id == "ai-jail":
             cargo_bin = Path.home() / ".cargo" / "bin" / ("ai-jail.exe" if self.os_type == "windows" else "ai-jail")
             local_user_bin = Path.home() / ".local" / "bin" / "ai-jail"
+            global_unix_bin = Path("/usr/local/bin/ai-jail")
+            global_win_bin = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin" / "ai-jail.cmd"
             return bool(
                 shutil.which("ai-jail") or
                 cargo_bin.exists() or
                 local_user_bin.exists() or
+                global_unix_bin.exists() or
+                global_win_bin.exists() or
                 (local_bin / "ai-jail.cmd").exists() or
                 (local_bin / "ai-jail").exists()
             )
         elif tool_id == "opengrep":
             target_bin = local_bin / ("opengrep.exe" if self.os_type == "windows" else "opengrep")
-            return bool(shutil.which("opengrep") or target_bin.exists())
+            global_unix_bin = Path("/usr/local/bin/opengrep")
+            global_win_bin = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin" / "opengrep.cmd"
+            return bool(shutil.which("opengrep") or target_bin.exists() or global_unix_bin.exists() or global_win_bin.exists())
         return False
 
     def stream_remove_extra_tool(self, tool_id: str):
         """
-        Removes/uninstalls a security extra tool and associated wrappers, streaming progress and audit logs.
+        Removes/uninstalls a security extra tool and associated wrappers (locally and system-wide), streaming progress and audit logs.
         Yields (event_type, payload):
           - ("log", text_line)
           - ("progress", percentage_int, step_description)
           - ("done", success_bool, summary_message)
         """
-        logger.info(f"Triggering removal of extra tool: {tool_id} on {self.os_type}")
+        is_elevated = OSDetector.is_admin()
+        elevated_tag = " [SYSTEM-WIDE ADMIN REMOVAL]" if is_elevated else ""
+        logger.info(f"Triggering removal of extra tool: {tool_id} on {self.os_type}{elevated_tag}")
         yield ("progress", 10, f"Initializing removal for {tool_id} on {self.os_type.upper()}...")
-        yield ("log", f"[bold cyan][*] Removing component:[/] {tool_id} | Host OS: {self.os_type.upper()}")
+        yield ("log", f"[bold cyan][*] Removing component:[/] {tool_id} | Host OS: {self.os_type.upper()}{elevated_tag}")
 
         local_bin = self.repo_root / "scripts" / "extra-tools" / "bin"
         removed_items = []
@@ -651,20 +660,38 @@ class HardeningEngine:
                 if cargo_bin.exists():
                     cargo_bin.unlink(missing_ok=True)
                     removed_items.append(str(cargo_bin))
-                    yield ("log", f"  [green]✓ Removed:[/] {cargo_bin}")
+                    yield ("log", f"  [green]✓ Removed user cargo binary:[/] {cargo_bin}")
 
                 local_user_bin = Path.home() / ".local" / "bin" / "ai-jail"
                 if local_user_bin.exists():
                     local_user_bin.unlink(missing_ok=True)
                     removed_items.append(str(local_user_bin))
-                    yield ("log", f"  [green]✓ Removed:[/] {local_user_bin}")
+                    yield ("log", f"  [green]✓ Removed local binary:[/] {local_user_bin}")
+
+                global_unix_bin = Path("/usr/local/bin/ai-jail")
+                if is_elevated and global_unix_bin.exists():
+                    try:
+                        global_unix_bin.unlink(missing_ok=True)
+                        removed_items.append(str(global_unix_bin))
+                        yield ("log", f"  [green]✓ Removed global system binary:[/] {global_unix_bin}")
+                    except Exception:
+                        pass
+
+                global_win_bin = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin" / "ai-jail.cmd"
+                if is_elevated and global_win_bin.exists():
+                    try:
+                        global_win_bin.unlink(missing_ok=True)
+                        removed_items.append(str(global_win_bin))
+                        yield ("log", f"  [green]✓ Removed global Windows bridge wrapper:[/] {global_win_bin}")
+                    except Exception:
+                        pass
 
                 for wrapper_name in ["ai-jail", "ai-jail.cmd", "ai-jail.ps1"]:
                     w_path = local_bin / wrapper_name
                     if w_path.exists():
                         w_path.unlink(missing_ok=True)
                         removed_items.append(str(w_path))
-                        yield ("log", f"  [green]✓ Removed wrapper:[/] {w_path}")
+                        yield ("log", f"  [green]✓ Removed repo wrapper:[/] {w_path}")
 
                 build_dir = Path.home() / ".cache" / "ai-jail-build"
                 if build_dir.exists():
@@ -687,7 +714,34 @@ class HardeningEngine:
                     if bin_path.exists():
                         bin_path.unlink(missing_ok=True)
                         removed_items.append(str(bin_path))
-                        yield ("log", f"  [green]✓ Removed binary:[/] {bin_path}")
+                        yield ("log", f"  [green]✓ Removed repo binary:[/] {bin_path}")
+
+                global_unix_bin = Path("/usr/local/bin/opengrep")
+                if is_elevated and global_unix_bin.exists():
+                    try:
+                        global_unix_bin.unlink(missing_ok=True)
+                        removed_items.append(str(global_unix_bin))
+                        yield ("log", f"  [green]✓ Removed global system binary:[/] {global_unix_bin}")
+                    except Exception:
+                        pass
+
+                global_win_bin = Path(os.environ.get("ProgramData", "C:\\ProgramData")) / "Hardening-IA" / "bin" / "opengrep.cmd"
+                if is_elevated and global_win_bin.exists():
+                    try:
+                        global_win_bin.unlink(missing_ok=True)
+                        removed_items.append(str(global_win_bin))
+                        yield ("log", f"  [green]✓ Removed global Windows bridge wrapper:[/] {global_win_bin}")
+                    except Exception:
+                        pass
+
+                global_rules = Path("/etc/opengrep-rules")
+                if is_elevated and global_rules.exists():
+                    try:
+                        shutil.rmtree(global_rules, ignore_errors=True)
+                        removed_items.append(str(global_rules))
+                        yield ("log", f"  [green]✓ Removed global ruleset:[/] {global_rules}")
+                    except Exception:
+                        pass
 
             yield ("progress", 75, "Verifying clean removal from system environment...")
             still_in_path = shutil.which(tool_id)
