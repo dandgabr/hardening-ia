@@ -54,7 +54,7 @@ class HelpModal(ModalScreen):
 [bold yellow]Navigation & Selection:[/]
   • [bold white]Up / Down Arrow Keys[/]: Scroll through the list of 14 supported AI tools.
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
-  • [bold white]F1 or ?[/]: Toggle this Help screen.
+  • [bold white]H, F1 or ?[/]: Toggle this Help screen.
   • [bold white]S[/]: Toggle Strict Mode.
 
 [bold yellow]The 3 Policy Application Modes:[/]
@@ -236,6 +236,7 @@ class ToolItem(ListItem):
 
 class HardeningApp(App):
     BINDINGS = [
+        ("h", "toggle_help", "Help"),
         ("f1", "toggle_help", "Help"),
         ("question_mark", "toggle_help", "Help"),
         ("d", "view_dlp", "View DLP"),
@@ -449,7 +450,7 @@ class HardeningApp(App):
                 with Horizontal(id="extras-buttons"):
                     yield Button("ai-jail", id="btn-install-jail", variant="success")
                     yield Button("OpenGrep", id="btn-install-opengrep", variant="success")
-                    yield Button("Help (F1)", id="btn-help", variant="default")
+                    yield Button("Help (H)", id="btn-help", variant="default")
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):

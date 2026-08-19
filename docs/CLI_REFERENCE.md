@@ -342,6 +342,7 @@ When launching `python main.py` (or `main.sh` / `main.ps1` without arguments), t
 
 | Key | Action |
 | :---: | :--- |
+| `h` / `F1` / `?` | **Help:** Opens interactive help and controls guide. |
 | `q` | **Quit:** Safely closes the application. |
 | `a` | **Apply Hardening:** Applies the policy to the currently selected tool. |
 | `s` | **Toggle Strict Mode:** Toggles the *Strict Mode* checkbox. |
