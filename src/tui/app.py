@@ -48,6 +48,7 @@ class HelpModal(ModalScreen):
 
 [bold yellow]Core Action Buttons:[/]
   • [bold green]Apply to Selected[/]: Applies hardening policy directly to the highlighted tool.
+  • [bold blue]View DLP Config[/]: Inspect the complete Data Loss Prevention rules and secret exclusions.
   • [bold blue]Apply Installed[/]: Hardens only tools detected and installed on this host.
   • [bold orange3]Apply All[/]: Provisions hardened baselines across all 14 supported tools.
   • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement without altering host files.
@@ -71,6 +72,51 @@ class HelpModal(ModalScreen):
             yield Button("Close Help (Esc)", id="btn-close-help", variant="primary")
 
 
+class DlpModal(ModalScreen):
+    """Interactive Data Loss Prevention (DLP) Inspector Dialog."""
+
+    def __init__(self, policy: HardeningPolicy):
+        super().__init__()
+        self.policy = policy
+
+    def compose(self) -> ComposeResult:
+        dlp_info = self.policy.policies.get("dlp", {})
+        patterns = dlp_info.get("block_sensitive_paths", [])
+        disable_training = dlp_info.get("disable_code_training_sharing", True)
+        mask_secrets = dlp_info.get("mask_secrets", True)
+
+        patterns_formatted = []
+        for p in patterns:
+            patterns_formatted.append(f"  [cyan]•[/] [bold yellow]{p}[/bold yellow]")
+        patterns_str = "\n".join(patterns_formatted) if patterns_formatted else "  [dim]No specific patterns defined[/dim]"
+
+        dlp_text = f"""
+[bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]
+[bold cyan]║      🛡️ Data Loss Prevention (DLP) Security Profile - {self.policy.tool.vendor.upper()}/{self.policy.tool.name.upper()}       ║[/]
+[bold cyan]╚═══════════════════════════════════════════════════════════════════════════╝[/]
+
+[bold yellow]DLP Policy Overview:[/]
+  • [bold white]Tool Category:[/] {self.policy.tool.category.upper()}
+  • [bold white]Prompt Training Ingestion:[/] [bold green]{'BLOCKED (Zero Data Sharing)' if disable_training else 'Allowed'}[/bold green]
+  • [bold white]Real-Time Secret Masking:[/] [bold green]{'ACTIVE (Redacted in Agent Context)' if mask_secrets else 'Inactive'}[/bold green]
+  • [bold white]Total Excluded Path Rules:[/] [bold green]{len(patterns)} glob pattern rules[/bold green]
+
+[bold yellow]Protected File & Path Exclusions (Blocked from AI Prompts & Scans):[/]
+{patterns_str}
+
+[bold yellow]Enforced Cloud & Key Storage Protections:[/]
+  [green]✓[/green] [bold white]SSH Private Keys:[/] `~/.ssh/id_rsa`, `~/.ssh/id_ed25519`, `~/.ssh/known_hosts`
+  [green]✓[/green] [bold white]Cloud Provider Credentials:[/] `~/.aws/credentials`, `~/.kube/config`, `~/.azure`
+  [green]✓[/green] [bold white]GPG Keyrings & Certificates:[/] `~/.gnupg/**`, `*.pem`, `*.key`, `*.pfx`, `*.p12`
+  [green]✓[/green] [bold white]Environment & Token Files:[/] `.env*`, `.git-credentials`, `.netrc`, `.docker/config.json`
+
+[dim]Press Escape or Click Close to return to the main dashboard.[/dim]
+"""
+        with VerticalScroll(id="dlp-container"):
+            yield Static(dlp_text, id="dlp-text")
+            yield Button("Close DLP Inspector (Esc)", id="btn-close-dlp", variant="success")
+
+
 class ToolItem(ListItem):
     def __init__(self, policy: HardeningPolicy):
         super().__init__()
@@ -87,6 +133,7 @@ class HardeningApp(App):
     BINDINGS = [
         ("f1", "toggle_help", "Help"),
         ("question_mark", "toggle_help", "Help"),
+        ("d", "view_dlp", "View DLP"),
         ("q", "quit", "Quit")
     ]
 
@@ -141,18 +188,18 @@ class HardeningApp(App):
         padding: 1;
         border: solid #45475a;
     }
-    #help-container {
-        width: 80%;
-        height: 80%;
+    #help-container, #dlp-container {
+        width: 82%;
+        height: 82%;
         background: #181825;
         border: thick #89b4fa;
         padding: 1;
         align: center middle;
     }
-    #help-text {
+    #help-text, #dlp-text {
         margin-bottom: 1;
     }
-    #btn-close-help {
+    #btn-close-help, #btn-close-dlp {
         width: 100%;
     }
     """
@@ -185,9 +232,10 @@ class HardeningApp(App):
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
-                    yield Static("Select a tool from the catalog to inspect host status and security policies.", id="policy-info")
+                    yield Static("Select a tool from the catalog to inspect host status, security policies, and DLP settings.", id="policy-info")
                 with Horizontal():
                     yield Button("Apply to Selected", id="btn-apply-selected", variant="success")
+                    yield Button("View DLP Config", id="btn-view-dlp", variant="primary")
                     yield Checkbox("Dry Run Mode", id="chk-dry-run")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
                 yield RichLog(id="log-view", highlight=True, markup=True)
@@ -195,7 +243,7 @@ class HardeningApp(App):
 
     def on_mount(self) -> None:
         self.title = "Hardening IA Framework"
-        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Multi-OS Risk Classifier & SAST Active"
+        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Multi-OS Risk Classifier & DLP Active"
 
         log_view = self.query_one("#log-view", RichLog)
         textual_handler = TextualLogHandler(log_view)
@@ -215,6 +263,13 @@ class HardeningApp(App):
 
     def action_toggle_help(self) -> None:
         self.push_screen(HelpModal())
+
+    def action_view_dlp(self) -> None:
+        if self.selected_policy and "dlp" in self.selected_policy.policies:
+            self.push_screen(DlpModal(self.selected_policy))
+        else:
+            log_view = self.query_one("#log-view", RichLog)
+            log_view.write("[bold yellow][!] Please select a tool with active DLP policies first.[/]")
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
@@ -268,7 +323,7 @@ class HardeningApp(App):
 
   [cyan]• Runtime Sandbox Isolation:[/] {'[bold green]ENFORCED (Bypass Disallowed)[/bold green]' if sandbox_enforced else '[yellow]Optional[/yellow]'}
   [cyan]• Zero-Telemetry & Crash Reporting:[/] {'[bold green]SHUTDOWN (DO_NOT_TRACK=1)[/bold green]' if telemetry_off else '[yellow]Enabled[/yellow]'}
-  [cyan]• Data Loss Prevention (DLP):[/] [bold green]{dlp_count} Protected Secret Patterns[/bold green]
+  [cyan]• Data Loss Prevention (DLP):[/] [bold green]{dlp_count} Protected Secret Patterns (Click 'View DLP Config' to inspect)[/bold green]
     Excluding: {dlp_sample}
   [cyan]• OS Filesystem ACL Lockdown:[/] [bold green]Owner Exclusive (chmod 700/600 or Windows NTFS ACL)[/bold green]
 """
@@ -278,11 +333,19 @@ class HardeningApp(App):
         log_view = self.query_one("#log-view", RichLog)
         dry_run = self.query_one("#chk-dry-run", Checkbox).value
 
-        if event.button.id == "btn-close-help":
+        if event.button.id == "btn-close-help" or event.button.id == "btn-close-dlp":
             self.pop_screen()
 
         elif event.button.id == "btn-help":
             self.push_screen(HelpModal())
+
+        elif event.button.id == "btn-view-dlp":
+            if self.selected_policy and "dlp" in self.selected_policy.policies:
+                self.push_screen(DlpModal(self.selected_policy))
+            elif self.selected_policy:
+                log_view.write(f"[bold yellow][!] No DLP configuration defined for {self.selected_policy.tool.name}.[/]")
+            else:
+                log_view.write("[bold red][!] Please select a tool first to view its DLP configuration.[/]")
 
         elif event.button.id == "btn-apply-selected":
             if not self.selected_policy:
