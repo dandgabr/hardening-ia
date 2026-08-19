@@ -26,27 +26,51 @@ def run_cmd(cmd: list, check: bool = True, capture: bool = False, cwd: str = Non
     return subprocess.run(cmd, check=check, text=True, capture_output=capture, cwd=cwd)
 
 
+def is_ai_jail_installed() -> bool:
+    """Checks if ai-jail is already installed and available in the environment."""
+    cargo_bin = Path.home() / ".cargo" / "bin" / ("ai-jail.exe" if platform.system().lower() == "windows" else "ai-jail")
+    local_bin = Path.home() / ".local" / "bin" / "ai-jail"
+    return bool(shutil.which("ai-jail") or cargo_bin.exists() or local_bin.exists())
+
+
+def are_linux_dependencies_installed() -> bool:
+    """Checks if required Linux sandbox dependencies (bubblewrap, git, curl) are already satisfied."""
+    has_bwrap = bool(shutil.which("bwrap") or shutil.which("bubblewrap"))
+    has_git = bool(shutil.which("git"))
+    has_curl = bool(shutil.which("curl"))
+    return has_bwrap and has_git and has_curl
+
+
 def install_linux() -> bool:
-    log("Resolving dependencies on Linux...")
+    log("Checking existing installation and prerequisites on Linux...")
 
-    # 1. Install bubblewrap (bwrap) dependency based on distro package manager
-    pkg_managers = [
-        ("apt-get", ["sudo", "apt-get", "update"], ["sudo", "apt-get", "install", "-y", "bubblewrap", "git", "curl", "build-essential"]),
-        ("pacman", None, ["sudo", "pacman", "-S", "--noconfirm", "bubblewrap", "git", "curl", "base-devel"]),
-        ("dnf", None, ["sudo", "dnf", "install", "-y", "bubblewrap", "git", "curl", "gcc"]),
-        ("zypper", None, ["sudo", "zypper", "install", "-y", "bubblewrap", "git", "curl"])
-    ]
+    # Fast Path: Tool already installed
+    if is_ai_jail_installed():
+        log("[INFO] ai-jail executable is already installed on this host. Skipping dependency installation & build.")
+        return True
 
-    for mgr, prep_cmd, install_cmd in pkg_managers:
-        if shutil.which(mgr):
-            try:
-                log(f"Detected package manager: {mgr}")
-                if prep_cmd:
-                    subprocess.run(prep_cmd, check=False)
-                subprocess.run(install_cmd, check=False)
-                break
-            except Exception as e:
-                log(f"Package manager installation notice: {e}")
+    # 1. Dependency Resolution
+    if are_linux_dependencies_installed():
+        log("[INFO] Prerequisites ('bubblewrap', 'git', 'curl') are already installed. Skipping package manager phase.")
+    else:
+        log("Resolving system dependencies on Linux via package manager...")
+        pkg_managers = [
+            ("apt-get", ["sudo", "apt-get", "update"], ["sudo", "apt-get", "install", "-y", "bubblewrap", "git", "curl", "build-essential"]),
+            ("pacman", None, ["sudo", "pacman", "-S", "--noconfirm", "bubblewrap", "git", "curl", "base-devel"]),
+            ("dnf", None, ["sudo", "dnf", "install", "-y", "bubblewrap", "git", "curl", "gcc"]),
+            ("zypper", None, ["sudo", "zypper", "install", "-y", "bubblewrap", "git", "curl"])
+        ]
+
+        for mgr, prep_cmd, install_cmd in pkg_managers:
+            if shutil.which(mgr):
+                try:
+                    log(f"Detected package manager: {mgr}")
+                    if prep_cmd:
+                        subprocess.run(prep_cmd, check=False)
+                    subprocess.run(install_cmd, check=False)
+                    break
+                except Exception as e:
+                    log(f"Package manager installation notice: {e}")
 
     # 2. Try Homebrew on Linux
     if shutil.which("brew"):
@@ -104,7 +128,10 @@ def install_linux() -> bool:
 
 
 def install_macos() -> bool:
-    log("Resolving dependencies on macOS...")
+    log("Checking existing installation and prerequisites on macOS...")
+    if is_ai_jail_installed():
+        log("[INFO] ai-jail executable is already installed on macOS. Skipping build.")
+        return True
 
     # 1. Prefer Homebrew
     if shutil.which("brew"):

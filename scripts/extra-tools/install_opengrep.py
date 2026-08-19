@@ -49,10 +49,23 @@ def download_file(url: str, dest: Path) -> bool:
         return False
 
 
+def is_opengrep_installed() -> bool:
+    """Checks if OpenGrep is already installed and available in PATH or local bin."""
+    bin_dir = get_target_bin_dir()
+    target_bin = bin_dir / ("opengrep.exe" if platform.system().lower() == "windows" else "opengrep")
+    return bool(shutil.which("opengrep") or target_bin.exists())
+
+
 def install_unix(sys_platform: str) -> bool:
-    log(f"Installing OpenGrep on {sys_platform.upper()}...")
+    log(f"Checking existing installation on {sys_platform.upper()}...")
     bin_dir = get_target_bin_dir()
     target_bin = bin_dir / "opengrep"
+
+    # Fast Path: Check if already installed
+    if is_opengrep_installed():
+        bin_loc = shutil.which("opengrep") or str(target_bin)
+        log(f"[INFO] OpenGrep is already installed and available at: {bin_loc}. Skipping download.")
+        return True
 
     # 1. Try official shell install script
     try:
@@ -65,9 +78,9 @@ def install_unix(sys_platform: str) -> bool:
     except Exception as e:
         log(f"Shell installer notice: {e}")
 
-    # 2. Check if opengrep is already in PATH
+    # 2. Check if opengrep is now in PATH
     if shutil.which("opengrep"):
-        log("[OK] OpenGrep is already installed and available in PATH.")
+        log("[OK] OpenGrep is now available in PATH.")
         return True
 
     # 3. Fetch latest release from GitHub
@@ -118,9 +131,15 @@ def install_unix(sys_platform: str) -> bool:
 
 
 def install_windows() -> bool:
-    log("Installing OpenGrep on Windows...")
+    log("Checking existing installation on Windows...")
     bin_dir = get_target_bin_dir()
     target_exe = bin_dir / "opengrep.exe"
+
+    # Fast Path: Check if already installed
+    if is_opengrep_installed():
+        bin_loc = shutil.which("opengrep") or str(target_exe)
+        log(f"[INFO] OpenGrep is already installed and available at: {bin_loc}. Skipping download.")
+        return True
 
     # 1. Try official PowerShell install script
     try:

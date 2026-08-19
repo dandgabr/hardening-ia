@@ -463,7 +463,13 @@ class HardeningEngine:
                     collected_logs.append(clean_line)
                     logger.info(f"[install-{tool_id}] {clean_line}")
                     lower = clean_line.lower()
-                    if "download" in lower or "fetching" in lower or "cargo" in lower or "brew" in lower:
+                    if "skipping" in lower and ("dependency" in lower or "prerequisite" in lower or "package" in lower):
+                        current_progress = max(current_progress, 70)
+                        yield ("progress", current_progress, "Prerequisites satisfied: Skipping dependency installation...")
+                    elif "already installed" in lower:
+                        current_progress = max(current_progress, 85)
+                        yield ("progress", current_progress, "Component detected: Skipping build phase...")
+                    elif "download" in lower or "fetching" in lower or "cargo" in lower or "brew" in lower:
                         current_progress = min(current_progress + 15, 65)
                         yield ("progress", current_progress, "Downloading and compiling package binaries...")
                     elif "configuring" in lower or "rule" in lower or "setting" in lower:
