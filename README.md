@@ -278,6 +278,7 @@ python main.py -gui
 
 ## 📖 Documentation Index
 
+- [CLI, Commands & Parameters Reference Manual](docs/CLI_REFERENCE.md)
 - [System Architecture](docs/ARCHITECTURE.md)
 - [Enterprise Hardening Guidelines & Threat Model](docs/HARDENING_GUIDELINES.md)
 - [YAML Policy Configuration Specification](docs/CONFIG_SPEC.md)
