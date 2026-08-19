@@ -42,6 +42,21 @@ venv.bak/
 *.key
 *.cert
 *.pfx
+*.p12
+*.pkcs12
+id_rsa*
+id_ed25519*
+id_ecdsa*
+id_dsa*
+*.token
+*.credential*
+*.credentials
+credentials.json
+client_secret*.json
+service-account*.json
+.aws/
+.kube/
+.ssh/
 secrets/
 
 # Logs, backups and databases
