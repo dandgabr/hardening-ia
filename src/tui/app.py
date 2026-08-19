@@ -256,9 +256,9 @@ class HardeningApp(App):
         width: 100%;
     }
     #sidebar {
-        width: 32%;
-        min-width: 28;
-        max-width: 48;
+        width: 35%;
+        min-width: 36;
+        max-width: 52;
         height: 1fr;
         padding: 0 1;
         border-right: solid #45475a;
@@ -288,15 +288,17 @@ class HardeningApp(App):
         margin-bottom: 0;
     }
     #extras-buttons Button {
-        min-width: 6;
-        height: 1;
+        min-width: 8;
+        height: 3;
+        border: none;
         margin-right: 1;
         margin-bottom: 0;
         padding: 0 1;
     }
     Button {
-        min-width: 8;
-        height: 1;
+        min-width: 10;
+        height: 3;
+        border: none;
         margin-right: 1;
         margin-bottom: 0;
         padding: 0 1;
@@ -304,7 +306,8 @@ class HardeningApp(App):
     Checkbox {
         margin: 0 1 0 0;
         padding: 0;
-        height: 1;
+        height: 3;
+        border: none;
     }
     #btn-view-dlp {
         display: none;
@@ -401,7 +404,8 @@ class HardeningApp(App):
     }
     .compact-mode Button {
         min-width: 6;
-        height: 1;
+        height: 3;
+        border: none;
         padding: 0 1;
         margin-right: 1;
         margin-bottom: 0;
