@@ -21,7 +21,7 @@ The following table lists the official configuration keys and their recommended 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/codebuddy/codebuddy/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/codebuddy/codebuddy/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/codebuddy/codebuddy/hardening_policy.yaml`](../../../../configs/tools/codebuddy/codebuddy/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash
