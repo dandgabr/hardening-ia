@@ -10,7 +10,7 @@ from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Button, Static, Label, ListView, ListItem, RichLog, Checkbox, ProgressBar
 from textual.screen import ModalScreen
 from textual.reactive import reactive
-from textual import work
+from textual import events, work
 
 from rich.markup import escape
 
@@ -245,61 +245,78 @@ class HardeningApp(App):
     Screen {
         background: #1e1e2e;
         color: #cdd6f4;
+        overflow: hidden;
     }
     #main-container {
         layout: horizontal;
         height: 1fr;
+        width: 100%;
     }
     #sidebar {
-        width: 36%;
+        width: 32%;
+        min-width: 28;
+        max-width: 48;
         height: 1fr;
-        padding: 1;
+        padding: 0 1;
         border-right: solid #45475a;
     }
     #details-panel {
-        width: 64%;
+        width: 1fr;
+        min-width: 40;
         height: 1fr;
-        padding: 1;
+        padding: 0 1;
     }
     .panel-title {
         text-style: bold;
         color: #89b4fa;
-        margin-bottom: 1;
+        margin-bottom: 0;
         margin-top: 1;
     }
     #tools-list {
         height: 1fr;
+        min-height: 5;
         border: solid #45475a;
         background: #11111b;
     }
     #apply-action-buttons, #remove-action-buttons, #extras-buttons {
         layout: horizontal;
         height: auto;
-        margin-top: 1;
-        margin-bottom: 1;
+        margin-top: 0;
+        margin-bottom: 0;
     }
     Button {
+        min-width: 10;
+        height: 3;
         margin-right: 1;
         margin-bottom: 1;
+        padding: 0 1;
     }
     #btn-view-dlp {
         display: none;
     }
     #log-view {
-        height: 10;
+        height: 1fr;
+        min-height: 5;
+        max-height: 11;
         border: solid #45475a;
         background: #11111b;
-        margin-top: 1;
+        margin-top: 0;
+        margin-bottom: 0;
     }
     #policy-details {
         height: 1fr;
+        min-height: 6;
         background: #11111b;
         padding: 1;
         border: solid #45475a;
     }
     #help-container, #dlp-container, #install-container {
-        width: 84%;
-        height: 84%;
+        width: 90%;
+        max-width: 110;
+        height: 90%;
+        max-height: 38;
+        min-width: 40;
+        min-height: 14;
         background: #181825;
         border: thick #89b4fa;
         padding: 1;
@@ -325,13 +342,69 @@ class HardeningApp(App):
         margin-bottom: 1;
     }
     #install-terminal-log {
-        height: 12;
+        height: 1fr;
+        min-height: 6;
+        max-height: 14;
         border: solid #45475a;
         background: #11111b;
         margin-bottom: 1;
     }
     #btn-close-help, #btn-close-dlp, #btn-close-install {
         width: 100%;
+    }
+
+    /* Responsive Compact Layout for smaller terminals (< 105 cols or < 32 lines) */
+    .compact-mode #main-container {
+        layout: vertical;
+    }
+    .compact-mode #sidebar {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: 9;
+        border-right: none;
+        border-bottom: solid #45475a;
+        padding: 0 1;
+    }
+    .compact-mode #tools-list {
+        height: 5;
+        min-height: 4;
+    }
+    .compact-mode #details-panel {
+        width: 100%;
+        height: 1fr;
+        padding: 0 1;
+    }
+    .compact-mode #policy-details {
+        height: 1fr;
+        min-height: 5;
+        padding: 0 1;
+    }
+    .compact-mode #log-view {
+        height: 5;
+        min-height: 3;
+    }
+    .compact-mode Button {
+        min-width: 8;
+        height: 3;
+        padding: 0 1;
+        margin-right: 1;
+        margin-bottom: 0;
+    }
+    .compact-mode .panel-title {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    /* Ultra-Compact Narrow Layout for narrow screens (< 80 cols) */
+    .narrow-mode Button {
+        min-width: 6;
+        padding: 0 0;
+    }
+    .narrow-mode #help-container, .narrow-mode #dlp-container, .narrow-mode #install-container {
+        width: 98%;
+        height: 96%;
+        padding: 0 1;
     }
     """
 
@@ -355,8 +428,8 @@ class HardeningApp(App):
                 yield ListView(id="tools-list")
                 yield Label("[b]Security Extras & Tools[/b]", classes="panel-title")
                 with Horizontal(id="extras-buttons"):
-                    yield Button("ai-jail", id="btn-install-jail")
-                    yield Button("OpenGrep", id="btn-install-opengrep", variant="primary")
+                    yield Button("ai-jail", id="btn-install-jail", variant="success")
+                    yield Button("OpenGrep", id="btn-install-opengrep", variant="success")
                     yield Button("Help (F1)", id="btn-help", variant="default")
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
@@ -401,6 +474,30 @@ class HardeningApp(App):
         log_view.write(f"[*] Discovered {len(self.policies)} policies ({installed_count} tools detected on host).")
 
         self._update_extras_buttons()
+
+        # Initial responsive class setup
+        if self.size.width < 105 or self.size.height < 32:
+            self.add_class("compact-mode")
+        if self.size.width < 80:
+            self.add_class("narrow-mode")
+
+    def on_resize(self, event: events.Resize) -> None:
+        """Dynamically adjusts responsive classes, layout stacking, and title bar metrics based on viewport."""
+        w = event.size.width
+        h = event.size.height
+
+        if w < 105 or h < 32:
+            self.add_class("compact-mode")
+        else:
+            self.remove_class("compact-mode")
+
+        if w < 80:
+            self.add_class("narrow-mode")
+        else:
+            self.remove_class("narrow-mode")
+
+        installed_count = sum(1 for p in self.policies if p.is_installed) if self.policies else 0
+        self.sub_title = f"Host: {OSDetector.get_os_type().upper()} | Terminal: {w}x{h} | Installed: {installed_count}/{len(self.policies)} | Strict: {'ON' if self.strict_mode else 'OFF'}"
 
     def _update_extras_buttons(self) -> None:
         """Dynamically updates extra tool buttons (label & color variant) based on host installation status."""
