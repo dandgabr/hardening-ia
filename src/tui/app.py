@@ -287,12 +287,24 @@ class HardeningApp(App):
         margin-top: 0;
         margin-bottom: 0;
     }
-    Button {
-        min-width: 10;
-        height: 3;
+    #extras-buttons Button {
+        min-width: 6;
+        height: 1;
         margin-right: 1;
-        margin-bottom: 1;
+        margin-bottom: 0;
         padding: 0 1;
+    }
+    Button {
+        min-width: 8;
+        height: 1;
+        margin-right: 1;
+        margin-bottom: 0;
+        padding: 0 1;
+    }
+    Checkbox {
+        margin: 0 1 0 0;
+        padding: 0;
+        height: 1;
     }
     #btn-view-dlp {
         display: none;
@@ -388,8 +400,8 @@ class HardeningApp(App):
         min-height: 3;
     }
     .compact-mode Button {
-        min-width: 8;
-        height: 3;
+        min-width: 6;
+        height: 1;
         padding: 0 1;
         margin-right: 1;
         margin-bottom: 0;
