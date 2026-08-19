@@ -5,8 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hardening-ia"
 version = "0.1.0"
-description = "Automação e framework para aplicação de hardening em ferramentas de desenvolvimento assistidas por IA"
+description = "Enterprise framework for automating security hardening, DLP, and runtime containment for AI tools"
 readme = "README.md"
+license = {text = "GPL-3.0-only"}
 requires-python = ">=3.9"
 dependencies = [
     "textual>=0.50.0",
