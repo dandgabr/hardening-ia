@@ -13,55 +13,106 @@ from src.core.os_detector import OSDetector
 
 logger = get_logger("code_analyzer")
 
-# Built-in heuristic AST / regex patterns for instant scanning when standalone binary is compiling
+# Built-in heuristic AST / regex patterns for instant scanning
 BUILTIN_PATTERNS = [
+    # OWASP Web / CWE-798
     {
-        "id": "AI-SEC-001",
-        "title": "Hardcoded API Key / Secret",
-        "pattern": r"""(?i)(?:api_key|secret_key|private_key|token|password)\s*=\s*['\"][A-Za-z0-9_\-\.]{16,}['\"]""",
+        "id": "OWASP-A04-CWE-798",
+        "title": "Hardcoded API Key / Token / Secret",
+        "pattern": r"""(?i)(?:api_key|secret_key|private_key|token|password|aws_secret|firebase_token)\s*=\s*['\"][A-Za-z0-9_\-\.]{16,}['\"]""",
         "severity": "HIGH",
         "cwe": "CWE-798",
         "remediation": "Move secrets to environment variables (os.environ.get(...)) or secure secret vaults."
     },
+    # OWASP Web / CWE-78
     {
-        "id": "AI-SEC-002",
-        "title": "Command Injection via shell=True or os.system",
-        "pattern": r"""(?:subprocess\.(?:run|Popen|call|check_output)\([^)]*shell\s*=\s*True|os\.system\([^)]*\))""",
+        "id": "OWASP-A03-CWE-78",
+        "title": "OS Command Injection via shell=True / os.system",
+        "pattern": r"""(?:subprocess\.(?:run|Popen|call|check_output)\([^)]*shell\s*=\s*True|os\.system\([^)]*\)|child_process\.exec\([^)]*\))""",
         "severity": "CRITICAL",
         "cwe": "CWE-78",
         "remediation": "Pass arguments as a list without shell=True, or sanitize with shlex.quote()."
     },
+    # OWASP Web / CWE-94 / CWE-95
     {
-        "id": "AI-SEC-003",
+        "id": "OWASP-A03-CWE-94",
         "title": "Insecure Dynamic Code Execution (eval / exec)",
         "pattern": r"""\b(?:eval|exec)\s*\([^)]+\)""",
         "severity": "HIGH",
-        "cwe": "CWE-95",
+        "cwe": "CWE-94",
         "remediation": "Refactor logic using ast.literal_eval() or explicit dispatch tables."
     },
+    # OWASP Web / CWE-502
     {
-        "id": "AI-SEC-004",
-        "title": "Insecure Deserialization via pickle or unsafe yaml",
-        "pattern": r"""(?:pickle\.loads?|yaml\.load\([^)]*Loader\s*=\s*yaml\.(?:Loader|CLoader))""",
+        "id": "OWASP-A08-CWE-502",
+        "title": "Insecure Deserialization (pickle / unsafe yaml / Marshal)",
+        "pattern": r"""(?:pickle\.loads?|yaml\.load\([^)]*Loader\s*=\s*yaml\.(?:Loader|CLoader)|Marshal\.load|unserialize\()""",
         "severity": "HIGH",
         "cwe": "CWE-502",
-        "remediation": "Use yaml.safe_load() and avoid deserializing untrusted pickle streams."
+        "remediation": "Use yaml.safe_load(), JSON, or signed deserialization tokens."
     },
+    # OWASP Web / CWE-89
     {
-        "id": "AI-SEC-005",
-        "title": "SQL String Formatting / Injection",
-        "pattern": r"""(?i)(?:execute|cursor\.execute)\s*\(\s*f['\"].*(?:SELECT|INSERT|UPDATE|DELETE|DROP)\s+""",
+        "id": "OWASP-A03-CWE-89",
+        "title": "SQL Injection via String Formatting",
+        "pattern": r"""(?i)(?:execute|cursor\.execute|rawQuery|query)\s*\(\s*f?['\"].*(?:SELECT|INSERT|UPDATE|DELETE|DROP)\s+.*[\+\$]""",
         "severity": "CRITICAL",
         "cwe": "CWE-89",
-        "remediation": "Use parameterized query placeholders (?, %s) rather than f-strings."
+        "remediation": "Use parameterized query placeholders (?, %s) rather than string concatenation."
     },
+    # OWASP Web / CWE-79
     {
-        "id": "AI-SEC-006",
-        "title": "Insecure Temporary File Creation",
-        "pattern": r"""(?:mktemp|tempfile\.mktemp)\s*\(""",
-        "severity": "MEDIUM",
-        "cwe": "CWE-377",
-        "remediation": "Use tempfile.NamedTemporaryFile() or tempfile.TemporaryDirectory()."
+        "id": "OWASP-A03-CWE-79",
+        "title": "Cross-Site Scripting (XSS) / dangerouslySetInnerHTML",
+        "pattern": r"""(?:dangerouslySetInnerHTML|document\.write\([^)]+\)|\.innerHTML\s*=\s*[^;\n]+)""",
+        "severity": "HIGH",
+        "cwe": "CWE-79",
+        "remediation": "Sanitize inputs using DOMPurify or framework auto-escaping templates."
+    },
+    # OWASP Web / CWE-918
+    {
+        "id": "OWASP-A10-CWE-918",
+        "title": "Server-Side Request Forgery (SSRF)",
+        "pattern": r"""(?:requests\.(?:get|post)\(\s*[a-zA-Z0-9_]+|urllib\.request\.urlopen\(\s*[a-zA-Z0-9_]+)""",
+        "severity": "WARNING",
+        "cwe": "CWE-918",
+        "remediation": "Validate target URLs against an explicit domain allowlist and block private IP ranges."
+    },
+    # OWASP Mobile / Android M5 / CWE-295
+    {
+        "id": "OWASP-M5-CWE-295",
+        "title": "Insecure TLS Certificate Validation / TrustAll",
+        "pattern": r"""(?:InsecureSkipVerify:\s*true|checkServerTrusted\(\s*\)\s*\{\s*\}|ServerCertificateValidationCallback\s*=)""",
+        "severity": "ERROR",
+        "cwe": "CWE-295",
+        "remediation": "Enable standard system CA validation and certificate pinning."
+    },
+    # OWASP Mobile / Android M8 / CWE-276
+    {
+        "id": "OWASP-M8-CWE-276",
+        "title": "World-Readable SharedPreferences / Insecure File Mode",
+        "pattern": r"""(?:MODE_WORLD_READABLE|MODE_WORLD_WRITEABLE)""",
+        "severity": "HIGH",
+        "cwe": "CWE-276",
+        "remediation": "Use Context.MODE_PRIVATE and EncryptedSharedPreferences."
+    },
+    # CWE-787 / Buffer Overflow (C/C++)
+    {
+        "id": "CWE-787-CWE-119",
+        "title": "Unsafe Buffer Operation (strcpy / sprintf / gets)",
+        "pattern": r"""\b(?:strcpy|strcat|sprintf|gets)\s*\(""",
+        "severity": "HIGH",
+        "cwe": "CWE-787",
+        "remediation": "Replace with bounds-checked alternatives: strncpy_s, snprintf, fgets."
+    },
+    # SCA: Insecure HTTP Repository Registry
+    {
+        "id": "SCA-SUPPLY-CHAIN-001",
+        "title": "Insecure Cleartext Package Registry (HTTP)",
+        "pattern": r"""(?i)http:\/\/(?:pypi\.org|registry\.npmjs\.org|repo\.maven\.apache\.org)""",
+        "severity": "HIGH",
+        "cwe": "CWE-319",
+        "remediation": "Use HTTPS endpoints exclusively for package managers to prevent supply-chain poisoning."
     }
 ]
 

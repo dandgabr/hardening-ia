@@ -1,0 +1,40 @@
+# ==============================================================================
+# Hardening IA - Unified OpenGrep Default Configuration (SAST & SCA)
+# Standards: OWASP Top 10 Web (2021), OWASP API Security (2023), OWASP Mobile / Android,
+#            CWE Top 25 Most Dangerous Weaknesses, Software Composition Analysis (SCA)
+# Languages: TIOBE Top 20 (Python, C, C++, Java, C#, JS, TS, Go, Rust, PHP, SQL, Ruby, Swift, Kotlin, Dart, R, etc.)
+# ==============================================================================
+
+version: "1.0.0"
+metadata:
+  framework: "Hardening IA"
+  description: "Comprehensive SAST & SCA scanning baseline for enterprise AI-assisted coding"
+  compliance:
+    - "OWASP Top 10 Web 2021"
+    - "OWASP API Security Top 10 2023"
+    - "OWASP Mobile Top 10 (Android)"
+    - "CWE Top 25 (2023/2024)"
+    - "TIOBE Top 20 Multi-Language Coverage"
+
+# Paths to include in scan
+include:
+  - "configs/opengrep-rules/owasp-top10-web.yaml"
+  - "configs/opengrep-rules/owasp-top10-api.yaml"
+  - "configs/opengrep-rules/owasp-mobile-android.yaml"
+  - "configs/opengrep-rules/cwe-top25.yaml"
+  - "configs/opengrep-rules/sca-dependencies.yaml"
+  - "configs/opengrep-rules/tiobe-languages-sast.yaml"
+  - "configs/opengrep-rules/ai_code_security.yaml"
+
+# Global Exclusions
+exclude:
+  - ".git"
+  - ".venv"
+  - "venv"
+  - "node_modules"
+  - "logs"
+  - "dist"
+  - "build"
+  - "target"
+  - "*.min.js"
+  - "*.bundle.js"

@@ -1,0 +1,95 @@
+# ==============================================================================
+# OpenGrep Rule Pack: OWASP Mobile Top 10 & Android Security
+# Standards Covered: M1 to M10 (Android, Java, Kotlin, AndroidManifest)
+# Languages: Java, Kotlin, XML, Dart
+# ==============================================================================
+rules:
+  # M1: Improper Credential Usage (Hardcoded API Tokens in Android Apps)
+  - id: owasp-android-m1-hardcoded-api-key
+    pattern-either:
+      - pattern: val $KEY = "..."
+      - pattern: String $KEY = "...";
+    patterns:
+      - pattern-regex: '(?i)(?:google_api_key|aws_secret|firebase_token|oauth_client_secret)\s*=\s*["\"][A-Za-z0-9_\-\.]{20,}["\"]'
+    message: "Hardcoded API key or private client secret in Android application. Extract to Gradle BuildConfig or secure cloud keystore."
+    languages: [java, kotlin]
+    severity: ERROR
+    metadata:
+      owasp: "M1:2024 - Improper Credential Usage"
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # M5: Insecure Communication (TrustAllCertificates / Blind X509TrustManager)
+  - id: owasp-android-m5-insecure-trustmanager
+    pattern-either:
+      - pattern: |
+          class $TM : X509TrustManager {
+              override fun checkClientTrusted(...) {}
+              override fun checkServerTrusted(...) {}
+              override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+          }
+      - pattern: |
+          new X509TrustManager() {
+              public void checkClientTrusted(...) {}
+              public void checkServerTrusted(...) {}
+              public X509Certificate[] getAcceptedIssuers() { return null; }
+          }
+    message: "Empty X509TrustManager implementation disables SSL/TLS certificate verification, enabling Man-in-the-Middle (MitM) attacks."
+    languages: [java, kotlin]
+    severity: ERROR
+    metadata:
+      owasp: "M5:2024 - Insecure Communication"
+      cwe: "CWE-295: Improper Certificate Validation"
+
+  # M5: Insecure Communication (HostnameVerifier bypass)
+  - id: owasp-android-m5-allow-all-hostnames
+    pattern-either:
+      - pattern: HttpsURLConnection.setDefaultHostnameVerifier { _, _ -> true }
+      - pattern: |
+          new HostnameVerifier() {
+              public boolean verify(String hostname, SSLSession session) { return true; }
+          }
+    message: "HostnameVerifier always returns true, disabling TLS hostname validation on mobile network sockets."
+    languages: [java, kotlin]
+    severity: ERROR
+    metadata:
+      owasp: "M5:2024 - Insecure Communication"
+      cwe: "CWE-297: Improper Validation of Certificate with Host Mismatch"
+
+  # M6: Inadequate Privacy Controls (Logging Sensitive Data to Android Logcat)
+  - id: owasp-android-m6-logcat-sensitive-data
+    pattern-either:
+      - pattern: Log.d($TAG, "password: " + $PWD)
+      - pattern: Log.i($TAG, "token: " + $TOKEN)
+      - pattern: Log.v($TAG, "auth: " + $AUTH)
+      - pattern: println("secret: $SECRET")
+    message: "Sensitive user or auth tokens logged to Android system Logcat. Any app with READ_LOGS (or debugging bridge) can intercept credentials."
+    languages: [java, kotlin]
+    severity: WARNING
+    metadata:
+      owasp: "M6:2024 - Inadequate Privacy Controls"
+      cwe: "CWE-532: Insertion of Sensitive Information into Log File"
+
+  # M8: Security Misconfiguration (World-Readable SharedPreferences)
+  - id: owasp-android-m8-world-readable-sharedpreferences
+    pattern-either:
+      - pattern: getSharedPreferences($NAME, Context.MODE_WORLD_READABLE)
+      - pattern: getSharedPreferences($NAME, Context.MODE_WORLD_WRITEABLE)
+      - pattern: openFileOutput($NAME, Context.MODE_WORLD_READABLE)
+    message: "SharedPreferences or internal file created with MODE_WORLD_READABLE/WRITEABLE. Other applications on the device can read and alter private state."
+    languages: [java, kotlin]
+    severity: ERROR
+    metadata:
+      owasp: "M8:2024 - Security Misconfiguration"
+      cwe: "CWE-276: Incorrect Default Permissions"
+
+  # M9: Insecure Data Storage (External SD Card Storage without Encryption)
+  - id: owasp-android-m9-insecure-external-storage
+    pattern-either:
+      - pattern: Environment.getExternalStorageDirectory()
+      - pattern: context.getExternalFilesDir(...)
+    message: "Sensitive data stored on external storage without encryption. Files on external storage are globally accessible and tamper-prone."
+    languages: [java, kotlin]
+    severity: WARNING
+    metadata:
+      owasp: "M9:2024 - Insecure Data Storage"
+      cwe: "CWE-922: Insecure Storage of Sensitive Information"

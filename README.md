@@ -234,4 +234,5 @@ python main.py -gui
 - [Linux Command Execution Risk Matrix](docs/LINUX_COMMAND_POLICY.md)
 - [Windows Command Execution Risk Matrix](docs/WINDOWS_COMMAND_POLICY.md)
 - [macOS Command Execution Risk Matrix](docs/MACOS_COMMAND_POLICY.md)
+- [OpenGrep SAST & SCA Security Ruleset Specification](docs/OPENGREP_SECURITY_CONFIG.md)
 - [Tool Documentation Directory](docs/tools/)

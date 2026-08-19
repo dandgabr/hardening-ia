@@ -1,0 +1,120 @@
+# ==============================================================================
+# OpenGrep Rule Pack: CWE Top 25 Most Dangerous Software Weaknesses
+# Standards Covered: CWE-787, CWE-79, CWE-89, CWE-416, CWE-78, CWE-20, CWE-125,
+#                     CWE-22, CWE-352, CWE-434, CWE-862, CWE-476, CWE-287,
+#                     CWE-190, CWE-502, CWE-77, CWE-119, CWE-798, CWE-918,
+#                     CWE-306, CWE-362, CWE-269, CWE-94, CWE-863, CWE-276
+# ==============================================================================
+rules:
+  # CWE-787 & CWE-119 & CWE-125: Out-of-bounds Write / Buffer Overflow (C / C++)
+  - id: cwe-787-unsafe-buffer-copy-c
+    pattern-either:
+      - pattern: strcpy($DST, $SRC)
+      - pattern: strcat($DST, $SRC)
+      - pattern: sprintf($DST, $FMT, ...)
+      - pattern: gets($BUF)
+    message: "CWE-787 / CWE-119: Unbounded buffer copy operation without bounds checking. Replace with strncpy, snprintf, or safer modern C++ abstractions."
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-787: Out-of-bounds Write"
+      owasp: "A06:2021 - Vulnerable and Outdated Components"
+
+  # CWE-416: Use After Free (C / C++)
+  - id: cwe-416-use-after-free
+    patterns:
+      - pattern: |
+          free($PTR);
+          ...
+          $PTR->$FIELD;
+    message: "CWE-416: Use After Free detected. Pointer dereferenced after being freed."
+    languages: [c, cpp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-416: Use After Free"
+
+  # CWE-476: NULL Pointer Dereference
+  - id: cwe-476-null-dereference
+    pattern-either:
+      - pattern: |
+          $PTR = malloc(...);
+          $PTR->$FIELD = ...;
+    pattern-not-inside:
+      - pattern: |
+          $PTR = malloc(...);
+          if ($PTR == NULL) { ... }
+          ...
+    message: "CWE-476: Pointer dereferenced immediately after allocation without NULL validation check."
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-476: NULL Pointer Dereference"
+
+  # CWE-190: Integer Overflow / Wraparound (C / C++ / Go / Rust)
+  - id: cwe-190-integer-overflow-allocation
+    pattern-either:
+      - pattern: malloc($COUNT * sizeof($TYPE))
+      - pattern: new $TYPE[$COUNT * $SIZE]
+    message: "CWE-190: Integer overflow in buffer allocation calculation. Arithmetic multiplication can wrap around and lead to heap buffer overflow."
+    languages: [c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-190: Integer Overflow or Wraparound"
+
+  # CWE-352: Cross-Site Request Forgery (CSRF - Disabled Protection)
+  - id: cwe-352-csrf-protection-disabled
+    pattern-either:
+      - pattern: @csrf_exempt
+      - pattern: csrf: false
+      - pattern: app.use(csrf({ cookie: false }))
+      - pattern: services.AddAntiforgery(options => options.SuppressXFrameOptionsHeader = true)
+    message: "CWE-352: Cross-Site Request Forgery (CSRF) protection explicitly disabled or exempted on state-changing controller endpoints."
+    languages: [python, javascript, typescript, csharp, ruby, php]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-352: Cross-Site Request Forgery (CSRF)"
+
+  # CWE-434: Unrestricted Upload of Dangerous File Types
+  - id: cwe-434-unrestricted-file-upload
+    pattern-either:
+      - pattern: $FILE.save(os.path.join($UPLOAD_DIR, $FILE.filename))
+      - pattern: $FILE.mv(path.join($UPLOAD_DIR, $FILE.name))
+      - pattern: move_uploaded_file($_FILES['...']['tmp_name'], $PATH . $_FILES['...']['name'])
+    message: "CWE-434: Unrestricted file upload with user-supplied filename. Attackers can upload executable web shells (.php, .jsp, .py, .exe) or traverse directories."
+    languages: [python, javascript, typescript, php, java, csharp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-434: Unrestricted Upload of Dangerous File Types"
+
+  # CWE-362: Race Condition / Concurrent Execution (TOCTOU)
+  - id: cwe-362-toctou-file-race
+    pattern-either:
+      - pattern: |
+          if os.path.exists($PATH):
+              ...
+              open($PATH, ...)
+      - pattern: |
+          if (fs.existsSync($PATH)) {
+              ...
+              fs.readFileSync($PATH);
+          }
+    message: "CWE-362: Time-of-check to time-of-use (TOCTOU) race condition on filesystem path. Use atomic open with O_CREAT | O_EXCL flags or file locking."
+    languages: [python, javascript, typescript, c, cpp]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization ('Race Condition')"
+
+  # CWE-94: Code Injection (Dynamic Evaluation in Python/JS/PHP/Ruby)
+  - id: cwe-94-code-injection-dynamic-eval
+    pattern-either:
+      - pattern: eval($PAYLOAD)
+      - pattern: Function($PAYLOAD)()
+      - pattern: new Function($ARG, $PAYLOAD)
+      - pattern: eval(params[:code])
+    pattern-not:
+      - pattern: eval("...")
+    message: "CWE-94: Code Injection vulnerability through dynamic string evaluation. User-controlled payload executed directly inside runtime interpreter."
+    languages: [python, javascript, typescript, ruby, php]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-94: Improper Control of Generation of Code ('Code Injection')"

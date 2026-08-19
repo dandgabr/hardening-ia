@@ -1,0 +1,45 @@
+# ==============================================================================
+# OpenGrep Rule Pack: Software Composition Analysis (SCA) & Supply Chain Security
+# Targets: requirements.txt, package.json, pom.xml, go.mod, Cargo.toml, Gemfile, composer.json
+# ==============================================================================
+rules:
+  # Insecure Package Index / HTTP Repository URL (Python pip, npm, Maven, Nuget)
+  - id: sca-insecure-http-repository
+    pattern-regex: '(?i)(?:http:\/\/pypi\.|http:\/\/registry\.npmjs\.org|http:\/\/repo\.maven\.apache\.org|http:\/\/api\.nuget\.org)'
+    message: "Supply Chain Risk: Insecure unencrypted HTTP registry configured for package management. Upstream dependencies can be intercepted or poisoned."
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      owasp: "A06:2021 - Vulnerable and Outdated Components"
+      cwe: "CWE-319: Cleartext Transmission of Sensitive Information"
+
+  # Unpinned Wildcard Dependencies in package.json / requirements.txt
+  - id: sca-unpinned-wildcard-dependency
+    patterns:
+      - pattern-regex: '(?i)"[a-zA-Z0-9_\-\.\/]+":\s*"\*"'
+    message: "Wildcard dependency ('*') detected in package manifest. Builds are not deterministic and vulnerable to breaking changes or supply-chain injections."
+    languages: [json]
+    severity: WARNING
+    metadata:
+      owasp: "A06:2021 - Vulnerable and Outdated Components"
+      cwe: "CWE-1104: Use of Unmaintained Third Party Components"
+
+  # Insecure pip install flags (e.g. --trusted-host or --extra-index-url without pins)
+  - id: sca-insecure-pip-trusted-host
+    pattern-regex: '(?i)--trusted-host\s+[a-zA-Z0-9\.\-]+'
+    message: "Insecure pip option '--trusted-host' disables TLS certificate verification during Python package resolution."
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      owasp: "A06:2021 - Vulnerable and Outdated Components"
+      cwe: "CWE-295: Improper Certificate Validation"
+
+  # Git / SSH untracked repository dependency without commit hash lock
+  - id: sca-unlocked-git-dependency
+    pattern-regex: '(?i)git\+(?:https?|ssh):\/\/[^#\n]+(?<!#[a-f0-9]{40})$'
+    message: "Git dependency without exact commit SHA pinning. Upstream branch updates can introduce unreviewed code into builds."
+    languages: [generic]
+    severity: WARNING
+    metadata:
+      owasp: "A06:2021 - Vulnerable and Outdated Components"
+      cwe: "CWE-829: Inclusion of Functionality from Untrusted Control Sphere"

@@ -1,0 +1,206 @@
+# ==============================================================================
+# OpenGrep Rule Pack: OWASP Top 10 Web Application Security (2021)
+# Standards Covered: A01 to A10 (Web Applications)
+# Languages: Python, JavaScript, TypeScript, Java, C#, PHP, Go, Ruby
+# ==============================================================================
+rules:
+  # A01: Broken Access Control (Path Traversal / Arbitrary File Access)
+  - id: owasp-web-a01-path-traversal
+    patterns:
+      - pattern-either:
+          - pattern: open(..., $PATH, ...)
+          - pattern: os.path.join(..., $USER_INPUT)
+          - pattern: fs.readFile($PATH, ...)
+          - pattern: fs.readFileSync($PATH, ...)
+          - pattern: File.Open($PATH)
+          - pattern: new File($PATH)
+      - pattern-not: open("...", ...)
+      - pattern-not: fs.readFile("...", ...)
+    message: "Potential Path Traversal / Arbitrary File Access. Ensure user-supplied paths are sanitized and resolved using safe base directories."
+    languages: [python, javascript, typescript, java, csharp, php, go]
+    severity: ERROR
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')"
+
+  # A01: Broken Access Control (CORS Wildcard with Credentials)
+  - id: owasp-web-a01-cors-wildcard-credentials
+    pattern-either:
+      - pattern: |
+          Access-Control-Allow-Origin: *
+          Access-Control-Allow-Credentials: true
+      - pattern: res.header("Access-Control-Allow-Origin", "*")
+      - pattern: response.headers["Access-Control-Allow-Origin"] = "*"
+      - pattern: context.Response.Headers.Add("Access-Control-Allow-Origin", "*")
+    message: "Insecure CORS configuration: Wildcard Origin combined with credentials allows cross-origin unauthorized data access."
+    languages: [python, javascript, typescript, java, csharp, php, go]
+    severity: ERROR
+    metadata:
+      owasp: "A01:2021 - Broken Access Control"
+      cwe: "CWE-942: Permissive Cross-Domain Policy with Untrusted Domains"
+
+  # A02: Cryptographic Failures (Weak Hash Functions)
+  - id: owasp-web-a02-weak-hash-algorithm
+    pattern-either:
+      - pattern: hashlib.md5(...)
+      - pattern: hashlib.sha1(...)
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA-1")
+      - pattern: MD5.Create(...)
+      - pattern: SHA1.Create(...)
+      - pattern: md5(...)
+      - pattern: sha1(...)
+    message: "Use of broken/weak cryptographic hash function (MD5 / SHA-1). Use SHA-256, SHA-3, or password-hashing algorithms (Argon2, bcrypt, PBKDF2)."
+    languages: [python, javascript, typescript, java, csharp, php, go, c, cpp]
+    severity: WARNING
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-328: Use of Weak Hash"
+
+  # A02: Cryptographic Failures (ECB Mode or Static Key)
+  - id: owasp-web-a02-insecure-cipher-mode
+    pattern-either:
+      - pattern: Cipher.getInstance("AES/ECB/...")
+      - pattern: AES.new($KEY, AES.MODE_ECB)
+      - pattern: CipherMode.ECB
+    message: "Insecure cipher mode detected (AES in ECB mode leaks pattern structure). Use AES-GCM or authenticated encryption."
+    languages: [python, java, csharp, c, cpp]
+    severity: ERROR
+    metadata:
+      owasp: "A02:2021 - Cryptographic Failures"
+      cwe: "CWE-327: Use of a Broken or Risky Cryptographic Algorithm"
+
+  # A03: Injection (SQL Injection via String Concatenation or F-strings)
+  - id: owasp-web-a03-sql-injection
+    pattern-either:
+      - pattern: $DB.execute(f"SELECT ... {$VAR} ...")
+      - pattern: $DB.execute(f"INSERT ... {$VAR} ...")
+      - pattern: $DB.execute(f"UPDATE ... {$VAR} ...")
+      - pattern: $DB.execute(f"DELETE ... {$VAR} ...")
+      - pattern: $DB.rawQuery("SELECT ... " + $VAR, ...)
+      - pattern: $DB.query("SELECT ... " + $VAR)
+      - pattern: db.Query("SELECT ... " + $VAR)
+      - pattern: $CONN->query("SELECT ... " . $VAR)
+    message: "SQL Injection vulnerability: Dynamic SQL query constructed via string formatting or concatenation. Use parameterized queries or prepared statements."
+    languages: [python, javascript, typescript, java, csharp, php, go, ruby]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"
+
+  # A03: Injection (Command Injection)
+  - id: owasp-web-a03-command-injection
+    pattern-either:
+      - pattern: subprocess.run($CMD, ..., shell=True, ...)
+      - pattern: subprocess.Popen($CMD, ..., shell=True, ...)
+      - pattern: os.system($CMD)
+      - pattern: exec($CMD)
+      - pattern: child_process.exec($CMD, ...)
+      - pattern: Runtime.getRuntime().exec($CMD)
+      - pattern: Process.Start($CMD)
+      - pattern: system($CMD)
+      - pattern: shell_exec($CMD)
+      - pattern: exec.Command("sh", "-c", $CMD)
+    pattern-not:
+      - pattern: subprocess.run("...", ..., shell=True, ...)
+      - pattern: os.system("...")
+      - pattern: child_process.exec("...", ...)
+    message: "Command Injection: Executing shell commands with dynamic user input. Pass arguments as a discrete array without shell invocation."
+    languages: [python, javascript, typescript, java, csharp, php, go, ruby, c, cpp]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-78: Improper Neutralization of Special Elements used in an OS Command ('OS Command Injection')"
+
+  # A03: Injection (Cross-Site Scripting - XSS)
+  - id: owasp-web-a03-cross-site-scripting
+    pattern-either:
+      - pattern: dangerouslySetInnerHTML={{ __html: $INPUT }}
+      - pattern: document.write($INPUT)
+      - pattern: $ELEM.innerHTML = $INPUT
+      - pattern: $RESPONSE.write("<script>" + $INPUT)
+      - pattern: echo $_GET[...]
+    message: "Cross-Site Scripting (XSS) vulnerability detected. Unsanitized user input is injected into the DOM or HTML response stream."
+    languages: [javascript, typescript, php, java, csharp]
+    severity: ERROR
+    metadata:
+      owasp: "A03:2021 - Injection"
+      cwe: "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"
+
+  # A04: Insecure Design (Hardcoded Secrets and Private Keys)
+  - id: owasp-web-a04-hardcoded-secret
+    pattern-either:
+      - pattern: $API_KEY = "..."
+      - pattern: private_key: "..."
+      - pattern: client_secret = "..."
+      - pattern: AWS_SECRET_ACCESS_KEY = "..."
+    message: "Hardcoded secret or API credential detected in source code. Store secrets in environment variables or hardware security modules (HSM)."
+    languages: [python, javascript, typescript, java, csharp, php, go, ruby, rust]
+    severity: ERROR
+    metadata:
+      owasp: "A04:2021 - Insecure Design"
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # A05: Security Misconfiguration (Debug Mode in Production)
+  - id: owasp-web-a05-debug-mode-enabled
+    pattern-either:
+      - pattern: app.run(..., debug=True, ...)
+      - pattern: DEBUG = True
+      - pattern: app.use(errorHandler({ dumpExceptions: true, showStack: true }))
+      - pattern: <customErrors mode="Off"/>
+    message: "Application debug mode enabled. Verbose stack traces and debug shells expose internal architecture and memory state."
+    languages: [python, javascript, typescript, csharp]
+    severity: WARNING
+    metadata:
+      owasp: "A05:2021 - Security Misconfiguration"
+      cwe: "CWE-209: Generation of Error Message Containing Sensitive Information"
+
+  # A07: Identification and Authentication Failures (JWT None Algorithm)
+  - id: owasp-web-a07-jwt-none-algorithm
+    pattern-either:
+      - pattern: jwt.decode($TOKEN, ..., algorithms=['none'], ...)
+      - pattern: jwt.verify($TOKEN, $KEY, { algorithms: ['none'] })
+      - pattern: jwt.decode($TOKEN, verify=False)
+    message: "JWT signature verification disabled or configured with 'none' algorithm. This allows authentication token forgery."
+    languages: [python, javascript, typescript, java, csharp, go]
+    severity: ERROR
+    metadata:
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      cwe: "CWE-287: Improper Authentication"
+
+  # A08: Software and Data Integrity Failures (Insecure Deserialization)
+  - id: owasp-web-a08-insecure-deserialization
+    pattern-either:
+      - pattern: pickle.loads(...)
+      - pattern: yaml.load(..., Loader=yaml.Loader)
+      - pattern: yaml.load(..., Loader=yaml.CLoader)
+      - pattern: new ObjectInputStream(...)
+      - pattern: BinaryFormatter.Deserialize(...)
+      - pattern: unserialize($DATA)
+    message: "Insecure deserialization of untrusted payloads enables Remote Code Execution (RCE). Use safe serializers like JSON or yaml.safe_load."
+    languages: [python, java, csharp, php, ruby]
+    severity: ERROR
+    metadata:
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  # A10: Server-Side Request Forgery (SSRF)
+  - id: owasp-web-a10-ssrf-unvalidated-url
+    pattern-either:
+      - pattern: requests.get($USER_URL, ...)
+      - pattern: requests.post($USER_URL, ...)
+      - pattern: urllib.request.urlopen($USER_URL)
+      - pattern: http.Get($USER_URL)
+      - pattern: fetch($USER_URL)
+      - pattern: axios.get($USER_URL)
+    pattern-not:
+      - pattern: requests.get("https://...", ...)
+      - pattern: fetch("https://...", ...)
+    message: "Potential Server-Side Request Forgery (SSRF): HTTP client requests constructed with unvalidated external URLs. Validate against an explicit domain allowlist."
+    languages: [python, javascript, typescript, java, csharp, php, go]
+    severity: WARNING
+    metadata:
+      owasp: "A10:2021 - Server-Side Request Forgery (SSRF)"
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"

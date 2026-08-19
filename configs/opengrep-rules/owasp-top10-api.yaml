@@ -1,0 +1,92 @@
+# ==============================================================================
+# OpenGrep Rule Pack: OWASP API Security Top 10 (2023)
+# Standards Covered: API1 to API10 (REST, GraphQL, gRPC endpoints)
+# Languages: Python, JavaScript, TypeScript, Java, C#, Go, Ruby, PHP
+# ==============================================================================
+rules:
+  # API1: Broken Object Level Authorization (BOLA / IDOR)
+  - id: owasp-api-api1-bola-unauthorized-db-access
+    patterns:
+      - pattern-either:
+          - pattern: $MODEL.objects.get(id=$ID)
+          - pattern: $DB.findById($ID)
+          - pattern: $REPO.GetByID($ID)
+      - pattern-not-inside:
+          - pattern: |
+              ...
+              if $OBJ.user_id != $CURRENT_USER:
+                  ...
+    message: "Potential Broken Object Level Authorization (BOLA/IDOR): Object retrieved directly by ID without verifying current requester ownership."
+    languages: [python, javascript, typescript, java, csharp, go]
+    severity: WARNING
+    metadata:
+      owasp: "API1:2023 - Broken Object Level Authorization"
+      cwe: "CWE-639: Authorization Bypass Through User-Controlled Key"
+
+  # API2: Broken Authentication (Missing Auth Decorator / Middleware)
+  - id: owasp-api-api2-unprotected-endpoint
+    pattern-either:
+      - pattern: |
+          @app.route("/api/admin/...", methods=...)
+          def $FUNC(...):
+              ...
+      - pattern: |
+          app.get("/api/admin/...", (req, res) => {
+              ...
+          })
+    pattern-not-inside:
+      - pattern: |
+          @authenticate
+          ...
+      - pattern: |
+          @jwt_required
+          ...
+    message: "Administrative API endpoint declared without explicit authentication middleware or decorator."
+    languages: [python, javascript, typescript]
+    severity: ERROR
+    metadata:
+      owasp: "API2:2023 - Broken Authentication"
+      cwe: "CWE-306: Missing Authentication for Critical Function"
+
+  # API3: Broken Object Property Level Authorization (Mass Assignment)
+  - id: owasp-api-api3-mass-assignment
+    pattern-either:
+      - pattern: $MODEL.update(req.body)
+      - pattern: $USER.update_attributes(params[:user])
+      - pattern: $DB.Users.Update(model)
+      - pattern: Object.assign($TARGET, req.body)
+    message: "Mass Assignment vulnerability: Request payload bound directly to domain/data model without field filtering (DTO allowlisting)."
+    languages: [python, javascript, typescript, csharp, ruby, php]
+    severity: WARNING
+    metadata:
+      owasp: "API3:2023 - Broken Object Property Level Authorization"
+      cwe: "CWE-915: Improperly Controlled Modification of Dynamically-Determined Object Attributes"
+
+  # API4: Unrestricted Resource Consumption (Missing Pagination / Limit)
+  - id: owasp-api-api4-unbounded-query-pagination
+    pattern-either:
+      - pattern: $DB.query("SELECT * FROM ...")
+      - pattern: $MODEL.objects.all()
+      - pattern: $MODEL.find()
+      - pattern: db.Find(&$RESULTS)
+    pattern-not:
+      - pattern: $MODEL.objects.all()[:$LIMIT]
+      - pattern: $MODEL.find().limit($N)
+    message: "Unrestricted Resource Consumption: API query returns unbounded dataset without pagination or max limit constraints."
+    languages: [python, javascript, typescript, java, go, ruby]
+    severity: WARNING
+    metadata:
+      owasp: "API4:2023 - Unrestricted Resource Consumption"
+      cwe: "CWE-770: Allocation of Resources Without Limits or Throttling"
+
+  # API8: Security Misconfiguration (Verbose GraphQL Introspection or Open Swagger)
+  - id: owasp-api-api8-graphql-introspection-enabled
+    pattern-either:
+      - pattern: GraphQLServer(..., introspection=True, ...)
+      - pattern: ApolloServer(..., introspection: true, ...)
+    message: "GraphQL schema introspection enabled in production. Attackers can map entire internal schema, mutations, and field relationships."
+    languages: [python, javascript, typescript]
+    severity: WARNING
+    metadata:
+      owasp: "API8:2023 - Security Misconfiguration"
+      cwe: "CWE-200: Exposure of Sensitive Information to an Unauthorized Actor"

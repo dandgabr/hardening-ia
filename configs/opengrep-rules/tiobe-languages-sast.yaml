@@ -1,0 +1,87 @@
+# ==============================================================================
+# OpenGrep Rule Pack: TIOBE Top 20 Languages Multi-Platform SAST Rules
+# Languages Covered: Python, C, C++, Java, C#, JavaScript, TypeScript, Go, Rust,
+#                    PHP, SQL, Ruby, Swift, Kotlin, R, Fortran, MATLAB, Dart
+# ==============================================================================
+rules:
+  # Go: Insecure TLS MinVersion / InsecureSkipVerify
+  - id: tiobe-go-tls-insecure-skip-verify
+    pattern-either:
+      - pattern: |
+          &tls.Config{
+              ...,
+              InsecureSkipVerify: true,
+              ...
+          }
+      - pattern: |
+          $CFG.InsecureSkipVerify = true
+    message: "Go: InsecureSkipVerify=true disables TLS certificate validation, exposing network calls to MitM attacks."
+    languages: [go]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-295: Improper Certificate Validation"
+      owasp: "A02:2021 - Cryptographic Failures"
+
+  # Rust: Unsafe Block without Invariant Validation
+  - id: tiobe-rust-unsafe-raw-pointer-deref
+    pattern: |
+      unsafe {
+          ...
+          *$PTR
+          ...
+      }
+    message: "Rust: Unsafe block dereferencing raw pointer. Ensure memory bounds, alignment, and lifetime guarantees are explicitly enforced."
+    languages: [rust]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-119: Improper Restriction of Operations within the Bounds of a Memory Buffer"
+
+  # PHP: Remote File Inclusion / Insecure Include
+  - id: tiobe-php-insecure-file-include
+    pattern-either:
+      - pattern: include($_GET[...]);
+      - pattern: require($_POST[...]);
+      - pattern: include_once($_REQUEST[...]);
+      - pattern: require_once($FILE);
+    pattern-not:
+      - pattern: include("...");
+      - pattern: require("...");
+    message: "PHP: Remote File Inclusion (RFI) / Local File Inclusion (LFI) vulnerability. Dynamic file inclusion based on user parameters."
+    languages: [php]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-98: Improper Control of Filename for Include/Require Statement in PHP Program"
+      owasp: "A03:2021 - Injection"
+
+  # Ruby: Insecure Object Deserialization via Marshal
+  - id: tiobe-ruby-insecure-marshal-load
+    pattern-either:
+      - pattern: Marshal.load($DATA)
+      - pattern: Marshal.restore($DATA)
+    message: "Ruby: Insecure deserialization using Marshal.load. Untrusted data streams can execute arbitrary Ruby objects and remote code."
+    languages: [ruby]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+
+  # C#: Disable Certificate Validation in ServicePointManager
+  - id: tiobe-csharp-disable-cert-validation
+    pattern: |
+      ServicePointManager.ServerCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true;
+    message: "C#: ServerCertificateValidationCallback unconditionally returns true, permitting invalid SSL certificates."
+    languages: [csharp]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-295: Improper Certificate Validation"
+
+  # SQL: Dynamic Procedure / Stored Proc Injection
+  - id: tiobe-sql-exec-dynamic-string
+    pattern-either:
+      - pattern: EXEC('SELECT ' + @VAR)
+      - pattern: EXECUTE IMMEDIATE 'SELECT ' || $VAR;
+      - pattern: sp_executesql @DYNAMIC_STMT
+    message: "SQL: Dynamic SQL statement execution inside stored procedure / dialect script without sanitization."
+    languages: [generic]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-89: SQL Injection"
