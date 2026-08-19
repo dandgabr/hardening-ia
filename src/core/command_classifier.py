@@ -329,11 +329,14 @@ class CommandRiskClassifier:
             return LINUX_COMMANDS
 
     @classmethod
-    def classify_command(cls, raw_command: str, os_type: str = None) -> Tuple[RiskLevel, bool, str]:
+    def classify_command(cls, raw_command: str, os_type: str = None, strict_mode: bool = False) -> Tuple[RiskLevel, bool, str]:
         """
         Evaluates a raw shell command line against the OS risk matrix.
+        In strict mode, critical destructive patterns and dangerous path access are blocked immediately without prompting.
         Returns: (RiskLevel, requires_approval, reasoning)
         """
+        from src.core.security_policy import SecurityPolicyManager
+
         if os_type is None:
             os_type = OSDetector.get_os_type()
 
@@ -341,17 +344,42 @@ class CommandRiskClassifier:
         if not stripped:
             return RiskLevel.LOW, False, "Empty command"
 
-        # 1. Check global destructive anti-patterns
-        for pattern in GLOBAL_DANGEROUS_PATTERNS:
+        # 1. Check global and OS-specific destructive anti-patterns
+        all_patterns = list(GLOBAL_DANGEROUS_PATTERNS) + SecurityPolicyManager.get_critical_denied_patterns_for_os(os_type)
+        for pattern in all_patterns:
             if re.search(pattern, stripped, re.IGNORECASE):
-                return (
-                    RiskLevel.CRITICAL,
-                    True,
-                    f"Command matches critical destructive anti-pattern: {pattern}"
-                )
+                if strict_mode:
+                    return (
+                        RiskLevel.CRITICAL,
+                        False,
+                        f"[STRICT BLOCKED] Command matches critical destructive anti-pattern: {pattern}. Blocked immediately without prompting."
+                    )
+                else:
+                    return (
+                        RiskLevel.CRITICAL,
+                        True,
+                        f"Command matches critical destructive anti-pattern: {pattern}. Requires explicit multi-step confirmation."
+                    )
 
-        # 2. Extract base command
+        # 2. Check for dangerous OS paths within command arguments
         tokens = stripped.split()
+        for token in tokens[1:]:
+            clean_token = token.strip("'\"`=,;")
+            if clean_token and SecurityPolicyManager.is_dangerous_path(clean_token, os_type):
+                if strict_mode:
+                    return (
+                        RiskLevel.CRITICAL,
+                        False,
+                        f"[STRICT BLOCKED] Command accesses dangerous OS path '{clean_token}'. Blocked immediately without prompting."
+                    )
+                else:
+                    return (
+                        RiskLevel.HIGH,
+                        True,
+                        f"Command accesses sensitive OS path '{clean_token}'. Requires explicit user confirmation before accessing."
+                    )
+
+        # 3. Extract base command
         cmd = tokens[0].lower()
 
         # Handle execution wrappers (sudo, doas, powershell -command, etc.)
@@ -377,11 +405,15 @@ class CommandRiskClassifier:
             # Default unknown command to MEDIUM risk to guarantee human safety
             risk = RiskLevel.MEDIUM
 
-        # Policy: Low risk runs without approval. Medium, High, and Critical REQUIRE explicit user approval.
-        requires_approval = (risk != RiskLevel.LOW)
-
-        reasoning = f"[{os_type.upper()}] Command '{cmd}' is classified as {risk.value} risk. " + (
-            "Requires user approval before execution." if requires_approval else "Permitted for automatic execution."
-        )
+        # Policy evaluation:
+        if risk == RiskLevel.CRITICAL and strict_mode:
+            requires_approval = False
+            reasoning = f"[STRICT BLOCKED] [{os_type.upper()}] Command '{cmd}' is classified as CRITICAL. Blocked immediately without prompting."
+        elif risk != RiskLevel.LOW:
+            requires_approval = True
+            reasoning = f"[{os_type.upper()}] Command '{cmd}' is classified as {risk.value} risk. Requires user approval before execution."
+        else:
+            requires_approval = False
+            reasoning = f"[{os_type.upper()}] Command '{cmd}' is classified as LOW risk. Permitted for automatic execution."
 
         return risk, requires_approval, reasoning

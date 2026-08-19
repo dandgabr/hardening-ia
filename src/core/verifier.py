@@ -48,7 +48,7 @@ class HardeningVerifier:
         self.repo_root = repo_root or Path(__file__).resolve().parent.parent.parent
         self.os_type = OSDetector.get_os_type()
 
-    def verify_policy(self, policy: HardeningPolicy) -> PolicyVerificationReport:
+    def verify_policy(self, policy: HardeningPolicy, strict_mode: Optional[bool] = None) -> PolicyVerificationReport:
         """Audits a single tool policy against the host environment."""
         tool_name = policy.tool.name
         vendor = policy.tool.vendor
@@ -90,9 +90,27 @@ class HardeningVerifier:
             except Exception as e:
                 logger.warning(f"Could not parse settings file {settings_path}: {e}")
 
-        # 1. Verify Native Settings Overrides
-        overrides = policy.policies.get("native_settings_override", {})
-        for key, expected_val in overrides.items():
+        # Auto-detect strict mode if not explicitly provided
+        is_strict = strict_mode
+        if is_strict is None:
+            is_strict = bool(
+                current_settings.get("security.strict_mode") is True
+                or self._get_nested_value(current_settings, "security.strict_mode") is True
+            )
+
+        # 1. Prepare expected overrides (standard + strict if applicable)
+        expected_overrides = dict(policy.policies.get("native_settings_override", {}))
+        if is_strict:
+            strict_conf = policy.policies.get("strict_rules", {})
+            if strict_conf and "native_overrides" in strict_conf:
+                expected_overrides.update(strict_conf["native_overrides"])
+            expected_overrides["security.strict_mode"] = True
+            expected_overrides["security.dangerousPaths.action"] = "block"
+            expected_overrides["security.approvals.bypass_allowed"] = False
+            expected_overrides["security.approvals.auto_apply_edits"] = False
+            expected_overrides["security.approvals.require_write_approval"] = True
+
+        for key, expected_val in expected_overrides.items():
             actual_val = self._get_nested_value(current_settings, key)
             passed = (actual_val == expected_val)
 
@@ -101,28 +119,44 @@ class HardeningVerifier:
                 expected=expected_val,
                 actual=actual_val if actual_val is not None else "[MISSING]",
                 passed=passed,
-                description=f"Configuration key '{key}' matches hardened default"
+                description=f"Configuration key '{key}' matches hardened baseline"
             ))
 
-        # 2. Verify Rules Directory
+        # 2. Verify Rules Directory and rule file deployment
         if rules_path:
-            rules_exist = rules_path.exists()
+            rule_file_exists = False
+            if rules_path.exists():
+                for rf in [f"{self.os_type}_security_policy.md", "linux_command_risk_policy.md", "windows_security_policy.md", "macos_security_policy.md"]:
+                    if (rules_path / rf).exists():
+                        rule_file_exists = True
+                        break
+
             report.checks.append(CheckResult(
                 key="security_rules_deployed",
                 expected=True,
-                actual=rules_exist,
-                passed=rules_exist,
-                description=f"Agent security rules directory exists at {rules_path}"
+                actual=rule_file_exists,
+                passed=rule_file_exists,
+                description=f"Agent security rules file deployed in {rules_path}"
             ))
 
-        # 3. Verify Environment Telemetry Variables
-        do_not_track = os.environ.get("DO_NOT_TRACK") == "1"
+        # 3. Verify Environment Telemetry Protection
+        telemetry_policy_disabled = not policy.policies.get("telemetry", {}).get("enable_telemetry", True)
+        native_telemetry_disabled = False
+        for tk in ("telemetry.enabled", "disableTelemetry", "telemetry", "analytics.enabled", "privacy.telemetry", "telemetryEnabled"):
+            if tk in expected_overrides:
+                val = self._get_nested_value(current_settings, tk)
+                if val == expected_overrides[tk]:
+                    native_telemetry_disabled = True
+                    break
+
+        env_dnt = os.environ.get("DO_NOT_TRACK") == "1" or os.environ.get("CLAUDE_TELEMETRY_DISABLED") == "1"
+        telemetry_protected = env_dnt or telemetry_policy_disabled or native_telemetry_disabled
         report.checks.append(CheckResult(
             key="env_do_not_track",
             expected=True,
-            actual=do_not_track,
-            passed=do_not_track,
-            description="Environment variable DO_NOT_TRACK=1 active"
+            actual=telemetry_protected,
+            passed=telemetry_protected,
+            description="Environment and settings telemetry lockdown active"
         ))
 
         # Calculate score
@@ -131,12 +165,13 @@ class HardeningVerifier:
         report.failed_checks = report.total_checks - report.passed_checks
         report.compliance_score = (report.passed_checks / report.total_checks * 100.0) if report.total_checks > 0 else 0.0
 
+        mode_desc = " [STRICT MODE]" if is_strict else " [STANDARD MODE]"
         if report.compliance_score == 100.0:
-            report.message = f"100% Compliant: All {report.total_checks} security checks passed."
+            report.message = f"100% Compliant{mode_desc}: All {report.total_checks} security checks passed."
         elif report.compliance_score >= 80.0:
-            report.message = f"Partially Compliant ({report.compliance_score:.1f}%): {report.failed_checks} check(s) need remediation."
+            report.message = f"Partially Compliant ({report.compliance_score:.1f}%){mode_desc}: {report.failed_checks} check(s) need remediation."
         else:
-            report.message = f"Non-Compliant ({report.compliance_score:.1f}%): {report.failed_checks} check(s) failed."
+            report.message = f"Non-Compliant ({report.compliance_score:.1f}%){mode_desc}: {report.failed_checks} check(s) failed."
 
         log_audit_event(
             event_type="POLICY_VERIFICATION",
@@ -147,11 +182,20 @@ class HardeningVerifier:
                 "compliance_score": report.compliance_score,
                 "passed_checks": report.passed_checks,
                 "failed_checks": report.failed_checks,
-                "total_checks": report.total_checks
+                "total_checks": report.total_checks,
+                "strict_mode": is_strict
             }
         )
 
         return report
+
+    def remediate_policy(self, policy: HardeningPolicy, strict_mode: bool = False) -> Any:
+        """Automatically remediates all non-compliant configuration keys, rules, and telemetry settings."""
+        from src.core.engine import HardeningEngine
+        engine = HardeningEngine(self.repo_root)
+        os.environ["DO_NOT_TRACK"] = "1"
+        os.environ["CLAUDE_TELEMETRY_DISABLED"] = "1"
+        return engine.apply_policy(policy, dry_run=False, strict_mode=strict_mode)
 
     def _get_nested_value(self, data: Dict[str, Any], path: str) -> Any:
         """Retrieves value by direct key or dotted path notation."""

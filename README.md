@@ -30,6 +30,9 @@ AI developer assistants introduce new threat surfaces: unintended command execut
 **Hardening IA** provides a unified, declarative pipeline to enforce robust enterprise baselines:
 - **Runtime Sandboxing:** Contain autonomous subagents and shell tools.
 - **Human-in-the-Loop Controls:** Disallow unrestricted auto-approvals.
+- **Dangerous OS Paths Protection:** Detects host OS (Linux, Windows, macOS) and restricts sensitive paths (`/etc`, `C:\Windows`, `/System`, `~/.ssh`, `~/.aws`, `~/.kube`). In Standard Mode, always prompts before access; in Strict Mode, blocks access immediately without asking.
+- **Rate Limiting & Timeouts:** Enforces 30 requests/min (burst 10) and 30s/60s command & execution timeouts across supported tools.
+- **Strict Restrictive Mode (Regras Restritivas):** One-click toggle in TUI and `--strict` in CLI enforcing explicit denied patterns for critical anti-patterns (`rm -rf /`, `mkfs`, `format`, `dd`, `diskpart`) with zero prompting.
 - **Data Loss Prevention (DLP):** Exclude credentials, tokens, and SSH/cloud keys from context pipelines.
 - **Zero-Telemetry Lockdown:** Enforce `DO_NOT_TRACK`, disable crash uploads and model training consent.
 - **Multi-OS Command Risk Classifier:** 390+ commands categorized across Linux, Windows, and macOS into LOW, MEDIUM, HIGH, and CRITICAL risk tiers.

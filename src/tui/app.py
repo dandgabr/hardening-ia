@@ -11,6 +11,8 @@ from textual.widgets import Header, Footer, Button, Static, Label, ListView, Lis
 from textual.screen import ModalScreen
 from textual.reactive import reactive
 
+from rich.markup import escape
+
 from src.core.config_loader import ConfigLoader
 from src.core.engine import HardeningEngine
 from src.core.os_detector import OSDetector
@@ -18,6 +20,7 @@ from src.core.models import HardeningPolicy
 from src.core.logger import setup_logging
 from src.core.code_analyzer import CodeVulnerabilityScanner
 from src.core.verifier import HardeningVerifier
+from src.core.security_policy import SecurityPolicyManager
 
 
 class TextualLogHandler(logging.Handler):
@@ -47,25 +50,21 @@ class HelpModal(ModalScreen):
   • [bold white]Up / Down Arrow Keys[/]: Scroll through the list of 14 supported AI tools.
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]F1 or ?[/]: Toggle this Help screen.
+  • [bold white]S[/]: Toggle Regras Restritivas (Strict Mode).
 
 [bold yellow]The 3 Policy Application Modes:[/]
   1. [bold green]Apply Selected[/]: Applies hardening policy strictly to the selected tool.
   2. [bold blue]Apply All Installed[/]: Automatically detects all tools present on this host OS and hardens them.
   3. [bold orange3]Apply All Supported[/]: Proactively provisions standard config directories and hardened baselines for ALL 14 tools.
 
-[bold yellow]The 3 Policy Removal Modes (Rollback):[/]
-  1. [bold red]Remove Selected[/]: Reverts hardening overrides and deletes rules for the selected tool.
-  2. [bold red]Remove All Installed[/]: Reverts hardening configurations across all detected host tools.
-  3. [bold red]Remove All Supported[/]: Reverts and cleans hardening configs across all 14 supported tools.
+[bold yellow]Regras Restritivas (Strict Mode):[/]
+  • [bold red]Bloqueio Explícito de Caminhos Perigosos[/]: Bloqueia o acesso a caminhos sensíveis do sistema sem nem perguntar ao usuário.
+  • [bold red]Denied Patterns Explícitos[/]: Rejeição automática de comandos críticos (`rm -rf /`, `mkfs`, `dd`, `diskpart`, etc.).
+  • [bold green]Modo Padrão[/]: Restringe caminhos perigosos mas sempre solicita autorização prévia ao operador humano.
 
-[bold yellow]Audit & DLP Tools:[/]
-  • [bold yellow]Verify Config[/]: Audits host files and verifies 100% compliance of applied settings.
-  • [bold blue]View DLP Config[/]: Inspects Data Loss Prevention secret exclusion patterns (dynamic button).
-  • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement or removal without altering host files.
-
-[bold yellow]Security Extras & OpenGrep SAST:[/]
-  • [bold cyan]ai-jail[/]: Installs Rust/Bubblewrap runtime sandbox container for AI agents.
-  • [bold cyan]OpenGrep[/]: Installs & executes OpenGrep SAST/SCA security scanner across your codebase.
+[bold yellow]Rate Limit & Timeouts Configurados:[/]
+  • [bold white]Rate Limit:[/] `30 requisições por minuto` (burst de 10).
+  • [bold white]Timeouts:[/] `30s` para comandos de terminal, `60s` para execução geral.
 
 [dim]Press Escape or Click Close to return to the dashboard.[/dim]
 """
@@ -86,31 +85,38 @@ class DlpModal(ModalScreen):
         patterns = dlp_info.get("block_sensitive_paths", [])
         disable_training = dlp_info.get("disable_code_training_sharing", True)
         mask_secrets = dlp_info.get("mask_secrets", True)
+        os_type = OSDetector.get_os_type()
+        dangerous_paths = SecurityPolicyManager.get_dangerous_paths_for_os(os_type)
 
         patterns_formatted = []
         for p in patterns:
             patterns_formatted.append(f"  [cyan]•[/] [bold yellow]{p}[/bold yellow]")
         patterns_str = "\n".join(patterns_formatted) if patterns_formatted else "  [dim]No specific patterns defined[/dim]"
 
+        danger_formatted = []
+        for dp in dangerous_paths[:10]:
+            danger_formatted.append(f"  [red]•[/] [bold white]{dp}[/bold white]")
+        if len(dangerous_paths) > 10:
+            danger_formatted.append(f"  [dim]... and {len(dangerous_paths) - 10} more OS paths[/dim]")
+        danger_str = "\n".join(danger_formatted)
+
         dlp_text = f"""
 [bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]
-[bold cyan]║      🛡️ Data Loss Prevention (DLP) Security Profile - {self.policy.tool.vendor.upper()}/{self.policy.tool.name.upper()}       ║[/]
+[bold cyan]║      🛡️ Data Loss Prevention (DLP) & Dangerous Paths - {self.policy.tool.vendor.upper()}/{self.policy.tool.name.upper()}       ║[/]
 [bold cyan]╚═══════════════════════════════════════════════════════════════════════════╝[/]
 
 [bold yellow]DLP Policy Overview:[/]
   • [bold white]Tool Category:[/] {self.policy.tool.category.upper()}
   • [bold white]Prompt Training Ingestion:[/] [bold green]{'BLOCKED (Zero Data Sharing)' if disable_training else 'Allowed'}[/bold green]
   • [bold white]Real-Time Secret Masking:[/] [bold green]{'ACTIVE (Redacted in Agent Context)' if mask_secrets else 'Inactive'}[/bold green]
-  • [bold white]Total Excluded Path Rules:[/] [bold green]{len(patterns)} glob pattern rules[/bold green]
+  • [bold white]Rate Limit:[/] [bold cyan]30 requests/min (Burst 10)[/bold cyan]
+  • [bold white]Execution Timeout:[/] [bold cyan]30s Command / 60s Session[/bold cyan]
 
 [bold yellow]Protected File & Path Exclusions (Blocked from AI Prompts & Scans):[/]
 {patterns_str}
 
-[bold yellow]Enforced Cloud & Key Storage Protections:[/]
-  [green]✓[/green] [bold white]SSH Private Keys:[/] `~/.ssh/id_rsa`, `~/.ssh/id_ed25519`, `~/.ssh/known_hosts`
-  [green]✓[/green] [bold white]Cloud Provider Credentials:[/] `~/.aws/credentials`, `~/.kube/config`, `~/.azure`
-  [green]✓[/green] [bold white]GPG Keyrings & Certificates:[/] `~/.gnupg/**`, `*.pem`, `*.key`, `*.pfx`, `*.p12`
-  [green]✓[/green] [bold white]Environment & Token Files:[/] `.env*`, `.git-credentials`, `.netrc`, `.docker/config.json`
+[bold yellow]OS Dangerous Paths Protected ({os_type.upper()}):[/]
+{danger_str}
 
 [dim]Press Escape or Click Close to return to the main dashboard.[/dim]
 """
@@ -137,6 +143,7 @@ class HardeningApp(App):
         ("question_mark", "toggle_help", "Help"),
         ("d", "view_dlp", "View DLP"),
         ("v", "verify_config", "Verify Config"),
+        ("s", "toggle_strict", "Strict Mode"),
         ("q", "quit", "Quit")
     ]
 
@@ -213,6 +220,7 @@ class HardeningApp(App):
     """
 
     selected_policy: reactive[Optional[HardeningPolicy]] = reactive(None)
+    strict_mode: reactive[bool] = reactive(False)
 
     def __init__(self):
         super().__init__()
@@ -244,8 +252,10 @@ class HardeningApp(App):
                     yield Button("Apply All Installed", id="btn-apply-installed", variant="primary")
                     yield Button("Apply All Supported", id="btn-apply-all-supported", variant="warning")
                     yield Button("Verify Config", id="btn-verify-selected", variant="default")
+                    yield Button("Corrigir Compliance", id="btn-fix-compliance", variant="success")
                     yield Button("View DLP Config", id="btn-view-dlp", variant="default")
                     yield Checkbox("Dry Run", id="chk-dry-run")
+                    yield Checkbox("Regras Restritivas", id="chk-strict-mode")
                 with Horizontal(id="remove-action-buttons"):
                     yield Button("Remove Selected", id="btn-remove-selected", variant="error")
                     yield Button("Remove All Installed", id="btn-remove-installed", variant="error")
@@ -283,6 +293,17 @@ class HardeningApp(App):
     def action_toggle_help(self) -> None:
         self.push_screen(HelpModal())
 
+    def action_toggle_strict(self) -> None:
+        chk = self.query_one("#chk-strict-mode", Checkbox)
+        chk.value = not chk.value
+        self.strict_mode = chk.value
+        self._update_details()
+
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        if event.checkbox.id == "chk-strict-mode":
+            self.strict_mode = event.value
+            self._update_details()
+
     def action_view_dlp(self) -> None:
         if self._supports_dlp(self.selected_policy):
             self.push_screen(DlpModal(self.selected_policy))
@@ -299,15 +320,24 @@ class HardeningApp(App):
             log_view.write("[bold red][!] Please select a tool from the catalog first to verify.[/]")
             return
 
-        report = self.verifier.verify_policy(self.selected_policy)
+        report = self.verifier.verify_policy(self.selected_policy, strict_mode=self.strict_mode)
         score_style = "bold green" if report.compliance_score == 100.0 else ("bold yellow" if report.compliance_score > 0 else "bold red")
-        log_view.write(f"\n[*] Auditing compliance for {self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}...")
+        mode_label = "[bold red][STRICT][/bold red] " if self.strict_mode else "[bold green][STANDARD][/bold green] "
+        log_view.write(f"\n[*] Auditing {mode_label}compliance for {self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}...")
         log_view.write(f"  Score: [{score_style}]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks} checks passed)[/]")
 
         for c in report.checks:
             status_sym = "[green]✓ PASSED[/]" if c.passed else "[red]✗ FAILED[/]"
-            log_view.write(f"    {status_sym} {c.key} (expected: {c.expected}, actual: {c.actual})")
-        log_view.write(f"  Summary: [{score_style}]{report.message}[/]\n")
+            escaped_key = escape(str(c.key))
+            escaped_expected = escape(str(c.expected))
+            escaped_actual = escape(str(c.actual))
+            log_view.write(f"    {status_sym} {escaped_key} (expected: {escaped_expected}, actual: {escaped_actual})")
+        log_view.write(f"  Summary: [{score_style}]{report.message}[/]")
+
+        if report.compliance_score < 100.0:
+            log_view.write("[bold yellow][!] Divergências detectadas. Clique no botão 'Corrigir Compliance' para ajustar automaticamente para 100%.[/bold yellow]\n")
+        else:
+            log_view.write("[bold green][OK] 100% de conformidade com os baselines de segurança atingida.[/bold green]\n")
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
@@ -326,56 +356,91 @@ class HardeningApp(App):
 
         os_type = OSDetector.get_os_type()
         path_info = p.paths.get(os_type)
-        settings_path = path_info.settings_file if path_info else "N/A"
-        rules_path = path_info.rules_dir if path_info and path_info.rules_dir else "N/A"
+        settings_path = escape(str(path_info.settings_file if path_info and path_info.settings_file else "N/A"))
+        rules_path = escape(str(path_info.rules_dir if path_info and path_info.rules_dir else "N/A"))
 
         status_badge = "[bold green]● INSTALLED ON HOST[/]" if p.is_installed else "[dim]○ NOT DETECTED ON HOST[/]"
         dlp_list = p.policies.get("dlp", {}).get("block_sensitive_paths", [])
         dlp_count = len(dlp_list)
         sandbox_enforced = p.policies.get("sandbox", {}).get("enforce_sandbox", False)
         telemetry_off = not p.policies.get("telemetry", {}).get("enable_telemetry", True)
-        native_overrides = p.policies.get("native_settings_override", {})
+        native_overrides = dict(p.policies.get("native_settings_override", {}))
+
+        if self.strict_mode:
+            strict_overrides = p.policies.get("strict_rules", {}).get("native_overrides", {})
+            native_overrides.update(strict_overrides)
+            native_overrides["security.strict_mode"] = True
+            native_overrides["security.dangerousPaths.action"] = "block"
 
         overrides_lines = []
         for k, v in native_overrides.items():
-            overrides_lines.append(f"  [cyan]•[/] [bold white]{k}[/bold white] [green]➔[/green] [bold yellow]{v}[/bold yellow]")
+            escaped_k = escape(str(k))
+            escaped_v = escape(str(v))
+            overrides_lines.append(f"  [cyan]•[/] [bold white]{escaped_k}[/bold white] [green]➔[/green] [bold yellow]{escaped_v}[/bold yellow]")
         overrides_text = "\n".join(overrides_lines) if overrides_lines else "  [dim]Standard baseline configuration[/dim]"
 
-        dlp_sample = ", ".join([f"`{pat}`" for pat in dlp_list[:6]])
+        dlp_sample = ", ".join([f"`{escape(str(pat))}`" for pat in dlp_list[:6]])
         if dlp_count > 6:
             dlp_sample += f" [dim](+{dlp_count - 6} more patterns)[/dim]"
 
         dlp_badge = f"[bold green]{dlp_count} Protected Secret Patterns (Click 'View DLP Config' button to inspect)[/bold green]" if has_dlp else "[dim]No DLP rules defined for this tool category[/dim]"
 
+        mode_badge = (
+            "[bold red]🔴 REGRAS RESTRITIVAS (STRICT) ATIVAS (Bloqueio Total / Denied Patterns Ativos / Sem Perguntas)[/bold red]"
+            if self.strict_mode else
+            "[bold green]🟢 MODO PADRÃO ATIVO (Sempre Perguntar Antes de Acessar / Confirmação Prévia)[/bold green]"
+        )
+
+        danger_action = (
+            "[bold red]BLOQUEIO EXPLÍCITO & TOTAL (Bloquear e nem perguntar)[/bold red]"
+            if self.strict_mode else
+            "[bold yellow]SEMPRE PERGUNTAR ANTES DE ACESSAR (Confirmação Obrigatória)[/bold yellow]"
+        )
+
+        critical_action = (
+            "[bold red]DENIED PATTERNS ATIVOS (Rejeição Automática sem Confirmação)[/bold red]"
+            if self.strict_mode else
+            "[bold yellow]Confirmação Estrita em Múltiplas Etapas[/bold yellow]"
+        )
+
+        dangerous_paths = SecurityPolicyManager.get_dangerous_paths_for_os(os_type)
+        sample_danger = ", ".join([f"`{escape(str(dp))}`" for dp in dangerous_paths[:6]]) + f" [dim](+{len(dangerous_paths)-6} more)[/dim]"
+
+        escaped_vendor = escape(str(p.tool.vendor))
+        escaped_name = escape(str(p.tool.name.upper()))
+        escaped_cat = escape(str(p.tool.category.upper()))
+        escaped_desc = escape(str(p.tool.description))
+
         text = f"""[bold yellow]═══════════════════════════════════════════════════════════════════════[/]
-[bold cyan]TOOL:[/] [bold white]{p.tool.vendor}/{p.tool.name.upper()}[/]  |  [bold cyan]CATEGORY:[/] [bold]{p.tool.category.upper()}[/]  |  {status_badge}
-[dim]{p.tool.description}[/dim]
+[bold cyan]TOOL:[/] [bold white]{escaped_vendor}/{escaped_name}[/]  |  [bold cyan]CATEGORY:[/] [bold]{escaped_cat}[/]  |  {status_badge}
+[dim]{escaped_desc}[/dim]
 [bold yellow]═══════════════════════════════════════════════════════════════════════[/]
+
+[bold yellow]🛡️ STATUS DO MODO DE SEGURANÇA:[/] {mode_badge}
 
 [bold green]📁 TARGET FILE PATHS & RULES LOCATION ({os_type.upper()}):[/]
   [cyan]• Settings File:[/] [white]{settings_path}[/]
   [cyan]• Agent Rules Dir:[/] [white]{rules_path}[/]
 
-[bold green]⚙️ NATIVE CONFIGURATION OVERRIDES TO BE APPLIED ({len(native_overrides)} settings):[/]
+[bold green]⚙️ CONFIGURATION OVERRIDES TO BE APPLIED ({len(native_overrides)} settings):[/]
 {overrides_text}
 
-[bold green]🛡️ SECURITY CONTROLS & COMPLIANCE ENFORCEMENT:[/]
-  [cyan]• Multi-OS Command Risk Matrix:[/] [bold green]ACTIVE[/bold green]
-    - [green]LOW Risk Commands[/] (ls, pwd, git status): [bold green]Auto-Executable[/bold green]
-    - [yellow]MEDIUM Risk Commands[/] (mkdir, touch, npm build): [bold yellow]Requires Approval[/bold yellow]
-    - [red]HIGH / CRITICAL Risk Commands[/] (rm -rf, sudo, chmod): [bold red]Strict Human Approval Required[/bold red]
-
+[bold green]🛡️ CONTROLES DE SEGURANÇA & GUARDRAILS ({os_type.upper()}):[/]
+  [cyan]• Restrição a Caminhos Perigosos:[/] {danger_action}
+    [dim]Monitorando: {sample_danger}[/dim]
+  [cyan]• Comandos Críticos & Destrutivos:[/] {critical_action}
+  [cyan]• Rate Limit Configurado:[/] [bold cyan]30 req/min (Burst 10, Max USD $10.00)[/bold cyan]
+  [cyan]• Timeouts Configurados:[/] [bold cyan]30s Comando / 60s Sessão / 15s Rede[/bold cyan]
   [cyan]• Runtime Sandbox Isolation:[/] {'[bold green]ENFORCED (Bypass Disallowed)[/bold green]' if sandbox_enforced else '[yellow]Optional[/yellow]'}
   [cyan]• Zero-Telemetry & Crash Reporting:[/] {'[bold green]SHUTDOWN (DO_NOT_TRACK=1)[/bold green]' if telemetry_off else '[yellow]Enabled[/yellow]'}
   [cyan]• Data Loss Prevention (DLP):[/] {dlp_badge}
-    {('Excluding: ' + dlp_sample) if has_dlp else ''}
-  [cyan]• OS Filesystem ACL Lockdown:[/] [bold green]Owner Exclusive (chmod 700/600 or Windows NTFS ACL)[/bold green]
 """
         info_widget.update(text)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         log_view = self.query_one("#log-view", RichLog)
         dry_run = self.query_one("#chk-dry-run", Checkbox).value
+        strict_mode = self.query_one("#chk-strict-mode", Checkbox).value
 
         if event.button.id == "btn-close-help" or event.button.id == "btn-close-dlp":
             self.pop_screen()
@@ -394,34 +459,50 @@ class HardeningApp(App):
         elif event.button.id == "btn-verify-selected":
             self._run_verification_on_selected()
 
+        elif event.button.id == "btn-fix-compliance":
+            if not self.selected_policy:
+                log_view.write("[bold red][!] Please select a tool from the catalog first to fix compliance.[/]")
+                return
+            mode_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
+            log_view.write(f"\n[*] {mode_prefix}Remediando configurações e alinhando baselines para [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+            res = self.verifier.remediate_policy(self.selected_policy, strict_mode=strict_mode)
+            if res.success:
+                log_view.write(f"  [bold green][OK] {res.message}[/bold green]")
+                self._run_verification_on_selected()
+            else:
+                log_view.write(f"  [bold red][!] {res.message}[/bold red]")
+
         elif event.button.id == "btn-apply-selected":
             if not self.selected_policy:
                 log_view.write("[bold red][!] Please select a tool from the catalog first.[/]")
                 return
             mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
-            log_view.write(f"[*] {mode_prefix}Applying hardening to [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
-            res = self.engine.apply_policy(self.selected_policy, dry_run=dry_run)
+            strict_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
+            log_view.write(f"[*] {mode_prefix}{strict_prefix}Applying hardening to [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+            res = self.engine.apply_policy(self.selected_policy, dry_run=dry_run, strict_mode=strict_mode)
             status_style = "bold green" if res.success else "bold red"
             log_view.write(f"  [{status_style}]{res.message}[/]")
 
         elif event.button.id == "btn-apply-installed":
             installed_policies = [p for p in self.policies if p.is_installed]
             mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
-            log_view.write(f"\n[*] {mode_prefix}Applying policies to {len(installed_policies)} INSTALLED tools on host...")
+            strict_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
+            log_view.write(f"\n[*] {mode_prefix}{strict_prefix}Applying policies to {len(installed_policies)} INSTALLED tools on host...")
             if not installed_policies:
                 log_view.write("[bold yellow][!] No installed AI tools detected on this host.[/]")
                 return
             for p in installed_policies:
-                res = self.engine.apply_policy(p, dry_run=dry_run)
+                res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=strict_mode)
                 status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
             log_view.write("[bold green][OK] Host-installed tools hardening completed.[/]\n")
 
         elif event.button.id == "btn-apply-all-supported":
             mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
-            log_view.write(f"\n[*] {mode_prefix}Proactively provisioning standard configs across ALL {len(self.policies)} supported tools...")
+            strict_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
+            log_view.write(f"\n[*] {mode_prefix}{strict_prefix}Proactively provisioning standard configs across ALL {len(self.policies)} supported tools...")
             for p in self.policies:
-                res = self.engine.apply_policy(p, dry_run=dry_run)
+                res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=strict_mode)
                 status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
             log_view.write("[bold green][OK] All 14 supported tools provisioned and hardened in standard directories.[/]\n")
@@ -492,3 +573,4 @@ class HardeningApp(App):
 def run_tui():
     app = HardeningApp()
     app.run()
+

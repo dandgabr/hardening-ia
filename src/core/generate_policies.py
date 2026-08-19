@@ -2,6 +2,12 @@
 
 import yaml
 from pathlib import Path
+from src.core.security_policy import (
+    DANGEROUS_PATHS_BY_OS,
+    CRITICAL_DENIED_PATTERNS_BY_OS,
+    DEFAULT_RATE_LIMIT,
+    DEFAULT_TIMEOUT
+)
 
 COMMON_DLP_PATHS = [
     "**/.env*",
@@ -59,8 +65,12 @@ POLICIES_DATABASE = [
             "approvals": {
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True,
+                "require_approval_for_write": True,
                 "allowNonWorkspaceAccess": False
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True,
@@ -71,6 +81,20 @@ POLICIES_DATABASE = [
                 "enable_crash_reporting": False,
                 "audit_logging": True
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "security.dangerousPaths.action": "block",
+                    "security.deniedPatterns": [
+                        "rm -rf /", "mkfs*", "dd if=/dev/zero*", "dd if=/dev/urandom*",
+                        "format*", "diskpart*", "diskutil eraseDisk*"
+                    ],
+                    "toolPermissions": "deny-critical",
+                    "autoApplyEdits": False,
+                    "approvals.require_approval_for_write": True
+                }
+            },
             "native_settings_override": {
                 "telemetry.enabled": False,
                 "crashReporting.enabled": False,
@@ -79,7 +103,11 @@ POLICIES_DATABASE = [
                 "allowNonWorkspaceAccess": False,
                 "hooks.enforceGuardrails": True,
                 "security.sandbox.default_enforced": True,
-                "security.approvals.bypass_allowed": False
+                "security.approvals.bypass_allowed": False,
+                "timeout.command_timeout_seconds": 30,
+                "timeout.execution_timeout_seconds": 60,
+                "rate_limit.max_requests_per_minute": 30,
+                "security.dangerousPaths.action": "ask"
             }
         }
     },
@@ -116,6 +144,9 @@ POLICIES_DATABASE = [
                 "acceptEdits": False,
                 "dangerouslySkipPermissions": False
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -126,6 +157,23 @@ POLICIES_DATABASE = [
                 "CLAUDE_TELEMETRY_DISABLED": True,
                 "audit_logging": True
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "acceptEdits": False,
+                    "permissionMode": "manual",
+                    "autoApprove": [],
+                    "deniedCommands": [
+                        "rm -rf /", "rm -rf /*", "mkfs*", "dd if=/dev/zero*", "dd if=/dev/urandom*",
+                        "format*", "diskpart*", "cipher /w", "diskutil eraseDisk*"
+                    ],
+                    "disallowedPaths": [
+                        "/etc/**", "/boot/**", "/root/**", "~/.ssh/**", "~/.aws/**",
+                        "C:\\Windows\\**", "C:\\Program Files\\**", "/System/**", "/Library/**"
+                    ]
+                }
+            },
             "native_settings_override": {
                 "permissionMode": "manual",
                 "autoApprove": [],
@@ -133,7 +181,10 @@ POLICIES_DATABASE = [
                 "disableTelemetry": True,
                 "allowBypassSandbox": False,
                 "dangerouslySkipPermissions": False,
-                "maxCostThresholdUSD": 10.0
+                "maxCostThresholdUSD": 10.0,
+                "timeoutSeconds": 60,
+                "commandTimeoutSeconds": 30,
+                "rateLimitPerMinute": 30
             }
         }
     },
@@ -157,6 +208,9 @@ POLICIES_DATABASE = [
             }
         },
         "policies": {
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -164,10 +218,21 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "github.copilot.editor.enableAutoCompletions": True,
+                    "github.copilot.chat.localeOverride": "en",
+                    "github.copilot.chat.autoApplyEdits": False
+                }
+            },
             "native_settings_override": {
                 "github.copilot.advanced": {
                     "authProvider": "github",
-                    "debug.overrideCAPIUrl": ""
+                    "debug.overrideCAPIUrl": "",
+                    "requestTimeout": 30,
+                    "rateLimitPerMinute": 30
                 },
                 "github.copilot.enable": {
                     "*": True,
@@ -210,6 +275,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -217,12 +285,26 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "cursor.deniedTerminalPatterns": [
+                        "rm -rf /", "mkfs*", "dd if=/dev/zero*", "format*", "diskpart*", "diskutil eraseDisk*"
+                    ],
+                    "cursor.terminal.strictExecution": True,
+                    "cursor.composer.autoApply": False,
+                    "cursor.chat.autoApply": False
+                }
+            },
             "native_settings_override": {
                 "cursor.privacyMode": True,
                 "cursor.general.privacy": "no-retention",
                 "cursor.terminal.autoExecute": False,
                 "cursor.terminal.sandbox": True,
                 "cursor.terminal.legacyTerminalTool": False,
+                "cursor.terminal.timeout": 60,
+                "cursor.rateLimit.requestsPerMinute": 30,
                 "security.workspace.trust.enabled": True,
                 "telemetry.telemetryLevel": "off",
                 "cursor.indexer.ignorePatterns": [
@@ -275,12 +357,26 @@ POLICIES_DATABASE = [
                 },
                 "allowNonWorkspaceAccess": False
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
             },
             "telemetry": {
                 "enable_telemetry": False
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "autoApprove.write": False,
+                    "autoApprove.read": False,
+                    "autoApproveExecution": False,
+                    "deniedCommands": ["rm -rf /", "mkfs*", "dd*", "format*"],
+                    "strictPathIsolation": True
+                }
             },
             "native_settings_override": {
                 "alwaysApproveResubmit": False,
@@ -295,7 +391,10 @@ POLICIES_DATABASE = [
                 "allowNonWorkspaceAccess": False,
                 "telemetryEnabled": False,
                 "restrictSecretAccess": True,
-                "mcp.requireConsent": True
+                "mcp.requireConsent": True,
+                "executionTimeout": 60,
+                "commandTimeout": 30,
+                "rateLimitPerMinute": 30
             }
         }
     },
@@ -327,6 +426,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -334,13 +436,25 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "block_critical_commands": True,
+                    "strict_path_isolation": True,
+                    "auto_write_files": False,
+                    "require_human_confirmation": True
+                }
+            },
             "native_settings_override": {
                 "telemetry": False,
                 "auto_execute": False,
                 "enforce_sandboxing": True,
                 "allow_network": False,
                 "require_human_confirmation": True,
-                "prompt_secret_masking": True
+                "prompt_secret_masking": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
             }
         }
     },
@@ -372,6 +486,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -379,12 +496,25 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "sandbox.denied_commands": ["rm -rf /", "mkfs*", "dd*", "format*"],
+                    "sandbox.strict_mode": True,
+                    "agent.auto_apply_edits": False,
+                    "agent.confirm_actions": True
+                }
+            },
             "native_settings_override": {
                 "analytics.enabled": False,
                 "agent.confirm_actions": True,
                 "sandbox.strict_mode": True,
                 "network.isolate_agent": True,
-                "dlp.mask_credentials": True
+                "dlp.mask_credentials": True,
+                "timeout.command_seconds": 30,
+                "timeout.request_seconds": 30,
+                "rate_limit.requests_per_minute": 30
             }
         }
     },
@@ -416,6 +546,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -423,13 +556,25 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "safe_mode": True,
+                    "blocked_tools": ["system_admin", "raw_exec", "disk_partition"],
+                    "auto_write_files": False,
+                    "human_in_the_loop": True
+                }
+            },
             "native_settings_override": {
                 "enable_telemetry": False,
                 "human_in_the_loop": True,
                 "safe_mode": True,
                 "max_recursive_steps": 10,
                 "sandbox_container": True,
-                "blocked_tools": ["system_admin", "raw_exec"]
+                "blocked_tools": ["system_admin", "raw_exec"],
+                "timeout_seconds": 60,
+                "max_requests_per_minute": 30
             }
         }
     },
@@ -461,6 +606,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -468,11 +616,23 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "security.denyCritical": True,
+                    "security.denyDangerousPaths": True,
+                    "security.autoApplyEdits": False,
+                    "security.executionConsent": "always"
+                }
+            },
             "native_settings_override": {
                 "telemetry.shareData": False,
                 "security.executionConsent": "always",
                 "security.sandbox": True,
-                "dlp.maskEnvSecrets": True
+                "dlp.maskEnvSecrets": True,
+                "executionTimeout": 60,
+                "rateLimitRpm": 30
             }
         }
     },
@@ -504,6 +664,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -511,11 +674,23 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "security.denied_patterns": ["rm -rf /", "mkfs*", "dd*", "format*"],
+                    "security.strict_block": True,
+                    "execution.auto_accept_edits": False,
+                    "execution.require_confirmation": True
+                }
+            },
             "native_settings_override": {
                 "privacy.telemetry": False,
                 "execution.require_confirmation": True,
                 "sandbox.enabled": True,
-                "indexing.exclude_hidden_and_secrets": True
+                "indexing.exclude_hidden_and_secrets": True,
+                "timeout.command": 30,
+                "rate_limit.rpm": 30
             }
         }
     },
@@ -547,6 +722,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -554,11 +732,22 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "vault.block_dangerous_paths": True,
+                    "proxy.block_unapproved_hosts": True,
+                    "proxy.require_consent_for_file_edits": True
+                }
+            },
             "native_settings_override": {
                 "vault.enforce_encryption": True,
                 "proxy.block_unapproved_hosts": True,
                 "proxy.mask_tokens_in_logs": True,
-                "audit.full_logging": True
+                "audit.full_logging": True,
+                "proxy.timeout_seconds": 30,
+                "proxy.rate_limit_rpm": 30
             }
         }
     },
@@ -590,6 +779,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -597,11 +789,23 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "auto_run_commands": False,
+                    "sandbox_isolated": True,
+                    "strict_mode": True,
+                    "auto_apply_diffs": False
+                }
+            },
             "native_settings_override": {
                 "share_code_snippets": False,
                 "telemetry": "off",
                 "auto_run_commands": False,
-                "sandbox_isolated": True
+                "sandbox_isolated": True,
+                "timeout_seconds": 30,
+                "rate_limit_rpm": 30
             }
         }
     },
@@ -633,6 +837,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -640,11 +847,23 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "security.deny_dangerous_paths": True,
+                    "security.block_critical": True,
+                    "agent.auto_write": False,
+                    "security.require_write_confirmation": True
+                }
+            },
             "native_settings_override": {
                 "telemetry.enabled": False,
                 "privacy.data_retention": False,
                 "prompt.mask_secrets": True,
-                "context.exclude_secret_files": True
+                "context.exclude_secret_files": True,
+                "timeout.request": 30,
+                "rate_limit.max_rpm": 30
             }
         }
     },
@@ -676,6 +895,9 @@ POLICIES_DATABASE = [
                 "require_approval_for_terminal": True,
                 "require_approval_for_network": True
             },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
                 "disable_code_training_sharing": True
@@ -683,12 +905,24 @@ POLICIES_DATABASE = [
             "telemetry": {
                 "enable_telemetry": False
             },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "sandbox_strict": True,
+                    "denied_patterns": ["rm -rf /", "mkfs*", "dd*", "format*"],
+                    "auto_edit_files": False,
+                    "require_approval_all_tools": True
+                }
+            },
             "native_settings_override": {
                 "telemetry": False,
                 "audit_logs": True,
                 "sandbox_strict": True,
                 "share_prompts": False,
-                "require_approval_all_tools": True
+                "require_approval_all_tools": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
             }
         }
     }

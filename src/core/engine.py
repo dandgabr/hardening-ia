@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional
 from src.core.models import HardeningPolicy, ExecutionResult, SettingDiff
 from src.core.os_detector import OSDetector
 from src.core.logger import get_logger, log_audit_event
+from src.core.security_policy import SecurityPolicyManager
 
 logger = get_logger("engine")
 
@@ -27,15 +28,15 @@ class HardeningEngine:
         b_dir.mkdir(parents=True, exist_ok=True)
         return b_dir
 
-    def apply_policy(self, policy: HardeningPolicy, dry_run: bool = False) -> ExecutionResult:
-        """Applies hardening policy controls with automatic full backup and differential tracking."""
+    def apply_policy(self, policy: HardeningPolicy, dry_run: bool = False, strict_mode: bool = False) -> ExecutionResult:
+        """Applies hardening policy controls with automatic full backup, differential tracking, and optional strict mode."""
         tool_name = policy.tool.name
         vendor = policy.tool.vendor
         modified_paths: List[str] = []
         errors: List[str] = []
         diffs: List[SettingDiff] = []
 
-        logger.info(f"Starting policy application for {vendor}/{tool_name} (dry_run={dry_run})")
+        logger.info(f"Starting policy application for {vendor}/{tool_name} (dry_run={dry_run}, strict_mode={strict_mode})")
 
         try:
             # 1. Resolve configuration file paths for active OS
@@ -43,7 +44,18 @@ class HardeningEngine:
             if os_paths:
                 if os_paths.settings_file:
                     settings_path = OSDetector.expand_path(os_paths.settings_file)
-                    native_overrides = policy.policies.get("native_settings_override", {})
+                    native_overrides = dict(policy.policies.get("native_settings_override", {}))
+
+                    # Incorporate strict rules and explicit denied patterns if requested
+                    if strict_mode:
+                        strict_rules = policy.policies.get("strict_rules", {})
+                        if strict_rules and "native_overrides" in strict_rules:
+                            native_overrides.update(strict_rules["native_overrides"])
+                        native_overrides["security.strict_mode"] = True
+                        native_overrides["security.dangerousPaths.action"] = "block"
+                        native_overrides["security.approvals.bypass_allowed"] = False
+                        native_overrides["security.approvals.auto_apply_edits"] = False
+                        native_overrides["security.approvals.require_write_approval"] = True
 
                     if native_overrides:
                         tool_diffs = self._apply_json_settings(settings_path, native_overrides, dry_run, vendor, tool_name)
@@ -51,17 +63,16 @@ class HardeningEngine:
                         modified_paths.append(str(settings_path))
                         logger.info(f"Applied {len(tool_diffs)} configuration overrides to {settings_path}")
 
-                # 2. Deploy Command Execution Policy into agent rules directory if configured
+                # 2. Deploy OS-specific Security Policy into agent rules directory if configured
                 if os_paths.rules_dir:
                     rules_path = OSDetector.expand_path(os_paths.rules_dir)
-                    policy_src = self.repo_root / "configs" / "rules" / "linux_command_risk_policy.md"
-                    if policy_src.exists():
-                        target_rule_file = rules_path / "linux_command_risk_policy.md"
-                        if not dry_run:
-                            rules_path.mkdir(parents=True, exist_ok=True)
-                            shutil.copy2(policy_src, target_rule_file)
-                            logger.info(f"Deployed command risk policy rule to {target_rule_file}")
-                        modified_paths.append(str(target_rule_file))
+                    target_rule_file = rules_path / f"{self.os_type}_security_policy.md"
+                    rule_content = SecurityPolicyManager.generate_security_policy_rule(self.os_type, strict_mode=strict_mode)
+                    if not dry_run:
+                        rules_path.mkdir(parents=True, exist_ok=True)
+                        target_rule_file.write_text(rule_content, encoding="utf-8")
+                        logger.info(f"Deployed {self.os_type} security policy rule to {target_rule_file}")
+                    modified_paths.append(str(target_rule_file))
 
             # 3. Locate YAML policy file path
             yaml_policy_path = self.repo_root / "configs" / "tools" / vendor / tool_name / "hardening_policy.yaml"
@@ -75,7 +86,7 @@ class HardeningEngine:
                 else:
                     logger.warning(f"Configured script not found on disk: {script_full_path}")
 
-            message = f"Hardening successfully applied to {vendor}/{tool_name}"
+            message = f"Hardening successfully applied to {vendor}/{tool_name}" + (" [STRICT MODE]" if strict_mode else "")
             log_audit_event(
                 event_type="POLICY_APPLIED",
                 tool_name=tool_name,
@@ -83,6 +94,7 @@ class HardeningEngine:
                 status="SUCCESS",
                 details={
                     "dry_run": dry_run,
+                    "strict_mode": strict_mode,
                     "os": self.os_type,
                     "modified_paths": modified_paths,
                     "changes_count": len(diffs)
@@ -109,7 +121,7 @@ class HardeningEngine:
                 tool_name=tool_name,
                 vendor=vendor,
                 status="FAILURE",
-                details={"error": str(e), "os": self.os_type}
+                details={"error": str(e), "os": self.os_type, "strict_mode": strict_mode}
             )
 
             return ExecutionResult(
@@ -141,7 +153,14 @@ class HardeningEngine:
                 # 1. Surgically revert overrides in settings file
                 if os_paths.settings_file:
                     settings_path = OSDetector.expand_path(os_paths.settings_file)
-                    native_overrides = policy.policies.get("native_settings_override", {})
+                    native_overrides = dict(policy.policies.get("native_settings_override", {}))
+                    strict_overrides = policy.policies.get("strict_rules", {}).get("native_overrides", {})
+                    native_overrides.update(strict_overrides)
+                    native_overrides["security.strict_mode"] = True
+                    native_overrides["security.dangerousPaths.action"] = "block"
+                    native_overrides["security.approvals.bypass_allowed"] = False
+                    native_overrides["security.approvals.auto_apply_edits"] = False
+                    native_overrides["security.approvals.require_write_approval"] = True
 
                     if settings_path.exists() and native_overrides:
                         tool_diffs = self._remove_json_settings(settings_path, native_overrides, dry_run, vendor, tool_name)
@@ -152,12 +171,13 @@ class HardeningEngine:
                 # 2. Clean up deployed rule files
                 if os_paths.rules_dir:
                     rules_path = OSDetector.expand_path(os_paths.rules_dir)
-                    target_rule_file = rules_path / "linux_command_risk_policy.md"
-                    if target_rule_file.exists():
-                        if not dry_run:
-                            target_rule_file.unlink(missing_ok=True)
-                            logger.info(f"Removed deployed rule file: {target_rule_file}")
-                        modified_paths.append(str(target_rule_file))
+                    for rule_filename in [f"{self.os_type}_security_policy.md", "linux_command_risk_policy.md", "windows_security_policy.md", "macos_security_policy.md"]:
+                        target_rule_file = rules_path / rule_filename
+                        if target_rule_file.exists():
+                            if not dry_run:
+                                target_rule_file.unlink(missing_ok=True)
+                                logger.info(f"Removed deployed rule file: {target_rule_file}")
+                            modified_paths.append(str(target_rule_file))
 
             message = f"Hardening configurations successfully reverted for {vendor}/{tool_name}"
             log_audit_event(

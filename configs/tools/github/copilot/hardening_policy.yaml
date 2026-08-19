@@ -15,6 +15,111 @@ paths:
     config_dir: ~/Library/Application Support/Code/User
     settings_file: ~/Library/Application Support/Code/User/settings.json
 policies:
+  rate_limit:
+    max_requests_per_minute: 30
+    max_tokens_per_minute: 100000
+    max_daily_budget_usd: 10.0
+    burst_limit: 10
+  timeout:
+    execution_timeout_seconds: 60
+    command_timeout_seconds: 30
+    network_timeout_seconds: 15
+    read_timeout_seconds: 30
+  dangerous_paths:
+    linux:
+    - /etc
+    - /etc/shadow
+    - /etc/sudoers
+    - /etc/sudoers.d
+    - /etc/passwd
+    - /etc/group
+    - /etc/ssl
+    - /etc/crontab
+    - /etc/cron.*
+    - /boot
+    - /root
+    - /sys
+    - /proc
+    - /dev
+    - /var/log
+    - /var/run
+    - /var/backups
+    - /usr/local/bin
+    - /usr/bin
+    - /sbin
+    - /bin
+    - ~/.ssh
+    - ~/.gnupg
+    - ~/.aws
+    - ~/.azure
+    - ~/.kube
+    - ~/.docker
+    - ~/.config/gcloud
+    - ~/.bashrc
+    - ~/.zshrc
+    - ~/.profile
+    - ~/.bash_profile
+    - ~/.bash_history
+    - ~/.zsh_history
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.config/gh
+    - ~/.npmrc
+    - ~/.pypirc
+    windows:
+    - C:\Windows
+    - C:\Windows\System32
+    - C:\Windows\System32\drivers\etc
+    - C:\Windows\SysWOW64
+    - C:\Program Files
+    - C:\Program Files (x86)
+    - C:\ProgramData
+    - C:\Boot
+    - C:\Recovery
+    - C:\System Volume Information
+    - C:\$Recycle.Bin
+    - '%USERPROFILE%\.ssh'
+    - '%USERPROFILE%\.aws'
+    - '%USERPROFILE%\.azure'
+    - '%USERPROFILE%\.kube'
+    - '%USERPROFILE%\.docker'
+    - '%USERPROFILE%\AppData\Local\Microsoft\Credentials'
+    - '%USERPROFILE%\AppData\Roaming\Microsoft\Vault'
+    - '%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu'
+    - '%USERPROFILE%\.git-credentials'
+    - '%USERPROFILE%\_netrc'
+    - '%USERPROFILE%\.npmrc'
+    - '%USERPROFILE%\.pypirc'
+    macos:
+    - /System
+    - /System/Library
+    - /Library
+    - /private
+    - /private/etc
+    - /private/var
+    - /private/tmp
+    - /Volumes
+    - /usr/bin
+    - /usr/sbin
+    - /bin
+    - /sbin
+    - ~/.ssh
+    - ~/.gnupg
+    - ~/.aws
+    - ~/.azure
+    - ~/.kube
+    - ~/.docker
+    - ~/.config/gcloud
+    - ~/Library/Keychains
+    - ~/Library/Application Support/com.apple.sharedfilelist
+    - ~/.zshrc
+    - ~/.bash_profile
+    - ~/.bashrc
+    - ~/.zsh_history
+    - ~/.bash_history
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.config/gh
   dlp:
     block_sensitive_paths:
     - '**/.env*'
@@ -34,10 +139,64 @@ policies:
     disable_code_training_sharing: true
   telemetry:
     enable_telemetry: false
+  strict_rules:
+    action: block_without_prompting
+    denied_patterns:
+      linux:
+      - rm\s+-(?:r|f|rf|fr)\s+/(?:\s|$|\*)
+      - rm\s+-(?:r|f|rf|fr)\s+/etc
+      - rm\s+-(?:r|f|rf|fr)\s+/boot
+      - rm\s+-(?:r|f|rf|fr)\s+/root
+      - ':\(\)\s*\{\s*:\|:&\s*\}\s*;\s*:'
+      - dd\s+if=/dev/zero
+      - dd\s+if=/dev/urandom
+      - mkfs\.[a-z0-9]+\s+/dev/sd[a-z]
+      - mkfs\s+
+      - '>\s*/dev/sd[a-z]'
+      - chmod\s+-(?:R|r)\s+777\s+/
+      - chown\s+-(?:R|r)\s+nobody\s+/
+      - mv\s+/\s+/dev/null
+      - wget.*\|\s*(?:sh|bash)
+      - curl.*\|\s*(?:sh|bash)
+      - wipefs\s+
+      - fdisk\s+
+      - gdisk\s+
+      - parted\s+
+      - lvreduce\s+
+      windows:
+      - format-volume\s+
+      - 'format\s+[a-zA-Z]:'
+      - clear-disk\s+
+      - initialize-disk\s+
+      - remove-partition\s+
+      - resize-partition\s+
+      - diskpart\s+
+      - cipher\s+/w
+      - chkdsk\s+/f
+      - remove-item\s+.*-recurse\s+c:\\windows
+      - del\s+/f\s+/s\s+/q\s+c:\\windows
+      - rd\s+/s\s+/q\s+c:\\
+      macos:
+      - diskutil\s+eraseDisk
+      - diskutil\s+partitionDisk
+      - diskutil\s+apfs\s+deleteContainer
+      - gpt\s+
+      - newfs_apfs\s+
+      - newfs_hfs\s+
+      - dd\s+if=/dev/zero\s+of=/dev/r?disk
+      - asr\s+--restore
+      - rm\s+-(?:r|f|rf|fr)\s+/(?:\s|$|\*)
+      - rm\s+-(?:r|f|rf|fr)\s+/System
+    native_overrides:
+      github.copilot.editor.enableAutoCompletions: true
+      github.copilot.chat.localeOverride: en
+      github.copilot.chat.autoApplyEdits: false
   native_settings_override:
     github.copilot.advanced:
       authProvider: github
       debug.overrideCAPIUrl: ''
+      requestTimeout: 30
+      rateLimitPerMinute: 30
     github.copilot.enable:
       '*': true
       plaintext: false

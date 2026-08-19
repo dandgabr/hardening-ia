@@ -28,6 +28,7 @@ HELP_EPILOG = """
   [green]python main.py --list[/]                       List all 14 supported AI tools and host detection status
   [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
   [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
+  [green]python main.py --apply --strict[/]             Apply STRICT mode (explicit critical denials & zero prompting on dangerous paths)
   [green]python main.py --apply[/]                      Provision & apply hardening across all 14 supported tools
   [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
   [green]python main.py --remove --installed-only[/]    Revert/remove hardening from detected tools
@@ -39,6 +40,7 @@ HELP_EPILOG = """
   [green]python main.py --scan-code[/]                  Run OpenGrep SAST & SCA scan on current workspace
   [green]python main.py --scan-code ./src[/]            Scan a specific directory for code vulnerabilities
   [green]python main.py --check-command "ls -la"[/]     Evaluate command risk tier (LOW/MEDIUM/HIGH/CRITICAL)
+  [green]python main.py --check-command "rm -rf /" --strict[/] Check command in strict restrictive mode
   [green]python main.py --install-extra all[/]          Install runtime sandboxes (ai-jail) and OpenGrep
 """
 
@@ -52,8 +54,10 @@ def run_cli(args: List[str]):
     )
     parser.add_argument("--tool", type=str, metavar="NAME", help="Filter by tool or vendor name (e.g. google/antigravity, cursor, claude-code)")
     parser.add_argument("--apply", action="store_true", help="Apply declarative security hardening policies to matching tools")
+    parser.add_argument("--strict", "--restrictive", action="store_true", help="Apply strict restrictive rules: explicit denied patterns for critical items & immediate blocking of dangerous paths without asking")
     parser.add_argument("--remove", "--revert", action="store_true", help="Revert/remove hardening policies and clean configuration overrides")
     parser.add_argument("--verify", action="store_true", help="Audit host configuration files to verify that hardening is active and functional")
+    parser.add_argument("--fix", "--remediate", action="store_true", help="Automatically remediate and bring any non-compliant tools to 100%% compliance")
     parser.add_argument("--test", action="store_true", help="Run automated test suite for policies, classifier, verifier, and scanner")
     parser.add_argument("--list", action="store_true", help="List all available tools and their host installation status")
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
@@ -102,7 +106,10 @@ def run_cli(args: List[str]):
 
     # 2. Evaluate command risk if requested
     if parsed.check_command:
-        risk, requires_approval, reason = CommandRiskClassifier.classify_command(parsed.check_command)
+        risk, requires_approval, reason = CommandRiskClassifier.classify_command(
+            parsed.check_command,
+            strict_mode=parsed.strict
+        )
         color = {
             RiskLevel.LOW: "green",
             RiskLevel.MEDIUM: "yellow",
@@ -110,12 +117,18 @@ def run_cli(args: List[str]):
             RiskLevel.CRITICAL: "bold red"
         }.get(risk, "white")
 
+        approval_text = "[bold red]BLOCKED IMMEDIATELY (No Prompting)[/bold red]" if (parsed.strict and not requires_approval and risk == RiskLevel.CRITICAL) else (
+            '[bold yellow]YES (Operator Confirmation Required)[/bold yellow]' if requires_approval else '[bold green]NO (Auto-executable)[/bold green]'
+        )
+
+        mode_tag = " [STRICT RESTRICTIVE MODE]" if parsed.strict else " [STANDARD MODE]"
+
         console.print(Panel(
             f"[bold]Command:[/] `{parsed.check_command}`\n"
             f"[bold]Risk Level:[/] [{color}]{risk.value}[/{color}]\n"
-            f"[bold]Requires Approval:[/] {'[bold yellow]YES[/bold yellow]' if requires_approval else '[bold green]NO (Auto-executable)[/bold green]'}\n"
+            f"[bold]Execution Control:[/] {approval_text}\n"
             f"[bold]Policy Rule:[/] {reason}",
-            title=f"{os_name} Command Risk Evaluation",
+            title=f"{os_name} Command Risk Evaluation{mode_tag}",
             border_style=color
         ))
         return
@@ -170,16 +183,23 @@ def run_cli(args: List[str]):
                 if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
             ]
 
-        console.print(f"\n[bold cyan][*] Auditing Hardening Compliance across {len(target_policies)} target tool(s)...[/bold cyan]\n")
+        mode_str = " [STRICT MODE]" if parsed.strict else " [STANDARD MODE]"
+        console.print(f"\n[bold cyan][*] Auditing Hardening Compliance{mode_str} across {len(target_policies)} target tool(s)...[/bold cyan]\n")
 
-        table = Table(title="Host Security Hardening Verification Report", header_style="bold magenta")
+        table = Table(title=f"Host Security Hardening Verification Report{mode_str}", header_style="bold magenta")
         table.add_column("Tool", style="bold white", width=25)
         table.add_column("Host Status", width=14)
         table.add_column("Compliance Score", width=18)
         table.add_column("Audit Findings & Discrepancies", style="dim")
 
         for p in target_policies:
-            report = verifier.verify_policy(p)
+            report = verifier.verify_policy(p, strict_mode=parsed.strict)
+
+            if parsed.fix and report.compliance_score < 100.0:
+                console.print(f"[*] Auto-remediating non-compliant baseline for {p.tool.vendor}/{p.tool.name}...")
+                verifier.remediate_policy(p, strict_mode=parsed.strict)
+                report = verifier.verify_policy(p, strict_mode=parsed.strict)
+
             installed_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT FOUND[/dim]"
 
             if report.compliance_score == 100.0:
@@ -284,16 +304,17 @@ def run_cli(args: List[str]):
             return
 
         mode_str = "[bold yellow][DRY RUN][/bold yellow] " if parsed.dry_run else ""
-        console.print(f"\n[*] {mode_str}Applying hardening policies to [bold]{len(target_policies)}[/bold] tool(s)...\n")
+        strict_str = "[bold red][STRICT RESTRICTIVE MODE][/bold red] " if parsed.strict else ""
+        console.print(f"\n[*] {mode_str}{strict_str}Applying hardening policies to [bold]{len(target_policies)}[/bold] tool(s)...\n")
 
-        summary_table = Table(title="Hardening Execution Summary", header_style="bold cyan")
+        summary_table = Table(title=f"Hardening Execution Summary{' [STRICT RESTRICTIVE MODE]' if parsed.strict else ''}", header_style="bold cyan")
         summary_table.add_column("Tool", style="white", width=25)
         summary_table.add_column("Host Status", width=14)
         summary_table.add_column("Result", width=12)
         summary_table.add_column("Details", style="dim")
 
         for p in target_policies:
-            res = engine.apply_policy(p, dry_run=parsed.dry_run)
+            res = engine.apply_policy(p, dry_run=parsed.dry_run, strict_mode=parsed.strict)
             status_badge = "[bold green]SUCCESS[/bold green]" if res.success else "[bold red]FAILED[/bold red]"
             installed_badge = "[green]Installed[/green]" if p.is_installed else "[dim]Not Found[/dim]"
             details = ", ".join([f"{d.key} -> {d.new_value}" for d in res.diffs]) if res.diffs else ("No changes needed" if res.success else res.message)
