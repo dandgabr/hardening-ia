@@ -401,39 +401,117 @@ class HardeningEngine:
         except Exception as e:
             logger.error(f"Failed to execute OS script {script_path}: {e}")
 
-    def install_extra_tool(self, tool_id: str) -> bool:
-        """Runs security extra tool installation automation script."""
-        logger.info(f"Triggering extra tool installation: {tool_id} on {self.os_type}")
+    def stream_install_extra_tool(self, tool_id: str):
+        """
+        Executes security extra tool installer, streaming log lines, progress percentage, and audit trail events.
+        Yields (event_type, payload):
+          - ("log", text_line)
+          - ("progress", percentage_int, step_description)
+          - ("done", success_bool, summary_message)
+        """
+        logger.info(f"Triggering streaming extra tool installation: {tool_id} on {self.os_type}")
+        yield ("progress", 10, f"Initializing {tool_id} installation pipeline on {self.os_type.upper()}...")
+        yield ("log", f"[bold cyan][*] Target component:[/] {tool_id} | Host OS: {self.os_type.upper()}")
 
-        # Universal Python installer
         universal_script = self.repo_root / "scripts" / "extra-tools" / f"install_{tool_id.replace('-', '_')}.py"
-        if universal_script.exists():
-            cmd = [sys.executable, str(universal_script)]
-            process = subprocess.run(cmd, capture_output=True, text=True)
-            for line in process.stdout.splitlines():
-                logger.info(f"[install-{tool_id}] {line}")
-            if process.returncode != 0:
-                for line in process.stderr.splitlines():
-                    logger.error(f"[install-{tool_id}] {line}")
-            return process.returncode == 0
-
         extra_dir = self.repo_root / "scripts" / "extra-tools" / self.os_type
-        if self.os_type == "windows":
+
+        cmd = None
+        if universal_script.exists():
+            cmd = [sys.executable, "-u", str(universal_script)]
+        elif self.os_type == "windows":
             script = extra_dir / f"install-{tool_id}.ps1"
             if script.exists():
                 cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)]
-                process = subprocess.run(cmd, capture_output=True, text=True)
-                for line in process.stdout.splitlines():
-                    logger.info(f"[install-{tool_id}] {line}")
-                return process.returncode == 0
         else:
             script = extra_dir / f"install-{tool_id}.sh"
             if script.exists():
                 cmd = ["bash", str(script)]
-                process = subprocess.run(cmd, capture_output=True, text=True)
-                for line in process.stdout.splitlines():
-                    logger.info(f"[install-{tool_id}] {line}")
-                return process.returncode == 0
 
-        logger.warning(f"No installation script found for {tool_id} on {self.os_type}")
-        return False
+        if not cmd:
+            err_msg = f"No installation script found for {tool_id} on {self.os_type}."
+            logger.warning(err_msg)
+            yield ("log", f"[bold red][!] {err_msg}[/bold red]")
+            log_audit_event(
+                event_type="EXTRA_TOOL_INSTALLATION",
+                tool_name=tool_id,
+                vendor="community",
+                status="FAILED",
+                details={"error": "Script not found", "os": self.os_type}
+            )
+            yield ("progress", 100, "Installation failed: Script not found")
+            yield ("done", False, err_msg)
+            return
+
+        yield ("progress", 25, "Resolving dependencies and package prerequisites...")
+        yield ("log", f"[*] Executing installer command: {' '.join(cmd)}")
+
+        collected_logs = []
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+            current_progress = 30
+            for line in process.stdout:
+                clean_line = line.rstrip()
+                if clean_line:
+                    collected_logs.append(clean_line)
+                    logger.info(f"[install-{tool_id}] {clean_line}")
+                    lower = clean_line.lower()
+                    if "download" in lower or "fetching" in lower or "cargo" in lower or "brew" in lower:
+                        current_progress = min(current_progress + 15, 65)
+                        yield ("progress", current_progress, "Downloading and compiling package binaries...")
+                    elif "configuring" in lower or "rule" in lower or "setting" in lower:
+                        current_progress = min(current_progress + 15, 80)
+                        yield ("progress", current_progress, "Configuring security rule packs and policies...")
+                    elif "verifying" in lower or "path" in lower or "ok" in lower:
+                        current_progress = min(current_progress + 10, 95)
+                        yield ("progress", current_progress, "Verifying binary integration in system PATH...")
+
+                    yield ("log", clean_line)
+
+            process.wait()
+            success = (process.returncode == 0)
+            status_msg = f"Extra tool '{tool_id}' installed successfully." if success else f"Installation script for '{tool_id}' exited with return code {process.returncode}."
+
+            log_audit_event(
+                event_type="EXTRA_TOOL_INSTALLATION",
+                tool_name=tool_id,
+                vendor="community",
+                status="SUCCESS" if success else "FAILED",
+                details={
+                    "returncode": process.returncode,
+                    "os": self.os_type,
+                    "logs_count": len(collected_logs)
+                }
+            )
+
+            yield ("progress", 100, "Complete: " + ("Success" if success else "Failed"))
+            yield ("done", success, status_msg)
+
+        except Exception as e:
+            err_msg = f"Installation exception: {e}"
+            logger.error(err_msg)
+            yield ("log", f"[bold red][!] {err_msg}[/bold red]")
+            log_audit_event(
+                event_type="EXTRA_TOOL_INSTALLATION",
+                tool_name=tool_id,
+                vendor="community",
+                status="ERROR",
+                details={"error": str(e), "os": self.os_type}
+            )
+            yield ("progress", 100, "Installation error encountered")
+            yield ("done", False, err_msg)
+
+    def install_extra_tool(self, tool_id: str) -> bool:
+        """Runs security extra tool installation automation script (batch/synchronous mode)."""
+        success = False
+        for item in self.stream_install_extra_tool(tool_id):
+            if item[0] == "done":
+                success = item[1]
+        return success

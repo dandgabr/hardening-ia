@@ -7,9 +7,10 @@ from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
-from textual.widgets import Header, Footer, Button, Static, Label, ListView, ListItem, RichLog, Checkbox
+from textual.widgets import Header, Footer, Button, Static, Label, ListView, ListItem, RichLog, Checkbox, ProgressBar
 from textual.screen import ModalScreen
 from textual.reactive import reactive
+from textual import work
 
 from rich.markup import escape
 
@@ -125,6 +126,70 @@ class DlpModal(ModalScreen):
             yield Button("Close DLP Inspector (Esc)", id="btn-close-dlp", variant="success")
 
 
+class InstallProgressModal(ModalScreen):
+    """Interactive Modal Screen with Real-Time Progress Bar & Streaming Terminal Output."""
+
+    def __init__(self, tool_id: str, tool_title: str):
+        super().__init__()
+        self.tool_id = tool_id
+        self.tool_title = tool_title
+        self.engine = HardeningEngine()
+        self.is_finished = False
+
+    def compose(self) -> ComposeResult:
+        with VerticalScroll(id="install-container"):
+            yield Static(
+                f"[bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]\n"
+                f"[bold cyan]║     🛡️ Installing Security Component: {self.tool_title:<34}║[/]\n"
+                f"[bold cyan]╚═══════════════════════════════════════════════════════════════════════════╝[/]",
+                id="install-header"
+            )
+            yield Label(f"[bold cyan]Component:[/] [bold white]{self.tool_id}[/bold white]  |  [bold cyan]Target OS:[/] [bold]{OSDetector.get_os_type().upper()}[/bold]", id="install-target-info")
+            yield ProgressBar(id="install-progress-bar", total=100, show_eta=False)
+            yield Label("Initializing installation pipeline...", id="install-step-label")
+            yield Label("[bold white]Streaming Terminal Output & Step Logs:[/bold white]", id="install-output-title")
+            yield RichLog(id="install-terminal-log", highlight=True, markup=True)
+            yield Button("Close (Esc)", id="btn-close-install", variant="primary", disabled=True)
+
+    def on_mount(self) -> None:
+        self.run_install_worker()
+
+    @work(thread=True)
+    def run_install_worker(self) -> None:
+        log_widget = self.query_one("#install-terminal-log", RichLog)
+        progress_bar = self.query_one("#install-progress-bar", ProgressBar)
+        step_label = self.query_one("#install-step-label", Label)
+        close_btn = self.query_one("#btn-close-install", Button)
+
+        final_success = False
+        for item in self.engine.stream_install_extra_tool(self.tool_id):
+            event_type = item[0]
+            if event_type == "progress":
+                percent = item[1]
+                desc = item[2]
+                self.app.call_from_thread(progress_bar.update, progress=percent)
+                self.app.call_from_thread(step_label.update, f"[bold yellow]▶ {desc}[/bold yellow]")
+            elif event_type == "log":
+                text = item[1]
+                self.app.call_from_thread(log_widget.write, escape(text) if "[" not in text else text)
+            elif event_type == "done":
+                final_success = item[1]
+                summary = item[2]
+                status_color = "bold green" if final_success else "bold red"
+                status_icon = "✓" if final_success else "✗"
+                self.app.call_from_thread(
+                    step_label.update,
+                    f"[{status_color}]{status_icon} {summary}[/{status_color}]"
+                )
+
+        self.is_finished = True
+        self.app.call_from_thread(setattr, close_btn, "disabled", False)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-close-install":
+            self.pop_screen()
+
+
 class ToolItem(ListItem):
     def __init__(self, policy: HardeningPolicy):
         super().__init__()
@@ -203,9 +268,9 @@ class HardeningApp(App):
         padding: 1;
         border: solid #45475a;
     }
-    #help-container, #dlp-container {
-        width: 82%;
-        height: 82%;
+    #help-container, #dlp-container, #install-container {
+        width: 84%;
+        height: 84%;
         background: #181825;
         border: thick #89b4fa;
         padding: 1;
@@ -214,7 +279,29 @@ class HardeningApp(App):
     #help-text, #dlp-text {
         margin-bottom: 1;
     }
-    #btn-close-help, #btn-close-dlp {
+    #install-target-info {
+        margin-bottom: 1;
+    }
+    #install-progress-bar {
+        width: 100%;
+        margin-top: 1;
+        margin-bottom: 1;
+    }
+    #install-step-label {
+        color: #f9e2af;
+        margin-bottom: 1;
+    }
+    #install-output-title {
+        color: #89b4fa;
+        margin-bottom: 1;
+    }
+    #install-terminal-log {
+        height: 12;
+        border: solid #45475a;
+        background: #11111b;
+        margin-bottom: 1;
+    }
+    #btn-close-help, #btn-close-dlp, #btn-close-install {
         width: 100%;
     }
     """
@@ -540,34 +627,10 @@ class HardeningApp(App):
             log_view.write("[bold green][OK] All supported tools hardening removed.[/]\n")
 
         elif event.button.id == "btn-install-jail":
-            log_view.write("[*] Launching ai-jail installer...")
-            success = self.engine.install_extra_tool("ai-jail")
-            if success:
-                log_view.write("[bold green][OK] ai-jail installed successfully.[/]")
-            else:
-                log_view.write("[bold red][!] ai-jail installation failed.[/]")
+            self.push_screen(InstallProgressModal("ai-jail", "ai-jail (Process Sandbox & Isolation)"))
 
         elif event.button.id == "btn-install-opengrep":
-            opengrep_installed = bool(shutil.which("opengrep"))
-            if not opengrep_installed:
-                log_view.write("[*] OpenGrep not detected in PATH. Launching OpenGrep installer...")
-                success = self.engine.install_extra_tool("opengrep")
-                if success:
-                    log_view.write("[bold green][OK] OpenGrep installed and configured with security rule packs.[/]")
-                else:
-                    log_view.write("[bold yellow][!] OpenGrep binary installer completed (using native AST rules fallback).[/]")
-
-            # Run SAST / SCA Scan
-            log_view.write("\n[*] Running OpenGrep SAST & SCA Security Analysis on workspace...")
-            findings = self.code_scanner.scan_path(Path("."))
-            if not findings:
-                log_view.write("[bold green][OK] Zero vulnerabilities or secret leaks detected in codebase.[/bold green]\n")
-            else:
-                log_view.write(f"[bold red][!] OpenGrep detected {len(findings)} security finding(s):[/bold red]")
-                for idx, f in enumerate(findings[:5], start=1):
-                    log_view.write(f"  {idx}. [{f.get('severity')}] {f.get('file')}:{f.get('line')} - {f.get('title', f.get('message', ''))}")
-                if len(findings) > 5:
-                    log_view.write(f"  ... and {len(findings)-5} more (see logs/audit.jsonl)\n")
+            self.push_screen(InstallProgressModal("opengrep", "OpenGrep (Static Code Vulnerability Scanner)"))
 
 
 def run_tui():
