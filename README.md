@@ -199,9 +199,20 @@ python main.py -gui
   python main.py --scan-code ./src
   ```
 
-- **Apply hardening across ALL registered tools:**
+- **Provision & apply hardening across ALL 14 supported tools:**
   ```bash
   python main.py --apply
+  ```
+
+- **Revert/remove hardening configurations from detected tools:**
+  ```bash
+  python main.py --remove --installed-only
+  python main.py --tool cursor --remove
+  ```
+
+- **Revert/remove hardening across ALL supported tools:**
+  ```bash
+  python main.py --remove
   ```
 
 - **Verbose / Debug output:**

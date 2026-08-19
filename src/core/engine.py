@@ -1,4 +1,4 @@
-"""Hardening Engine orchestrating policy enforcement, deep configuration merging, rules deployment, and script execution."""
+"""Hardening Engine orchestrating policy enforcement, rollback/removal, deep configuration merging, rules deployment, and script execution."""
 
 import sys
 import json
@@ -114,6 +114,87 @@ class HardeningEngine:
                 diffs=diffs
             )
 
+    def remove_policy(self, policy: HardeningPolicy, dry_run: bool = False) -> ExecutionResult:
+        """Removes/reverts hardening policy controls and deployed rules for a target tool."""
+        tool_name = policy.tool.name
+        vendor = policy.tool.vendor
+        modified_paths: List[str] = []
+        errors: List[str] = []
+        diffs: List[SettingDiff] = []
+
+        logger.info(f"Starting policy removal for {vendor}/{tool_name} (dry_run={dry_run})")
+
+        try:
+            os_paths = policy.paths.get(self.os_type)
+            if os_paths:
+                # 1. Remove overrides from target settings file
+                if os_paths.settings_file:
+                    settings_path = OSDetector.expand_path(os_paths.settings_file)
+                    native_overrides = policy.policies.get("native_settings_override", {})
+
+                    if settings_path.exists() and native_overrides:
+                        tool_diffs = self._remove_json_settings(settings_path, native_overrides, dry_run)
+                        diffs.extend(tool_diffs)
+                        modified_paths.append(str(settings_path))
+                        logger.info(f"Removed {len(tool_diffs)} hardening overrides from {settings_path}")
+
+                # 2. Remove deployed rule files
+                if os_paths.rules_dir:
+                    rules_path = OSDetector.expand_path(os_paths.rules_dir)
+                    target_rule_file = rules_path / "linux_command_risk_policy.md"
+                    if target_rule_file.exists():
+                        if not dry_run:
+                            target_rule_file.unlink(missing_ok=True)
+                            logger.info(f"Removed deployed rule file: {target_rule_file}")
+                        modified_paths.append(str(target_rule_file))
+
+            message = f"Hardening configurations successfully removed for {vendor}/{tool_name}"
+            log_audit_event(
+                event_type="POLICY_REMOVED",
+                tool_name=tool_name,
+                vendor=vendor,
+                status="SUCCESS",
+                details={
+                    "dry_run": dry_run,
+                    "os": self.os_type,
+                    "modified_paths": modified_paths,
+                    "reverted_count": len(diffs)
+                }
+            )
+
+            return ExecutionResult(
+                tool_name=tool_name,
+                vendor=vendor,
+                success=True,
+                message=message,
+                modified_paths=modified_paths,
+                errors=errors,
+                diffs=diffs
+            )
+
+        except Exception as e:
+            error_msg = f"Failed to remove hardening for {vendor}/{tool_name}: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            errors.append(str(e))
+
+            log_audit_event(
+                event_type="POLICY_REMOVED",
+                tool_name=tool_name,
+                vendor=vendor,
+                status="FAILURE",
+                details={"error": str(e), "os": self.os_type}
+            )
+
+            return ExecutionResult(
+                tool_name=tool_name,
+                vendor=vendor,
+                success=False,
+                message=error_msg,
+                modified_paths=modified_paths,
+                errors=errors,
+                diffs=diffs
+            )
+
     def _deep_merge(self, base: Dict[str, Any], updates: Dict[str, Any], prefix: str = "") -> List[SettingDiff]:
         """Deeply merges updates into base dictionary while tracking individual setting diffs."""
         diffs: List[SettingDiff] = []
@@ -144,15 +225,53 @@ class HardeningEngine:
         if not dry_run and diffs:
             path.parent.mkdir(parents=True, exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
-                json.dump(current_data, f, indent=2, ensure_ascii=False)
-            logger.debug(f"Wrote updated configuration file to {path}")
+                json.dump(current_data, f, indent=2)
+
+        return diffs
+
+    def _remove_json_settings(self, path: Path, overrides: dict, dry_run: bool) -> List[SettingDiff]:
+        """Removes hardening override keys from target JSON configuration."""
+        diffs: List[SettingDiff] = []
+        if not path.exists():
+            return diffs
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.warning(f"Could not parse settings for removal at {path}: {e}")
+            return diffs
+
+        for key in overrides.keys():
+            # Check direct key
+            if key in data:
+                old_val = data.pop(key)
+                diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
+            else:
+                # Check dotted path
+                parts = key.split(".")
+                curr = data
+                found = True
+                for p in parts[:-1]:
+                    if isinstance(curr, dict) and p in curr:
+                        curr = curr[p]
+                    else:
+                        found = False
+                        break
+                if found and isinstance(curr, dict) and parts[-1] in curr:
+                    old_val = curr.pop(parts[-1])
+                    diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
+
+        if not dry_run and diffs:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
 
         return diffs
 
     def _run_os_script(self, script_path: Path, policy_path: Path, tool_name: str, vendor: str, dry_run: bool):
-        """Executes native OS automation script, passing the tool's YAML policy definition."""
+        """Executes native OS automation scripts (PowerShell for Windows, Bash for Linux/macOS)."""
         logger.info(f"Executing OS script: {script_path.name} with policy {policy_path.name}")
-        dry_run_flag = "$true" if (self.os_type == "windows" and dry_run) else ("true" if dry_run else "false")
+        cmd = []
 
         if self.os_type == "windows":
             cmd = [
@@ -160,26 +279,24 @@ class HardeningEngine:
                 "-NoProfile",
                 "-ExecutionPolicy", "Bypass",
                 "-File", str(script_path),
-                "-PolicyFile", str(policy_path),
-                "-ToolName", tool_name,
-                "-Vendor", vendor
+                "-PolicyFile", str(policy_path)
             ]
             if dry_run:
                 cmd.append("-DryRun")
         else:
-            cmd = ["bash", str(script_path), str(policy_path), dry_run_flag]
+            cmd = ["bash", str(script_path), "--policy", str(policy_path)]
+            if dry_run:
+                cmd.append("--dry-run")
 
-        process = subprocess.run(cmd, capture_output=True, text=True)
-
-        if process.stdout:
-            for line in process.stdout.splitlines():
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            for line in result.stdout.splitlines():
                 logger.info(f"[{script_path.name}] {line}")
-
-        if process.returncode != 0:
-            if process.stderr:
-                for line in process.stderr.splitlines():
+            if result.returncode != 0:
+                for line in result.stderr.splitlines():
                     logger.error(f"[{script_path.name}] {line}")
-            raise RuntimeError(f"Script {script_path.name} failed with exit code {process.returncode}")
+        except Exception as e:
+            logger.error(f"Failed to execute OS script {script_path}: {e}")
 
     def install_extra_tool(self, tool_id: str) -> bool:
         """Runs security extra tool installation automation script."""

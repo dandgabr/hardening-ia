@@ -1,4 +1,4 @@
-"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, verification, and Rich reporting."""
+"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, verification, rollback, and Rich reporting."""
 
 import sys
 import argparse
@@ -28,7 +28,10 @@ HELP_EPILOG = """
   [green]python main.py --list[/]                       List all 14 supported AI tools and host detection status
   [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
   [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
+  [green]python main.py --apply[/]                      Provision & apply hardening across all 14 supported tools
   [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
+  [green]python main.py --remove --installed-only[/]    Revert/remove hardening from detected tools
+  [green]python main.py --tool cursor --remove[/]       Revert hardening from a specific tool
   [green]python main.py --apply --dry-run[/]            Simulate policy enforcement without writing files
   [green]python main.py --verify[/]                     Verify that hardening settings are functional on host
   [green]python main.py --verify --installed-only[/]    Verify compliance only for installed tools
@@ -49,12 +52,13 @@ def run_cli(args: List[str]):
     )
     parser.add_argument("--tool", type=str, metavar="NAME", help="Filter by tool or vendor name (e.g. google/antigravity, cursor, claude-code)")
     parser.add_argument("--apply", action="store_true", help="Apply declarative security hardening policies to matching tools")
+    parser.add_argument("--remove", "--revert", action="store_true", help="Revert/remove hardening policies and clean configuration overrides")
     parser.add_argument("--verify", action="store_true", help="Audit host configuration files to verify that hardening is active and functional")
     parser.add_argument("--test", action="store_true", help="Run automated test suite for policies, classifier, verifier, and scanner")
     parser.add_argument("--list", action="store_true", help="List all available tools and their host installation status")
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
     parser.add_argument("--check-command", type=str, metavar="CMD", help="Evaluate terminal command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
-    parser.add_argument("--dry-run", action="store_true", help="Simulate policy application without modifying configuration files")
+    parser.add_argument("--dry-run", action="store_true", help="Simulate policy application or removal without modifying configuration files")
     parser.add_argument("--install-extra", type=str, metavar="TOOL", help="Install extra security isolation tool: 'ai-jail', 'opengrep', or 'all'")
     parser.add_argument("--scan-code", type=str, nargs="?", const=".", metavar="PATH", help="Scan workspace or directory for AI-generated code vulnerabilities")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose debug logging")
@@ -226,6 +230,43 @@ def run_cli(args: List[str]):
                 console.print(f"[bold red][!] Installation script for '{t}' failed or not found for {os_name}.[/bold red]\n")
         return
 
+    # 5. Remove / Revert Policies
+    if parsed.remove:
+        target_policies = policies
+        if parsed.installed_only:
+            target_policies = [p for p in target_policies if p.is_installed]
+
+        if parsed.tool:
+            query = parsed.tool.lower()
+            target_policies = [
+                p for p in target_policies
+                if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
+            ]
+
+        if not target_policies:
+            console.print("[bold red][!] No matching tools found to remove hardening.[/bold red]")
+            return
+
+        mode_str = "[bold yellow][DRY RUN][/bold yellow] " if parsed.dry_run else ""
+        console.print(f"\n[*] {mode_str}Removing hardening policies from [bold]{len(target_policies)}[/bold] tool(s)...\n")
+
+        summary_table = Table(title="Hardening Removal Summary", header_style="bold red")
+        summary_table.add_column("Tool", style="white", width=25)
+        summary_table.add_column("Host Status", width=14)
+        summary_table.add_column("Result", width=12)
+        summary_table.add_column("Details", style="dim")
+
+        for p in target_policies:
+            res = engine.remove_policy(p, dry_run=parsed.dry_run)
+            status_badge = "[bold green]REMOVED[/bold green]" if res.success else "[bold red]FAILED[/bold red]"
+            installed_badge = "[green]Installed[/green]" if p.is_installed else "[dim]Not Found[/dim]"
+            details = ", ".join([f"Removed {d.key}" for d in res.diffs]) if res.diffs else ("No modifications required" if res.success else res.message)
+            summary_table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, status_badge, details)
+
+        console.print(summary_table)
+        console.print("\n[bold green][OK] Policy removal completed. Audit logs written to logs/audit.jsonl[/bold green]\n")
+        return
+
     if parsed.apply:
         target_policies = policies
         if parsed.installed_only:
@@ -239,7 +280,7 @@ def run_cli(args: List[str]):
             ]
 
         if not target_policies:
-            console.print(f"[bold red][!] No matching tools found to apply hardening.[/bold red]")
+            console.print("[bold red][!] No matching tools found to apply hardening.[/bold red]")
             return
 
         mode_str = "[bold yellow][DRY RUN][/bold yellow] " if parsed.dry_run else ""

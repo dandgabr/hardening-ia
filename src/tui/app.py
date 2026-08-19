@@ -47,15 +47,20 @@ class HelpModal(ModalScreen):
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]F1 or ?[/]: Toggle this Help screen.
 
-[bold yellow]The 3 Application Modes:[/]
+[bold yellow]The 3 Policy Application Modes:[/]
   1. [bold green]Apply Selected[/]: Applies hardening policy strictly to the selected tool.
   2. [bold blue]Apply All Installed[/]: Automatically detects all tools present on this host OS and hardens them.
-  3. [bold orange3]Apply All Supported[/]: Proactively provisions standard config directories and hardened baselines for ALL 14 tools (even if not yet installed).
+  3. [bold orange3]Apply All Supported[/]: Proactively provisions standard config directories and hardened baselines for ALL 14 tools.
+
+[bold yellow]The 3 Policy Removal Modes (Rollback):[/]
+  1. [bold red]Remove Selected[/]: Reverts hardening overrides and deletes rules for the selected tool.
+  2. [bold red]Remove All Installed[/]: Reverts hardening configurations across all detected host tools.
+  3. [bold red]Remove All Supported[/]: Reverts and cleans hardening configs across all 14 supported tools.
 
 [bold yellow]Audit & DLP Tools:[/]
   • [bold yellow]Verify Config[/]: Audits host files and verifies 100% compliance of applied settings.
   • [bold blue]View DLP Config[/]: Inspects Data Loss Prevention secret exclusion patterns (dynamic button).
-  • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement without altering host files.
+  • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement or removal without altering host files.
 
 [bold yellow]Extras & SAST Scanner:[/]
   • [bold cyan]ai-jail[/]: Installs Rust/Bubblewrap runtime sandbox container for AI agents.
@@ -166,7 +171,7 @@ class HardeningApp(App):
         border: solid #45475a;
         background: #11111b;
     }
-    #apply-action-buttons, #extras-buttons {
+    #apply-action-buttons, #remove-action-buttons, #extras-buttons {
         layout: horizontal;
         height: auto;
         margin-top: 1;
@@ -180,7 +185,7 @@ class HardeningApp(App):
         display: none;
     }
     #log-view {
-        height: 10;
+        height: 9;
         border: solid #45475a;
         background: #11111b;
         margin-top: 1;
@@ -234,7 +239,7 @@ class HardeningApp(App):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
                     yield Static("Select a tool from the catalog to inspect host status, security policies, and DLP settings.", id="policy-info")
-                yield Label("[b]Policy Application Controls (3 Modes)[/b]", classes="panel-title")
+                yield Label("[b]Policy Enforcement & Actions (Apply / Remove)[/b]", classes="panel-title")
                 with Horizontal(id="apply-action-buttons"):
                     yield Button("Apply Selected", id="btn-apply-selected", variant="success")
                     yield Button("Apply All Installed", id="btn-apply-installed", variant="primary")
@@ -242,13 +247,17 @@ class HardeningApp(App):
                     yield Button("Verify Config", id="btn-verify-selected", variant="default")
                     yield Button("View DLP Config", id="btn-view-dlp", variant="default")
                     yield Checkbox("Dry Run", id="chk-dry-run")
+                with Horizontal(id="remove-action-buttons"):
+                    yield Button("Remove Selected", id="btn-remove-selected", variant="error")
+                    yield Button("Remove All Installed", id="btn-remove-installed", variant="error")
+                    yield Button("Remove All Supported", id="btn-remove-all-supported", variant="error")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
                 yield RichLog(id="log-view", highlight=True, markup=True)
         yield Footer()
 
     def on_mount(self) -> None:
         self.title = "Hardening IA Framework"
-        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | 3 Application Modes & SAST Active"
+        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Apply & Revert Modes Active"
 
         log_view = self.query_one("#log-view", RichLog)
         textual_handler = TextualLogHandler(log_view)
@@ -417,6 +426,38 @@ class HardeningApp(App):
                 status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
             log_view.write("[bold green][OK] All 14 supported tools provisioned and hardened in standard directories.[/]\n")
+
+        elif event.button.id == "btn-remove-selected":
+            if not self.selected_policy:
+                log_view.write("[bold red][!] Please select a tool from the catalog first to remove.[/]")
+                return
+            mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
+            log_view.write(f"\n[*] {mode_prefix}Removing hardening for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+            res = self.engine.remove_policy(self.selected_policy, dry_run=dry_run)
+            status_style = "bold green" if res.success else "bold red"
+            log_view.write(f"  [{status_style}]{res.message}[/]")
+
+        elif event.button.id == "btn-remove-installed":
+            installed_policies = [p for p in self.policies if p.is_installed]
+            mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
+            log_view.write(f"\n[*] {mode_prefix}Removing hardening across {len(installed_policies)} INSTALLED tools...")
+            if not installed_policies:
+                log_view.write("[bold yellow][!] No installed AI tools detected on this host.[/]")
+                return
+            for p in installed_policies:
+                res = self.engine.remove_policy(p, dry_run=dry_run)
+                status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
+                log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            log_view.write("[bold green][OK] Host-installed tools removal completed.[/]\n")
+
+        elif event.button.id == "btn-remove-all-supported":
+            mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
+            log_view.write(f"\n[*] {mode_prefix}Removing hardening across ALL {len(self.policies)} supported tools...")
+            for p in self.policies:
+                res = self.engine.remove_policy(p, dry_run=dry_run)
+                status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
+                log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            log_view.write("[bold green][OK] All supported tools hardening removed.[/]\n")
 
         elif event.button.id == "btn-install-jail":
             log_view.write("[*] Launching ai-jail installer...")
