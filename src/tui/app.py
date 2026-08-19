@@ -41,6 +41,10 @@ class TextualLogHandler(logging.Handler):
 class HelpModal(ModalScreen):
     """Interactive Help and Usage Guide Dialog."""
 
+    BINDINGS = [
+        ("escape", "dismiss", "Close")
+    ]
+
     def compose(self) -> ComposeResult:
         help_text = """
 [bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]
@@ -73,9 +77,17 @@ class HelpModal(ModalScreen):
             yield Static(help_text, id="help-text")
             yield Button("Close Help (Esc)", id="btn-close-help", variant="primary")
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-close-help":
+            self.dismiss()
+
 
 class DlpModal(ModalScreen):
     """Interactive Data Loss Prevention (DLP) Inspector Dialog."""
+
+    BINDINGS = [
+        ("escape", "dismiss", "Close")
+    ]
 
     def __init__(self, policy: HardeningPolicy):
         super().__init__()
@@ -125,9 +137,17 @@ class DlpModal(ModalScreen):
             yield Static(dlp_text, id="dlp-text")
             yield Button("Close DLP Inspector (Esc)", id="btn-close-dlp", variant="success")
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-close-dlp":
+            self.dismiss()
+
 
 class InstallProgressModal(ModalScreen):
     """Interactive Modal Screen with Real-Time Progress Bar & Streaming Terminal Output."""
+
+    BINDINGS = [
+        ("escape", "dismiss_modal", "Close")
+    ]
 
     def __init__(self, tool_id: str, tool_title: str):
         super().__init__()
@@ -185,9 +205,13 @@ class InstallProgressModal(ModalScreen):
         self.is_finished = True
         self.app.call_from_thread(setattr, close_btn, "disabled", False)
 
+    def action_dismiss_modal(self) -> None:
+        if self.is_finished:
+            self.dismiss()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close-install":
-            self.pop_screen()
+            self.dismiss()
 
 
 class ToolItem(ListItem):

@@ -105,3 +105,4 @@ ConsoleHost_history.txt
 
 # Textual / TUI State
 .textual/
+.ai-jail/
