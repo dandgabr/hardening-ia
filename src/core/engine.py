@@ -298,12 +298,14 @@ class HardeningEngine:
             logger.warning(f"Could not parse settings for removal at {path}: {e}")
             return diffs
 
-        manifest_data = {}
+        manifest_existed_before = True
         if vendor and tool_name:
             manifest_file = self._get_tool_backup_dir(vendor, tool_name) / "restore_manifest.json"
             if manifest_file.exists():
                 try:
-                    manifest_data = json.loads(manifest_file.read_text(encoding="utf-8")).get("original_keys", {})
+                    m_json = json.loads(manifest_file.read_text(encoding="utf-8"))
+                    manifest_data = m_json.get("original_keys", {})
+                    manifest_existed_before = m_json.get("file_existed_before", True)
                 except Exception as e:
                     logger.debug(f"Could not read restore manifest: {e}")
 
@@ -336,8 +338,16 @@ class HardeningEngine:
                         diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
 
         if not dry_run and diffs:
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            if not data and not manifest_existed_before:
+                try:
+                    path.unlink(missing_ok=True)
+                    if path.parent.exists() and not any(path.parent.iterdir()):
+                        path.parent.rmdir()
+                except Exception:
+                    pass
+            else:
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
 
         return diffs
 
