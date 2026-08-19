@@ -228,10 +228,10 @@ class ToolItem(ListItem):
         self.policy = policy
 
     def compose(self) -> ComposeResult:
-        category_tag = f"[{self.policy.tool.category.upper():<7}]"
-        status_tag = "● [INSTALLED]" if self.policy.is_installed else "○ [NOT FOUND]"
+        status_icon = "●" if self.policy.is_installed else "○"
         status_style = "green" if self.policy.is_installed else "dim"
-        yield Label(f"[{status_style}]{status_tag}[/{status_style}] {category_tag} [bold]{self.policy.tool.vendor}/{self.policy.tool.name}[/bold]")
+        cat = self.policy.tool.category.upper()[:3]
+        yield Label(f"[{status_style}]{status_icon}[/{status_style}] [{cat}] [bold]{self.policy.tool.vendor}/{self.policy.tool.name}[/bold]")
 
 
 class HardeningApp(App):
@@ -257,16 +257,15 @@ class HardeningApp(App):
         width: 100%;
     }
     #sidebar {
-        width: 35%;
-        min-width: 36;
-        max-width: 52;
+        width: 34;
+        min-width: 32;
+        max-width: 36;
         height: 1fr;
         padding: 0 1;
         border-right: solid #45475a;
     }
     #details-panel {
         width: 1fr;
-        min-width: 40;
         height: 1fr;
         padding: 0 1;
     }
@@ -274,31 +273,34 @@ class HardeningApp(App):
         text-style: bold;
         color: #89b4fa;
         margin-bottom: 0;
-        margin-top: 1;
+        margin-top: 0;
+        height: 1;
     }
     #tools-list {
         height: 1fr;
         min-height: 5;
         border: solid #45475a;
         background: #11111b;
+        margin-bottom: 0;
     }
     #apply-action-buttons, #remove-action-buttons, #extras-buttons {
         layout: horizontal;
-        height: auto;
+        height: 1;
         margin-top: 0;
         margin-bottom: 0;
     }
     #extras-buttons Button {
         min-width: 8;
-        height: 3;
+        max-width: 12;
+        height: 1;
         border: none;
         margin-right: 1;
         margin-bottom: 0;
         padding: 0 1;
     }
     Button {
-        min-width: 10;
-        height: 3;
+        min-width: 6;
+        height: 1;
         border: none;
         margin-right: 1;
         margin-bottom: 0;
@@ -307,33 +309,34 @@ class HardeningApp(App):
     Checkbox {
         margin: 0 1 0 0;
         padding: 0;
-        height: 3;
+        height: 1;
         border: none;
     }
     #btn-view-dlp {
         display: none;
     }
+    #policy-details {
+        height: 12;
+        min-height: 8;
+        max-height: 14;
+        background: #11111b;
+        padding: 0 1;
+        border: solid #45475a;
+        margin-bottom: 0;
+    }
     #log-view {
         height: 1fr;
-        min-height: 5;
-        max-height: 11;
+        min-height: 4;
         border: solid #45475a;
         background: #11111b;
         margin-top: 0;
         margin-bottom: 0;
     }
-    #policy-details {
-        height: 1fr;
-        min-height: 6;
-        background: #11111b;
-        padding: 1;
-        border: solid #45475a;
-    }
     #help-container, #dlp-container, #install-container {
-        width: 90%;
-        max-width: 110;
-        height: 90%;
-        max-height: 38;
+        width: 85%;
+        max-width: 95;
+        height: 85%;
+        max-height: 28;
         min-width: 40;
         min-height: 14;
         background: #181825;
@@ -362,17 +365,19 @@ class HardeningApp(App):
     }
     #install-terminal-log {
         height: 1fr;
-        min-height: 6;
-        max-height: 14;
+        min-height: 5;
+        max-height: 10;
         border: solid #45475a;
         background: #11111b;
         margin-bottom: 1;
     }
     #btn-close-help, #btn-close-dlp, #btn-close-install {
         width: 100%;
+        height: 1;
+        border: none;
     }
 
-    /* Responsive Compact Layout for smaller terminals (< 105 cols or < 32 lines) */
+    /* Responsive Compact Layout for smaller terminals (< 95 cols or < 28 lines) */
     .compact-mode #main-container {
         layout: vertical;
     }
@@ -380,14 +385,14 @@ class HardeningApp(App):
         width: 100%;
         max-width: 100%;
         height: auto;
-        max-height: 9;
+        max-height: 8;
         border-right: none;
         border-bottom: solid #45475a;
         padding: 0 1;
     }
     .compact-mode #tools-list {
-        height: 5;
-        min-height: 4;
+        height: 4;
+        min-height: 3;
     }
     .compact-mode #details-panel {
         width: 100%;
@@ -395,17 +400,17 @@ class HardeningApp(App):
         padding: 0 1;
     }
     .compact-mode #policy-details {
-        height: 1fr;
-        min-height: 5;
+        height: 8;
+        min-height: 4;
         padding: 0 1;
     }
     .compact-mode #log-view {
-        height: 5;
+        height: 1fr;
         min-height: 3;
     }
     .compact-mode Button {
         min-width: 6;
-        height: 3;
+        height: 1;
         border: none;
         padding: 0 1;
         margin-right: 1;
@@ -416,9 +421,9 @@ class HardeningApp(App):
         margin-bottom: 0;
     }
 
-    /* Ultra-Compact Narrow Layout for narrow screens (< 80 cols) */
+    /* Ultra-Compact Narrow Layout for narrow screens (< 75 cols) */
     .narrow-mode Button {
-        min-width: 6;
+        min-width: 5;
         padding: 0 0;
     }
     .narrow-mode #help-container, .narrow-mode #dlp-container, .narrow-mode #install-container {
@@ -455,20 +460,20 @@ class HardeningApp(App):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
                     yield Static("Select a tool from the catalog to inspect host status, security policies, and DLP settings.", id="policy-info")
-                yield Label("[b]Policy Enforcement & Actions (Apply / Remove)[/b]", classes="panel-title")
+                yield Label("[b]Policy Actions & Enforcement[/b]", classes="panel-title")
                 with Horizontal(id="apply-action-buttons"):
-                    yield Button("Apply Selected", id="btn-apply-selected", variant="success")
-                    yield Button("Apply All Installed", id="btn-apply-installed", variant="primary")
-                    yield Button("Apply All Supported", id="btn-apply-all-supported", variant="warning")
-                    yield Button("Verify Config", id="btn-verify-selected", variant="default")
-                    yield Button("Fix Compliance", id="btn-fix-compliance", variant="success")
-                    yield Button("View DLP Config", id="btn-view-dlp", variant="default")
+                    yield Button("Apply", id="btn-apply-selected", variant="success")
+                    yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
+                    yield Button("Apply All", id="btn-apply-all-supported", variant="warning")
+                    yield Button("Verify", id="btn-verify-selected", variant="default")
+                    yield Button("Fix", id="btn-fix-compliance", variant="success")
+                    yield Button("DLP", id="btn-view-dlp", variant="default")
                     yield Checkbox("Dry Run", id="chk-dry-run")
-                    yield Checkbox("Strict Mode", id="chk-strict-mode")
+                    yield Checkbox("Strict", id="chk-strict-mode")
                 with Horizontal(id="remove-action-buttons"):
-                    yield Button("Remove Selected", id="btn-remove-selected", variant="error")
-                    yield Button("Remove All Installed", id="btn-remove-installed", variant="error")
-                    yield Button("Remove All Supported", id="btn-remove-all-supported", variant="error")
+                    yield Button("Remove", id="btn-remove-selected", variant="error")
+                    yield Button("Remove Installed", id="btn-remove-installed", variant="error")
+                    yield Button("Remove All", id="btn-remove-all-supported", variant="error")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
                 yield RichLog(id="log-view", highlight=True, markup=True)
         yield Footer()
@@ -496,9 +501,9 @@ class HardeningApp(App):
         self._update_extras_buttons()
 
         # Initial responsive class setup
-        if self.size.width < 105 or self.size.height < 32:
+        if self.size.width < 90 or self.size.height < 26:
             self.add_class("compact-mode")
-        if self.size.width < 80:
+        if self.size.width < 75:
             self.add_class("narrow-mode")
 
     def on_resize(self, event: events.Resize) -> None:
@@ -506,12 +511,12 @@ class HardeningApp(App):
         w = event.size.width
         h = event.size.height
 
-        if w < 105 or h < 32:
+        if w < 90 or h < 26:
             self.add_class("compact-mode")
         else:
             self.remove_class("compact-mode")
 
-        if w < 80:
+        if w < 75:
             self.add_class("narrow-mode")
         else:
             self.remove_class("narrow-mode")
