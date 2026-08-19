@@ -99,10 +99,24 @@ hardening-ia/
 - **Windows:** PowerShell 5.1+ or PowerShell 7+
 - **Linux / macOS:** Bash or Zsh
 
-### Virtual Environment Setup
+### Quickstart (1-Step Launchers)
+The repository includes native launchers for each platform that automatically detect/create the `.venv` and install dependencies:
+
+```bash
+# On Linux / macOS:
+./main.sh
+
+# On Windows (PowerShell):
+.\main.ps1
+
+# On Windows (CMD):
+main.cmd
+```
+
+### Manual Virtual Environment Setup
 ```bash
 # Create and activate virtual environment
-python -m venv .venv
+python3 -m venv .venv
 
 # On Linux/macOS:
 source .venv/bin/activate
