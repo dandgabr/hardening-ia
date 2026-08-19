@@ -1,0 +1,62 @@
+schema_version: '1.0'
+tool:
+  name: claude-code
+  vendor: anthropic
+  category: cli
+  description: Claude Code CLI - Agentic command line assistant with autonomous tools
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.claude'
+    settings_file: '%USERPROFILE%\.claude\config.json'
+    rules_dir: '%USERPROFILE%\.claude\rules'
+  linux:
+    config_dir: ~/.claude
+    settings_file: ~/.claude/config.json
+    rules_dir: ~/.claude/rules
+  macos:
+    config_dir: ~/.claude
+    settings_file: ~/.claude/config.json
+    rules_dir: ~/.claude/rules
+policies:
+  sandbox:
+    enforce_sandbox: true
+    allowBypassSandbox: false
+  approvals:
+    permissionMode: manual
+    autoApprove: []
+    acceptEdits: false
+    dangerouslySkipPermissions: false
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+    CLAUDE_CODE_ENABLE_TELEMETRY: 0
+    CLAUDE_TELEMETRY_DISABLED: true
+    audit_logging: true
+  native_settings_override:
+    permissionMode: manual
+    autoApprove: []
+    acceptEdits: false
+    disableTelemetry: true
+    allowBypassSandbox: false
+    dangerouslySkipPermissions: false
+    maxCostThresholdUSD: 10.0
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

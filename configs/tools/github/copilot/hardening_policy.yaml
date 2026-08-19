@@ -1,0 +1,53 @@
+schema_version: '1.0'
+tool:
+  name: copilot
+  vendor: github
+  category: ide
+  description: GitHub Copilot - AI pair programmer for VS Code and JetBrains IDEs
+paths:
+  windows:
+    config_dir: '%APPDATA%\Code\User'
+    settings_file: '%APPDATA%\Code\User\settings.json'
+  linux:
+    config_dir: ~/.config/Code/User
+    settings_file: ~/.config/Code/User/settings.json
+  macos:
+    config_dir: ~/Library/Application Support/Code/User
+    settings_file: ~/Library/Application Support/Code/User/settings.json
+policies:
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    github.copilot.advanced:
+      authProvider: github
+      debug.overrideCAPIUrl: ''
+    github.copilot.enable:
+      '*': true
+      plaintext: false
+      markdown: false
+      scminput: false
+      .env: false
+    github.copilot.editor.enableAutoCompletions: true
+    github.copilot.chat.localeOverride: en
+    telemetry.telemetryLevel: 'off'
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

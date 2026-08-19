@@ -1,0 +1,61 @@
+schema_version: '1.0'
+tool:
+  name: cursor
+  vendor: anysphere
+  category: ide
+  description: Cursor IDE - AI-native code editor built on VS Code foundation
+paths:
+  windows:
+    config_dir: '%APPDATA%\Cursor\User'
+    settings_file: '%APPDATA%\Cursor\User\settings.json'
+  linux:
+    config_dir: ~/.config/Cursor/User
+    settings_file: ~/.config/Cursor/User/settings.json
+  macos:
+    config_dir: ~/Library/Application Support/Cursor/User
+    settings_file: ~/Library/Application Support/Cursor/User/settings.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    cursor.privacyMode: true
+    cursor.general.privacy: no-retention
+    cursor.terminal.autoExecute: false
+    cursor.terminal.sandbox: true
+    cursor.terminal.legacyTerminalTool: false
+    security.workspace.trust.enabled: true
+    telemetry.telemetryLevel: 'off'
+    cursor.indexer.ignorePatterns:
+    - .env*
+    - '*.pem'
+    - '*.key'
+    - '**/.aws/**'
+    - '**/.ssh/**'
+    - '**/.kube/**'
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

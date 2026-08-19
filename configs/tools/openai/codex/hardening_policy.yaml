@@ -1,0 +1,54 @@
+schema_version: '1.0'
+tool:
+  name: codex
+  vendor: openai
+  category: cli
+  description: OpenAI Codex / CLI Assistant - Code generation and agent execution
+    engine
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.codex'
+    settings_file: '%USERPROFILE%\.codex\config.json'
+  linux:
+    config_dir: ~/.codex
+    settings_file: ~/.codex/config.json
+  macos:
+    config_dir: ~/.codex
+    settings_file: ~/.codex/config.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    telemetry: false
+    auto_execute: false
+    enforce_sandboxing: true
+    allow_network: false
+    require_human_confirmation: true
+    prompt_secret_masking: true
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

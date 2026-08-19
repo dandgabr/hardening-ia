@@ -1,0 +1,65 @@
+schema_version: '1.0'
+tool:
+  name: antigravity
+  vendor: google
+  category: agentic
+  description: Google Antigravity - Enterprise agentic developer platform (CLI, IDE,
+    MCP, SDK)
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.gemini\antigravity-cli'
+    settings_file: '%USERPROFILE%\.gemini\antigravity-cli\settings.json'
+    rules_dir: '%USERPROFILE%\.gemini\antigravity-cli\rules'
+  linux:
+    config_dir: ~/.gemini/antigravity-cli
+    settings_file: ~/.gemini/antigravity-cli/settings.json
+    rules_dir: ~/.gemini/antigravity-cli/rules
+  macos:
+    config_dir: ~/.gemini/antigravity-cli
+    settings_file: ~/.gemini/antigravity-cli/settings.json
+    rules_dir: ~/.gemini/antigravity-cli/rules
+policies:
+  sandbox:
+    enforce_sandbox: true
+    enableTerminalSandbox: true
+    default_bypass: false
+    toolPermissions: request-review
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+    allowNonWorkspaceAccess: false
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+    mask_secrets: true
+  telemetry:
+    enable_telemetry: false
+    enable_crash_reporting: false
+    audit_logging: true
+  native_settings_override:
+    telemetry.enabled: false
+    crashReporting.enabled: false
+    toolPermissions: request-review
+    enableTerminalSandbox: true
+    allowNonWorkspaceAccess: false
+    hooks.enforceGuardrails: true
+    security.sandbox.default_enforced: true
+    security.approvals.bypass_allowed: false
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

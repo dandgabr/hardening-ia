@@ -1,0 +1,52 @@
+schema_version: '1.0'
+tool:
+  name: clinepass
+  vendor: clinepass
+  category: agentic
+  description: ClinePass - Managed security wrapper and credential vault for Cline
+    agents
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.clinepass'
+    settings_file: '%USERPROFILE%\.clinepass\config.json'
+  linux:
+    config_dir: ~/.clinepass
+    settings_file: ~/.clinepass/config.json
+  macos:
+    config_dir: ~/.clinepass
+    settings_file: ~/.clinepass/config.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    vault.enforce_encryption: true
+    proxy.block_unapproved_hosts: true
+    proxy.mask_tokens_in_logs: true
+    audit.full_logging: true
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

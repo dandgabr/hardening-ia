@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hardening-ia"
+version = "0.1.0"
+description = "Automação e framework para aplicação de hardening em ferramentas de desenvolvimento assistidas por IA"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "textual>=0.50.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+hardening-ia = "main:main"

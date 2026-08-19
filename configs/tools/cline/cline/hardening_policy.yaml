@@ -1,0 +1,70 @@
+schema_version: '1.0'
+tool:
+  name: cline
+  vendor: cline
+  category: agentic
+  description: Cline (formerly Claude Dev) - Autonomous AI coding assistant for VS
+    Code
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.cline'
+    settings_file: '%USERPROFILE%\.cline\settings.json'
+    rules_dir: '%USERPROFILE%\.cline\rules'
+  linux:
+    config_dir: ~/.cline
+    settings_file: ~/.cline/settings.json
+    rules_dir: ~/.cline/rules
+  macos:
+    config_dir: ~/.cline
+    settings_file: ~/.cline/settings.json
+    rules_dir: ~/.cline/rules
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    alwaysApproveResubmit: false
+    autoApproveExecution: false
+    autoApprove:
+      terminal: false
+      write: false
+      read: true
+      browser: false
+      mcp: false
+    allowNonWorkspaceAccess: false
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    alwaysApproveResubmit: false
+    autoApproveExecution: false
+    autoApprove:
+      terminal: false
+      write: false
+      read: true
+      browser: false
+      mcp: false
+    allowNonWorkspaceAccess: false
+    telemetryEnabled: false
+    restrictSecretAccess: true
+    mcp.requireConsent: true
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

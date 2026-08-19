@@ -1,0 +1,52 @@
+schema_version: '1.0'
+tool:
+  name: grok
+  vendor: xai
+  category: cli
+  description: Grok / xAI Developer CLI - Advanced coding and reasoning interface
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.xai'
+    settings_file: '%USERPROFILE%\.xai\config.json'
+  linux:
+    config_dir: ~/.xai
+    settings_file: ~/.xai/config.json
+  macos:
+    config_dir: ~/.xai
+    settings_file: ~/.xai/config.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    telemetry: false
+    audit_logs: true
+    sandbox_strict: true
+    share_prompts: false
+    require_approval_all_tools: true
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

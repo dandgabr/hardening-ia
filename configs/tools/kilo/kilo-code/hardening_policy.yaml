@@ -1,0 +1,51 @@
+schema_version: '1.0'
+tool:
+  name: kilo-code
+  vendor: kilo
+  category: cli
+  description: Kilo Code - High-performance AI developer CLI suite
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.kilo'
+    settings_file: '%USERPROFILE%\.kilo\config.json'
+  linux:
+    config_dir: ~/.kilo
+    settings_file: ~/.kilo/config.json
+  macos:
+    config_dir: ~/.kilo
+    settings_file: ~/.kilo/config.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    privacy.telemetry: false
+    execution.require_confirmation: true
+    sandbox.enabled: true
+    indexing.exclude_hidden_and_secrets: true
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

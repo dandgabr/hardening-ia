@@ -1,0 +1,52 @@
+schema_version: '1.0'
+tool:
+  name: kimi
+  vendor: moonshot
+  category: cli
+  description: Kimi - High-context conversational and coding assistant from Moonshot
+    AI
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.kimi'
+    settings_file: '%USERPROFILE%\.kimi\config.json'
+  linux:
+    config_dir: ~/.kimi
+    settings_file: ~/.kimi/config.json
+  macos:
+    config_dir: ~/.kimi
+    settings_file: ~/.kimi/config.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    telemetry.enabled: false
+    privacy.data_retention: false
+    prompt.mask_secrets: true
+    context.exclude_secret_files: true
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh

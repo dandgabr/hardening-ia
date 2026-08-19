@@ -1,0 +1,55 @@
+schema_version: '1.0'
+tool:
+  name: hermes-agent
+  vendor: nousresearch
+  category: agentic
+  description: Hermes Agent - Advanced reasoning and autonomous execution agent
+paths:
+  windows:
+    config_dir: '%USERPROFILE%\.hermes'
+    settings_file: '%USERPROFILE%\.hermes\agent_config.json'
+  linux:
+    config_dir: ~/.hermes
+    settings_file: ~/.hermes/agent_config.json
+  macos:
+    config_dir: ~/.hermes
+    settings_file: ~/.hermes/agent_config.json
+policies:
+  sandbox:
+    enforce_sandbox: true
+    default_bypass: false
+  approvals:
+    require_approval_for_terminal: true
+    require_approval_for_network: true
+  dlp:
+    block_sensitive_paths:
+    - '**/.env*'
+    - '**/*.pem'
+    - '**/*.key'
+    - '**/*.pfx'
+    - '**/*.p12'
+    - '**/*_rsa'
+    - '**/*_ed25519'
+    - ~/.ssh/**
+    - ~/.aws/**
+    - ~/.kube/**
+    - ~/.gnupg/**
+    - ~/.git-credentials
+    - ~/.netrc
+    - ~/.docker/config.json
+    disable_code_training_sharing: true
+  telemetry:
+    enable_telemetry: false
+  native_settings_override:
+    enable_telemetry: false
+    human_in_the_loop: true
+    safe_mode: true
+    max_recursive_steps: 10
+    sandbox_container: true
+    blocked_tools:
+    - system_admin
+    - raw_exec
+custom_scripts:
+  windows: scripts/os/windows/apply-hardening.ps1
+  linux: scripts/os/linux/apply-hardening.sh
+  macos: scripts/os/macos/apply-hardening.sh
