@@ -50,6 +50,7 @@ logs/
 audit/
 *.sqlite3
 *.db
+scripts/extra-tools/bin/
 
 # Operating System Files
 .DS_Store

@@ -1,20 +1,26 @@
 <#
 .SYNOPSIS
-    Installs and verifies ai-jail sandbox runtime for AI agents on Windows.
+    Installs and verifies ai-jail sandbox runtime for AI agents on Windows (https://github.com/akitaonrails/ai-jail).
 #>
 
 Write-Output "[INFO] ========================================="
 Write-Output "[INFO]  Extra Tool Installer: ai-jail (Windows)"
 Write-Output "[INFO] ========================================="
 
-if (Get-Command "python" -ErrorAction SilentlyContinue) {
-    Write-Output "[INFO] Installing ai-jail via pip..."
-    python -m pip install "ai-jail>=0.1.0"
+$repoRoot = (Resolve-Path "$PSScriptRoot\..\..\..").Path
+$installerScript = Join-Path $repoRoot "scripts\extra-tools\install_ai_jail.py"
+
+if (Test-Path $installerScript) {
+    Write-Output "[INFO] Invoking universal ai-jail installer..."
+    python $installerScript
     if ($LASTEXITCODE -eq 0) {
         Write-Output "[INFO] [OK] ai-jail installed and verified successfully."
+        exit 0
     } else {
         Write-Error "[ERROR] Failed to install ai-jail."
+        exit 1
     }
 } else {
-    Write-Error "[ERROR] Python was not found in PATH. Please install Python 3.9+."
+    Write-Error "[ERROR] Installer script not found: $installerScript"
+    exit 1
 }

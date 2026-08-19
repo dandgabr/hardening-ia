@@ -14,6 +14,7 @@ An enterprise-grade, multi-platform framework for automating security hardening,
 - [Supported AI Tools](#-supported-ai-tools)
 - [Repository Structure](#-repository-structure)
 - [Prerequisites & Installation](#-prerequisites--installation)
+- [Extra Containment: ai-jail](#-extra-containment-ai-jail)
 - [Usage Guide](#-usage-guide)
   - [1. Interactive Terminal UI (TUI with Textual)](#1-interactive-terminal-ui-tui-with-textual)
   - [2. Headless CLI Automation Mode](#2-headless-cli-automation-mode)
@@ -31,28 +32,30 @@ AI developer assistants introduce new threat surfaces: unintended command execut
 - **Human-in-the-Loop Controls:** Disallow unrestricted auto-approvals.
 - **Data Loss Prevention (DLP):** Exclude credentials, tokens, and SSH/cloud keys from context pipelines.
 - **Zero-Telemetry Lockdown:** Enforce `DO_NOT_TRACK`, disable crash uploads and model training consent.
+- **Multi-OS Command Risk Classifier:** 390+ commands categorized across Linux, Windows, and macOS into LOW, MEDIUM, HIGH, and CRITICAL risk tiers.
+- **Dynamic Host Discovery:** Automatically detects active OS and installed AI tools before execution.
 - **Audit Logging:** Emits structured JSONL audit logs (`logs/audit.jsonl`) for enterprise SIEM/EDR ingestion.
 
 ---
 
 ## 🤖 Supported AI Tools
 
-| Vendor | Tool | Category | Policy Reference |
-|---|---|---|---|
-| **Google** | Antigravity | Agentic (CLI, IDE, MCP) | [`google/antigravity`](file:///B:/Code/hardening-ia/configs/tools/google/antigravity/hardening_policy.yaml) |
-| **Anthropic** | Claude Code | CLI Agent | [`anthropic/claude-code`](file:///B:/Code/hardening-ia/configs/tools/anthropic/claude-code/hardening_policy.yaml) |
-| **OpenAI** | Codex | CLI Agent | [`openai/codex`](file:///B:/Code/hardening-ia/configs/tools/openai/codex/hardening_policy.yaml) |
-| **OpenCode** | OpenCode | CLI Agent | [`opencode/opencode`](file:///B:/Code/hardening-ia/configs/tools/opencode/opencode/hardening_policy.yaml) |
-| **Nous Research** | Hermes Agent | Agentic | [`nousresearch/hermes-agent`](file:///B:/Code/hardening-ia/configs/tools/nousresearch/hermes-agent/hardening_policy.yaml) |
-| **Qoder** | Qoder | Agentic | [`qoder/qoder`](file:///B:/Code/hardening-ia/configs/tools/qoder/qoder/hardening_policy.yaml) |
-| **GitHub** | Copilot | IDE Extension | [`github/copilot`](file:///B:/Code/hardening-ia/configs/tools/github/copilot/hardening_policy.yaml) |
-| **Anysphere** | Cursor | AI-Native IDE | [`anysphere/cursor`](file:///B:/Code/hardening-ia/configs/tools/anysphere/cursor/hardening_policy.yaml) |
-| **Kilo** | Kilo Code | CLI Suite | [`kilo/kilo-code`](file:///B:/Code/hardening-ia/configs/tools/kilo/kilo-code/hardening_policy.yaml) |
-| **Cline** | Cline | Agentic | [`cline/cline`](file:///B:/Code/hardening-ia/configs/tools/cline/cline/hardening_policy.yaml) |
-| **ClinePass** | ClinePass | Security Wrapper | [`clinepass/clinepass`](file:///B:/Code/hardening-ia/configs/tools/clinepass/clinepass/hardening_policy.yaml) |
-| **CodeBuddy** | CodeBuddy | IDE Assistant | [`codebuddy/codebuddy`](file:///B:/Code/hardening-ia/configs/tools/codebuddy/codebuddy/hardening_policy.yaml) |
-| **Moonshot** | Kimi | CLI Agent | [`moonshot/kimi`](file:///B:/Code/hardening-ia/configs/tools/moonshot/kimi/hardening_policy.yaml) |
-| **xAI** | Grok | CLI Agent | [`xai/grok`](file:///B:/Code/hardening-ia/configs/tools/xai/grok/hardening_policy.yaml) |
+| Vendor | Tool | Category | Hardening Policy (YAML) | Tool Security Guide |
+|---|---|---|---|---|
+| **Google** | Antigravity | Agentic (CLI, IDE, MCP) | [hardening_policy.yaml](configs/tools/google/antigravity/hardening_policy.yaml) | [antigravity.md](docs/tools/google/antigravity/antigravity.md) |
+| **Anthropic** | Claude Code | CLI Agent | [hardening_policy.yaml](configs/tools/anthropic/claude-code/hardening_policy.yaml) | [claude-code.md](docs/tools/anthropic/claude-code/claude-code.md) |
+| **OpenAI** | Codex | CLI Agent | [hardening_policy.yaml](configs/tools/openai/codex/hardening_policy.yaml) | [codex.md](docs/tools/openai/codex/codex.md) |
+| **OpenCode** | OpenCode | CLI Agent | [hardening_policy.yaml](configs/tools/opencode/opencode/hardening_policy.yaml) | [opencode.md](docs/tools/opencode/opencode/opencode.md) |
+| **Nous Research** | Hermes Agent | Agentic | [hardening_policy.yaml](configs/tools/nousresearch/hermes-agent/hardening_policy.yaml) | [hermes-agent.md](docs/tools/nousresearch/hermes-agent/hermes-agent.md) |
+| **Qoder** | Qoder | Agentic | [hardening_policy.yaml](configs/tools/qoder/qoder/hardening_policy.yaml) | [qoder.md](docs/tools/qoder/qoder/qoder.md) |
+| **GitHub** | Copilot | IDE Extension | [hardening_policy.yaml](configs/tools/github/copilot/hardening_policy.yaml) | [copilot.md](docs/tools/github/copilot/copilot.md) |
+| **Anysphere** | Cursor | AI-Native IDE | [hardening_policy.yaml](configs/tools/anysphere/cursor/hardening_policy.yaml) | [cursor.md](docs/tools/anysphere/cursor/cursor.md) |
+| **Kilo** | Kilo Code | CLI Suite | [hardening_policy.yaml](configs/tools/kilo/kilo-code/hardening_policy.yaml) | [kilo-code.md](docs/tools/kilo/kilo-code/kilo-code.md) |
+| **Cline** | Cline | Agentic | [hardening_policy.yaml](configs/tools/cline/cline/hardening_policy.yaml) | [cline.md](docs/tools/cline/cline/cline.md) |
+| **ClinePass** | ClinePass | Security Wrapper | [hardening_policy.yaml](configs/tools/clinepass/clinepass/hardening_policy.yaml) | [clinepass.md](docs/tools/clinepass/clinepass/clinepass.md) |
+| **CodeBuddy** | CodeBuddy | IDE Assistant | [hardening_policy.yaml](configs/tools/codebuddy/codebuddy/hardening_policy.yaml) | [codebuddy.md](docs/tools/codebuddy/codebuddy/codebuddy.md) |
+| **Moonshot** | Kimi | CLI Agent | [hardening_policy.yaml](configs/tools/moonshot/kimi/hardening_policy.yaml) | [kimi.md](docs/tools/moonshot/kimi/kimi.md) |
+| **xAI** | Grok | CLI Agent | [hardening_policy.yaml](configs/tools/xai/grok/hardening_policy.yaml) | [grok.md](docs/tools/xai/grok/grok.md) |
 
 ---
 
@@ -64,22 +67,27 @@ hardening-ia/
 │   ├── ARCHITECTURE.md                 # System architecture and execution flow
 │   ├── HARDENING_GUIDELINES.md         # Threat models and security pillars
 │   ├── CONFIG_SPEC.md                  # Declarative YAML policy specification
-│   └── tools/                          # Dedicated guides for all 14 tools
+│   ├── LINUX_COMMAND_POLICY.md         # Linux command execution risk matrix (390+ cmds)
+│   ├── WINDOWS_COMMAND_POLICY.md       # Windows command risk policy (PowerShell/CMD)
+│   ├── MACOS_COMMAND_POLICY.md         # macOS command risk policy (Darwin/BSD)
+│   └── tools/                          # Dedicated security guides for all 14 tools
 ├── configs/                            # Declarative YAML policies
-│   └── tools/<vendor>/<tool>/          # Hardening policy definitions
+│   ├── rules/                          # Deployed agent security rule files
+│   └── tools/<vendor>/<tool>/          # Per-tool hardening policy definitions
 ├── scripts/                            # Platform execution automation
 │   ├── os/                             # Native OS scripts (Windows .ps1, Linux/macOS .sh)
 │   └── extra-tools/                    # Extra security tool installers (e.g. ai-jail)
 ├── src/                                # Core application source code
-│   ├── core/                           # Engine, models, logger, parser
+│   ├── core/                           # Engine, models, logger, parser, risk classifier
 │   ├── cli/                            # Headless CLI runner with Rich tables
 │   └── tui/                            # Interactive Terminal UI with Textual
 ├── logs/                               # Rolling logs and JSONL audit trail (.gitignored)
 ├── main.py                             # Unified CLI / TUI entrypoint
 ├── pyproject.toml                      # Package configuration
 ├── requirements.txt                    # Python dependencies
+├── LICENSE                             # MIT License
 ├── .gitignore                          # Standardized ignore rules
-└── README.md                           # Quickstart guide
+└── README.md                           # Project documentation
 ```
 
 ---
@@ -95,12 +103,28 @@ hardening-ia/
 ```bash
 # Create and activate virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or on Windows:
+
+# On Linux/macOS:
+source .venv/bin/activate
+
+# On Windows (PowerShell):
 .venv\Scripts\Activate.ps1
 
 # Install requirements
 pip install -r requirements.txt
+```
+
+---
+
+## 🛡️ Extra Containment: ai-jail
+
+The framework provides automated dependency resolution and installation for [**ai-jail**](https://github.com/akitaonrails/ai-jail), an open-source sandbox container written in Rust that isolates AI agents using `bubblewrap` (Linux/WSL2) or `sandbox-exec` (macOS):
+
+```bash
+# Universal cross-platform installer (Linux, macOS, Windows via WSL2):
+python main.py --install-extra ai-jail
+# or directly:
+python scripts/extra-tools/install_ai_jail.py
 ```
 
 ---
@@ -117,17 +141,17 @@ python main.py -gui
 
 ### 2. Headless CLI Automation Mode
 
-- **List all available tools and their host installation status:**
+- **List all available tools and their live host installation status:**
   ```bash
   python main.py --list
   ```
 
-- **List only tools installed on the current host:**
+- **List only tools detected/installed on the current machine:**
   ```bash
   python main.py --list --installed-only
   ```
 
-- **Evaluate Linux Command Risk Level (Low/Medium/High/Critical):**
+- **Evaluate Command Risk Level (Low/Medium/High/Critical across Linux, Windows, macOS):**
   ```bash
   python main.py --check-command "ls -la"
   python main.py --check-command "mkdir new_folder"
@@ -135,7 +159,7 @@ python main.py -gui
   python main.py --check-command "rm -rf /"
   ```
 
-- **Apply hardening only to installed tools:**
+- **Apply hardening only to installed tools on the host:**
   ```bash
   python main.py --apply --installed-only
   ```
@@ -151,9 +175,9 @@ python main.py -gui
   python main.py --tool claude-code --apply --dry-run
   ```
 
-- **Install extra containment runtime (`ai-jail`):**
+- **Apply hardening across ALL registered tools:**
   ```bash
-  python main.py --install-extra ai-jail
+  python main.py --apply
   ```
 
 - **Verbose / Debug output:**
@@ -188,5 +212,9 @@ python main.py -gui
 ## 📖 Documentation Index
 
 - [System Architecture](docs/ARCHITECTURE.md)
-- [Hardening Guidelines & Threat Model](docs/HARDENING_GUIDELINES.md)
+- [Enterprise Hardening Guidelines & Threat Model](docs/HARDENING_GUIDELINES.md)
 - [YAML Policy Configuration Specification](docs/CONFIG_SPEC.md)
+- [Linux Command Execution Risk Matrix](docs/LINUX_COMMAND_POLICY.md)
+- [Windows Command Execution Risk Matrix](docs/WINDOWS_COMMAND_POLICY.md)
+- [macOS Command Execution Risk Matrix](docs/MACOS_COMMAND_POLICY.md)
+- [Tool Documentation Directory](docs/tools/)

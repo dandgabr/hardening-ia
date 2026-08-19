@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Extra Tool Installer: ai-jail (macOS)
+# Extra Tool Installer: ai-jail (macOS) - https://github.com/akitaonrails/ai-jail
 # ==============================================================================
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+INSTALLER_PY="${REPO_ROOT}/scripts/extra-tools/install_ai_jail.py"
 
 echo "[INFO] ========================================="
 echo "[INFO]  Extra Tool Installer: ai-jail (macOS)"
 echo "[INFO] ========================================="
 
-if command -v pip3 &> /dev/null; then
-    echo "[INFO] Installing ai-jail via pip3..."
-    pip3 install "ai-jail>=0.1.0"
-    echo "[INFO] [OK] ai-jail installed successfully on macOS."
-elif command -v pip &> /dev/null; then
-    echo "[INFO] Installing ai-jail via pip..."
-    pip install "ai-jail>=0.1.0"
-    echo "[INFO] [OK] ai-jail installed successfully on macOS."
+if [ -f "$INSTALLER_PY" ]; then
+    echo "[INFO] Invoking universal ai-jail installer..."
+    python3 "$INSTALLER_PY"
+    exit 0
 else
-    echo "[ERROR] pip not found. Please install Python via Homebrew (brew install python)." >&2
+    echo "[ERROR] Installer script not found: $INSTALLER_PY" >&2
     exit 1
 fi

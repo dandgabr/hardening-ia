@@ -1,5 +1,6 @@
 """Hardening Engine orchestrating policy enforcement, deep configuration merging, rules deployment, and script execution."""
 
+import sys
 import json
 import shutil
 import subprocess
@@ -182,9 +183,21 @@ class HardeningEngine:
 
     def install_extra_tool(self, tool_id: str) -> bool:
         """Runs security extra tool installation automation script."""
-        extra_dir = self.repo_root / "scripts" / "extra-tools" / self.os_type
         logger.info(f"Triggering extra tool installation: {tool_id} on {self.os_type}")
 
+        # Universal Python installer
+        universal_script = self.repo_root / "scripts" / "extra-tools" / f"install_{tool_id.replace('-', '_')}.py"
+        if universal_script.exists():
+            cmd = [sys.executable, str(universal_script)]
+            process = subprocess.run(cmd, capture_output=True, text=True)
+            for line in process.stdout.splitlines():
+                logger.info(f"[install-{tool_id}] {line}")
+            if process.returncode != 0:
+                for line in process.stderr.splitlines():
+                    logger.error(f"[install-{tool_id}] {line}")
+            return process.returncode == 0
+
+        extra_dir = self.repo_root / "scripts" / "extra-tools" / self.os_type
         if self.os_type == "windows":
             script = extra_dir / f"install-{tool_id}.ps1"
             if script.exists():
