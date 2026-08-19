@@ -104,12 +104,12 @@ class DlpModal(ModalScreen):
 
         patterns_formatted = []
         for p in patterns:
-            patterns_formatted.append(f"  [cyan]•[/] [bold yellow]{p}[/bold yellow]")
+            patterns_formatted.append(f"  [cyan]•[/] [bold yellow]{escape(str(p))}[/bold yellow]")
         patterns_str = "\n".join(patterns_formatted) if patterns_formatted else "  [dim]No specific patterns defined[/dim]"
 
         danger_formatted = []
         for dp in dangerous_paths[:10]:
-            danger_formatted.append(f"  [red]•[/] [bold white]{dp}[/bold white]")
+            danger_formatted.append(f"  [red]•[/] [bold white]{escape(str(dp))}[/bold white]")
         if len(dangerous_paths) > 10:
             danger_formatted.append(f"  [dim]... and {len(dangerous_paths) - 10} more OS paths[/dim]")
         danger_str = "\n".join(danger_formatted)
