@@ -88,6 +88,26 @@ class TestHardeningEngine(unittest.TestCase):
         self.assertEqual(restored_config["anthropic.apiKey"], "sk-ant-custom-key-67890")
         self.assertEqual(len(restored_config["custom.aiProviders"]), 2)
 
+    def test_verify_extra_tool_installation_diagnostics(self):
+        """Verify post-installation diagnostic test suite execution for extra security components."""
+        # 1. Test ai-jail diagnostics
+        jail_diag = self.engine.verify_extra_tool_installation("ai-jail")
+        self.assertIsInstance(jail_diag, list)
+        self.assertGreaterEqual(len(jail_diag), 2)
+        for check in jail_diag:
+            self.assertIn("name", check)
+            self.assertIn("passed", check)
+            self.assertIn("details", check)
+
+        # 2. Test opengrep diagnostics
+        opengrep_diag = self.engine.verify_extra_tool_installation("opengrep")
+        self.assertIsInstance(opengrep_diag, list)
+        self.assertGreaterEqual(len(opengrep_diag), 2)
+        for check in opengrep_diag:
+            self.assertIn("name", check)
+            self.assertIn("passed", check)
+            self.assertIn("details", check)
+
 
 if __name__ == "__main__":
     unittest.main()
