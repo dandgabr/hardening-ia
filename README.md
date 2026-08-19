@@ -116,15 +116,32 @@ pip install -r requirements.txt
 
 ---
 
-## 🛡️ Extra Containment: ai-jail
+## 🛡️ Extra Tools: Runtime Sandboxes & SAST Analysis
 
-The framework provides automated dependency resolution and installation for [**ai-jail**](https://github.com/akitaonrails/ai-jail), an open-source sandbox container written in Rust that isolates AI agents using `bubblewrap` (Linux/WSL2) or `sandbox-exec` (macOS):
+The framework provides automated dependency resolution, installation, and integration for key ecosystem security tooling:
+
+### 1. [ai-jail](https://github.com/akitaonrails/ai-jail) (Runtime Containment)
+An open-source sandbox container written in Rust that isolates AI agent processes using `bubblewrap` (Linux / WSL2) or `sandbox-exec` (macOS).
 
 ```bash
-# Universal cross-platform installer (Linux, macOS, Windows via WSL2):
 python main.py --install-extra ai-jail
-# or directly:
-python scripts/extra-tools/install_ai_jail.py
+```
+
+### 2. [OpenGrep](https://github.com/opengrep/opengrep) (AI Code SAST & Vulnerability Remediation)
+An enterprise-grade, fully open-source static analysis security scanner (fork of Semgrep CE) integrated with custom rules to identify and fix security flaws in AI-generated code (command injections, hardcoded credentials, insecure deserialization, SQLi, SSRF):
+
+```bash
+# Install OpenGrep binary and deploy rules:
+python main.py --install-extra opengrep
+
+# Scan the workspace or a target directory for code vulnerabilities:
+python main.py --scan-code
+python main.py --scan-code ./src
+```
+
+### 3. Install All Extras
+```bash
+python main.py --install-extra all
 ```
 
 ---

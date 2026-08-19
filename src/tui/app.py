@@ -2,6 +2,7 @@
 
 import logging
 from typing import List, Optional
+from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll
 from textual.widgets import Header, Footer, Button, Static, Label, ListView, ListItem, RichLog, Checkbox
@@ -12,6 +13,7 @@ from src.core.engine import HardeningEngine
 from src.core.os_detector import OSDetector
 from src.core.models import HardeningPolicy
 from src.core.logger import setup_logging
+from src.core.code_analyzer import CodeVulnerabilityScanner
 
 
 class TextualLogHandler(logging.Handler):
@@ -37,44 +39,29 @@ class ToolItem(ListItem):
         category_tag = f"[{self.policy.tool.category.upper():<7}]"
         status_tag = "● [INSTALLED]" if self.policy.is_installed else "○ [NOT FOUND]"
         status_style = "green" if self.policy.is_installed else "dim"
-        yield Label(f"[{status_style}]{status_tag:<14}[/{status_style}] {category_tag} {self.policy.tool.vendor}/{self.policy.tool.name}")
+        yield Label(f"[{status_style}]{status_tag}[/{status_style}] {category_tag} [bold]{self.policy.tool.vendor}/{self.policy.tool.name}[/bold]")
 
 
 class HardeningApp(App):
-    """Textual interactive terminal UI for AI tool hardening and agent management."""
-
     CSS = """
     Screen {
         background: #1e1e2e;
         color: #cdd6f4;
     }
-    Header {
-        background: #11111b;
-        color: #89b4fa;
-        dock: top;
-    }
-    Footer {
-        background: #11111b;
-        color: #a6adc8;
-        dock: bottom;
-    }
     #main-container {
         layout: horizontal;
         height: 1fr;
-        padding: 1;
     }
     #sidebar {
-        width: 42%;
-        background: #181825;
-        border: round #313244;
+        width: 38%;
+        height: 1fr;
         padding: 1;
+        border-right: solid #45475a;
     }
     #details-panel {
-        width: 58%;
-        background: #181825;
-        border: round #313244;
+        width: 62%;
+        height: 1fr;
         padding: 1;
-        margin-left: 1;
     }
     .panel-title {
         text-style: bold;
@@ -86,13 +73,14 @@ class HardeningApp(App):
         border: solid #45475a;
         background: #11111b;
     }
-    #action-buttons {
+    #action-buttons, #extras-buttons {
         layout: horizontal;
         height: auto;
         margin-top: 1;
     }
     Button {
         margin-right: 1;
+        margin-bottom: 1;
     }
     #log-view {
         height: 11;
@@ -114,6 +102,7 @@ class HardeningApp(App):
         super().__init__()
         self.config_loader = ConfigLoader()
         self.engine = HardeningEngine()
+        self.code_scanner = CodeVulnerabilityScanner()
         self.policies: List[HardeningPolicy] = []
 
     def compose(self) -> ComposeResult:
@@ -126,7 +115,11 @@ class HardeningApp(App):
                 with Horizontal(id="action-buttons"):
                     yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
                     yield Button("Apply All", id="btn-apply-all", variant="warning")
+                yield Label("[b]Security Extras & SAST Scanner[/b]", classes="panel-title")
+                with Horizontal(id="extras-buttons"):
                     yield Button("ai-jail", id="btn-install-jail")
+                    yield Button("OpenGrep", id="btn-install-opengrep")
+                    yield Button("Scan Code", id="btn-scan-code", variant="error")
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
@@ -140,7 +133,7 @@ class HardeningApp(App):
 
     def on_mount(self) -> None:
         self.title = "Hardening IA Framework"
-        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Linux Risk Matrix Active"
+        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Multi-OS Risk Classifier & SAST Active"
 
         log_view = self.query_one("#log-view", RichLog)
         textual_handler = TextualLogHandler(log_view)
@@ -190,7 +183,7 @@ class HardeningApp(App):
 [bold cyan]Agent Rules Directory:[/] {rules_path}
 
 [bold green]Security Controls Enforced:[/]
-• Linux Command Risk Matrix: Active (Low=Auto, Medium/High/Critical=Approval)
+• Command Risk Matrix: Active (Low=Auto, Medium/High/Critical=Approval)
 • Runtime Sandbox Enforced: {sandbox_enforced}
 • Human Approval Required: {approvals_enforced}
 • Sensitive File DLP Blocks: {dlp_count} patterns
@@ -235,6 +228,26 @@ class HardeningApp(App):
                 log_view.write("[bold green][OK] ai-jail installed successfully.[/]")
             else:
                 log_view.write("[bold red][!] ai-jail installation failed.[/]")
+
+        elif event.button.id == "btn-install-opengrep":
+            log_view.write("[*] Launching OpenGrep installer...")
+            success = self.engine.install_extra_tool("opengrep")
+            if success:
+                log_view.write("[bold green][OK] OpenGrep installed and configured successfully.[/]")
+            else:
+                log_view.write("[bold red][!] OpenGrep installation failed.[/]")
+
+        elif event.button.id == "btn-scan-code":
+            log_view.write("[*] Running SAST Code Vulnerability Analysis on workspace...")
+            findings = self.code_scanner.scan_path(Path("."))
+            if not findings:
+                log_view.write("[bold green][OK] No code vulnerabilities or secret leaks detected.[/]")
+            else:
+                log_view.write(f"[bold red][!] Found {len(findings)} vulnerability issue(s):[/]")
+                for idx, f in enumerate(findings[:5], start=1):
+                    log_view.write(f"  {idx}. [{f.get('severity')}] {f.get('file')}:{f.get('line')} - {f.get('title')}")
+                if len(findings) > 5:
+                    log_view.write(f"  ... and {len(findings)-5} more (see logs/audit.jsonl)")
 
 
 def run_tui():

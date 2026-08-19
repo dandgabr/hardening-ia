@@ -1,8 +1,9 @@
-"""CLI runner for automated execution, tool discovery, command risk checking, and Rich reporting."""
+"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, and Rich reporting."""
 
 import sys
 import argparse
 import logging
+from pathlib import Path
 from typing import List
 
 from rich.console import Console
@@ -14,6 +15,7 @@ from src.core.engine import HardeningEngine
 from src.core.os_detector import OSDetector
 from src.core.logger import setup_logging, get_logger
 from src.core.command_classifier import CommandRiskClassifier, RiskLevel
+from src.core.code_analyzer import CodeVulnerabilityScanner
 
 logger = get_logger("cli")
 
@@ -21,15 +23,16 @@ logger = get_logger("cli")
 def run_cli(args: List[str]):
     parser = argparse.ArgumentParser(
         prog="hardening-ia",
-        description="Enterprise AI Hardening Framework with Linux Command Risk Matrix & Host Agent Discovery."
+        description="Enterprise AI Hardening Framework with Multi-OS Command Risk Matrix, SAST Code Analyzer & Host Discovery."
     )
     parser.add_argument("--tool", type=str, help="Filter by tool or vendor name (e.g. google/antigravity, cursor)")
     parser.add_argument("--apply", action="store_true", help="Apply security hardening policies to matching tools")
     parser.add_argument("--list", action="store_true", help="List all available tools and their host installation status")
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
-    parser.add_argument("--check-command", type=str, help="Evaluate Linux command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
+    parser.add_argument("--check-command", type=str, help="Evaluate terminal command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
     parser.add_argument("--dry-run", action="store_true", help="Simulate policy application without modifying configuration files")
-    parser.add_argument("--install-extra", type=str, help="Install extra security isolation tool (e.g. ai-jail)")
+    parser.add_argument("--install-extra", type=str, help="Install extra security isolation tool: 'ai-jail', 'opengrep', or 'all'")
+    parser.add_argument("--scan-code", type=str, nargs="?", const=".", help="Scan target workspace or file for AI-generated code vulnerabilities")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose debug logging")
     parser.add_argument("--cli", action="store_true", help="Explicitly force CLI mode")
     parser.add_argument("-gui", "--gui", action="store_true", help="Launch interactive Terminal User Interface (TUI)")
@@ -47,7 +50,7 @@ def run_cli(args: List[str]):
         border_style="cyan"
     ))
 
-    # Evaluate command risk if requested
+    # 1. Evaluate command risk if requested
     if parsed.check_command:
         risk, requires_approval, reason = CommandRiskClassifier.classify_command(parsed.check_command)
         color = {
@@ -62,9 +65,41 @@ def run_cli(args: List[str]):
             f"[bold]Risk Level:[/] [{color}]{risk.value}[/{color}]\n"
             f"[bold]Requires Approval:[/] {'[bold yellow]YES[/bold yellow]' if requires_approval else '[bold green]NO (Auto-executable)[/bold green]'}\n"
             f"[bold]Policy Rule:[/] {reason}",
-            title="Linux Command Risk Evaluation",
+            title=f"{os_name} Command Risk Evaluation",
             border_style=color
         ))
+        return
+
+    # 2. SAST Code Vulnerability Scan
+    if parsed.scan_code:
+        scan_target = Path(parsed.scan_code)
+        console.print(f"\n[bold cyan][*] Running OpenGrep SAST Vulnerability Analysis on:[/] {scan_target.resolve()}\n")
+        scanner = CodeVulnerabilityScanner()
+        findings = scanner.scan_path(scan_target)
+
+        if not findings:
+            console.print("[bold green][OK] Zero vulnerabilities or secret leaks detected in target codebase.[/bold green]\n")
+            return
+
+        table = Table(title=f"Security Vulnerabilities Detected ({len(findings)})", header_style="bold red")
+        table.add_column("Rule / Title", style="bold white", width=25)
+        table.add_column("Location", style="cyan", width=30)
+        table.add_column("Severity", width=12)
+        table.add_column("Remediation / Fix", style="yellow")
+
+        for f in findings:
+            sev = f.get("severity", "WARNING").upper()
+            sev_style = "bold red" if sev in ("CRITICAL", "HIGH", "ERROR") else "bold yellow"
+            loc = f"{f.get('file')}:{f.get('line')}"
+            table.add_row(
+                f"{f.get('rule_id')}\n[dim]{f.get('title', '')}[/dim]",
+                loc,
+                f"[{sev_style}]{sev}[/{sev_style}]",
+                f.get("remediation", "")
+            )
+
+        console.print(table)
+        console.print(f"\n[bold yellow][!] {len(findings)} vulnerability finding(s) recorded in logs/audit.jsonl[/bold yellow]\n")
         return
 
     loader = ConfigLoader()
@@ -93,12 +128,14 @@ def run_cli(args: List[str]):
         return
 
     if parsed.install_extra:
-        console.print(f"\n[bold yellow][*] Installing extra security component:[/] {parsed.install_extra}...")
-        success = engine.install_extra_tool(parsed.install_extra)
-        if success:
-            console.print(f"[bold green][OK] Extra tool '{parsed.install_extra}' installed successfully.[/bold green]\n")
-        else:
-            console.print(f"[bold red][!] Installation script for '{parsed.install_extra}' failed or not found for {os_name}.[/bold red]\n")
+        tools_to_install = ["ai-jail", "opengrep"] if parsed.install_extra.lower() == "all" else [parsed.install_extra]
+        for t in tools_to_install:
+            console.print(f"\n[bold yellow][*] Installing extra security component:[/] {t}...")
+            success = engine.install_extra_tool(t)
+            if success:
+                console.print(f"[bold green][OK] Extra tool '{t}' installed successfully.[/bold green]\n")
+            else:
+                console.print(f"[bold red][!] Installation script for '{t}' failed or not found for {os_name}.[/bold red]\n")
         return
 
     if parsed.apply:
@@ -134,6 +171,6 @@ def run_cli(args: List[str]):
             summary_table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, status_badge, details)
 
         console.print(summary_table)
-        console.print("\n[bold green][OK] Hardening execution completed. Audit logs written to logs/audit.jsonl[/bold green]\n")
+        console.print("\n[bold green][OK] Hardening execution completed. Audit logs written to logs/audit.jsonl[/bold green]\\n")
     else:
         parser.print_help()
