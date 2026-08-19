@@ -227,9 +227,24 @@ python main.py -gui
   python main.py --tool cursor --remove
   ```
 
-- **Revert/remove hardening across ALL supported tools:**
+- **Auto-remediate any non-compliant tools to 100% compliance:**
   ```bash
-  python main.py --remove
+  python main.py --verify --fix
+  python main.py --verify --installed-only --strict --fix
+  ```
+
+- **Enterprise Administrator System-Wide Hardening (Multi-User & Read-Only Locking):**
+  Enforces policies across ALL user accounts on the machine and sets file permissions to Read-Only so standard users can read the config but cannot alter or bypass it. Requires elevated privileges (Root/Administrator):
+  ```bash
+  # Linux & macOS (Run with sudo):
+  sudo python main.py --apply --admin --installed-only
+  sudo python main.py --apply --admin --strict
+  sudo python main.py --verify --admin
+
+  # Windows (Run in elevated PowerShell / Command Prompt as Administrator):
+  python main.py --apply --admin --installed-only
+  python main.py --apply --admin --strict
+  python main.py --verify --admin
   ```
 
 - **Verbose / Debug output:**

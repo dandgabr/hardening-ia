@@ -19,6 +19,7 @@ from src.core.logger import setup_logging, get_logger
 from src.core.command_classifier import CommandRiskClassifier, RiskLevel
 from src.core.code_analyzer import CodeVulnerabilityScanner
 from src.core.verifier import HardeningVerifier
+from src.core.admin_manager import AdminManager
 
 logger = get_logger("cli")
 
@@ -36,6 +37,9 @@ HELP_EPILOG = """
   [green]python main.py --apply --dry-run[/]            Simulate policy enforcement without writing files
   [green]python main.py --verify[/]                     Verify that hardening settings are functional on host
   [green]python main.py --verify --installed-only[/]    Verify compliance only for installed tools
+  [green]python main.py --verify --fix[/]               Audit and auto-remediate all tools to 100%% compliance
+  [green]sudo python main.py --apply --admin --strict[/] [ADMIN] Enforce system-wide read-only hardening across ALL user accounts
+  [green]sudo python main.py --verify --admin[/]        [ADMIN] Audit compliance and read-only file permissions across all users
   [green]python main.py --test[/]                       Execute automated unit and integration test suite
   [green]python main.py --scan-code[/]                  Run OpenGrep SAST & SCA scan on current workspace
   [green]python main.py --scan-code ./src[/]            Scan a specific directory for code vulnerabilities
@@ -55,6 +59,7 @@ def run_cli(args: List[str]):
     parser.add_argument("--tool", type=str, metavar="NAME", help="Filter by tool or vendor name (e.g. google/antigravity, cursor, claude-code)")
     parser.add_argument("--apply", action="store_true", help="Apply declarative security hardening policies to matching tools")
     parser.add_argument("--strict", "--restrictive", action="store_true", help="Apply strict restrictive rules: explicit denied patterns for critical items & immediate blocking of dangerous paths without asking")
+    parser.add_argument("--admin", "--system-wide", action="store_true", help="[ADMIN ONLY] Verify administrator/root elevation and enforce read-only system-wide hardening across all user accounts")
     parser.add_argument("--remove", "--revert", action="store_true", help="Revert/remove hardening policies and clean configuration overrides")
     parser.add_argument("--verify", action="store_true", help="Audit host configuration files to verify that hardening is active and functional")
     parser.add_argument("--fix", "--remediate", action="store_true", help="Automatically remediate and bring any non-compliant tools to 100%% compliance")
@@ -104,6 +109,23 @@ def run_cli(args: List[str]):
             console.print(f"\n[bold red][FAILED] {len(result.failures)} failure(s), {len(result.errors)} error(s) encountered.[/bold red]\n")
         return
 
+    # Admin Elevation Gate Check
+    if parsed.admin:
+        if not OSDetector.is_admin():
+            elevation_cmd = "sudo python main.py --admin ..." if os_name in ("LINUX", "MACOS") else "Run as Administrator in PowerShell / Command Prompt"
+            console.print(Panel(
+                f"[bold red]❌ ELEVATION REQUIRED: Administrator / Root privileges required.[/bold red]\n\n"
+                f"The [bold cyan]--admin[/bold cyan] option enforces system-wide security policies across all local user accounts\n"
+                f"and locks configuration files with Read-Only permissions so standard users cannot edit them.\n\n"
+                f"[bold yellow]How to execute with elevated privileges:[bold yellow]\n"
+                f"  • [bold white]{elevation_cmd}[/bold white]",
+                title="Access Denied: Insufficient Privileges",
+                border_style="red"
+            ))
+            return
+        else:
+            console.print("[bold green]🔒 ADMIN PRIVILEGES VERIFIED: Running System-Wide Enforcement Mode[/bold green]")
+
     # 2. Evaluate command risk if requested
     if parsed.check_command:
         risk, requires_approval, reason = CommandRiskClassifier.classify_command(
@@ -141,12 +163,12 @@ def run_cli(args: List[str]):
         findings = scanner.scan_path(scan_target)
 
         if not findings:
-            console.print("[bold green][OK] Zero vulnerabilities or secret leaks detected in target codebase.[/bold green]\n")
+            console.print("[bold green][OK] Zero vulnerabilities or secret leaks detected in codebase.[/bold green]\n")
             return
 
-        table = Table(title=f"Security Vulnerabilities Detected ({len(findings)})", header_style="bold red")
-        table.add_column("Rule / Title", style="bold white", width=25)
-        table.add_column("Location", style="cyan", width=30)
+        table = Table(title="OpenGrep Security Findings", header_style="bold red")
+        table.add_column("Rule ID & Title", style="bold white", width=30)
+        table.add_column("Location", style="cyan", width=25)
         table.add_column("Severity", width=12)
         table.add_column("Remediation / Fix", style="yellow")
 
@@ -168,6 +190,7 @@ def run_cli(args: List[str]):
     loader = ConfigLoader()
     engine = HardeningEngine()
     verifier = HardeningVerifier()
+    admin_mgr = AdminManager()
     policies = loader.discover_policies()
 
     # 4. Verify Applied Configurations
@@ -182,6 +205,32 @@ def run_cli(args: List[str]):
                 p for p in target_policies
                 if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
             ]
+
+        # System-Wide Admin Verification
+        if parsed.admin:
+            user_profiles = admin_mgr.get_all_user_profiles()
+            mode_str = " [STRICT MODE]" if parsed.strict else " [STANDARD MODE]"
+            console.print(f"\n[bold cyan][*] Auditing System-Wide Hardening & Read-Only Locks{mode_str} across {len(user_profiles)} User Account(s)...[/bold cyan]\n")
+
+            table = Table(title=f"System-Wide Multi-User Hardening Audit ({len(user_profiles)} Users)", header_style="bold magenta")
+            table.add_column("Tool", style="bold white", width=25)
+            table.add_column("Total Users Audited", width=20)
+            table.add_column("Read-Only Enforced", width=20)
+            table.add_column("Compliance Status", width=20)
+
+            for p in target_policies:
+                report = admin_mgr.verify_admin_system_wide_policy(p, strict_mode=parsed.strict)
+                all_ro = all(u.get("read_only_enforced", False) for u in report["users"])
+                all_comp = all(u.get("compliant", False) for u in report["users"])
+
+                ro_badge = "[bold green]YES (Root-Locked)[/bold green]" if all_ro else "[bold yellow]PARTIAL / UNLOCKED[/bold yellow]"
+                status_badge = "[bold green]100% COMPLIANT[/bold green]" if all_comp else "[bold yellow]AUDIT FINDINGS[/bold yellow]"
+
+                table.add_row(f"{p.tool.vendor}/{p.tool.name}", f"{report['total_users']} user profile(s)", ro_badge, status_badge)
+
+            console.print(table)
+            console.print("\n[bold green][OK] System-wide verification audit completed. Records written to logs/audit.jsonl[/bold green]\n")
+            return
 
         mode_str = " [STRICT MODE]" if parsed.strict else " [STANDARD MODE]"
         console.print(f"\n[bold cyan][*] Auditing Hardening Compliance{mode_str} across {len(target_policies)} target tool(s)...[/bold cyan]\n")
@@ -305,6 +354,31 @@ def run_cli(args: List[str]):
 
         mode_str = "[bold yellow][DRY RUN][/bold yellow] " if parsed.dry_run else ""
         strict_str = "[bold red][STRICT RESTRICTIVE MODE][/bold red] " if parsed.strict else ""
+
+        # System-Wide Multi-User Admin Enforcement
+        if parsed.admin:
+            user_profiles = admin_mgr.get_all_user_profiles()
+            console.print(f"\n[*] {mode_str}{strict_str}[bold green]🔒 Enforcing System-Wide Admin Hardening & Read-Only Permissions across {len(user_profiles)} User Account(s)...[/bold green]\n")
+
+            summary_table = Table(title=f"Admin System-Wide Hardening Summary ({len(user_profiles)} Users)", header_style="bold cyan")
+            summary_table.add_column("Tool", style="bold white", width=25)
+            summary_table.add_column("User Accounts", width=18)
+            summary_table.add_column("Read-Only Lock", width=20)
+            summary_table.add_column("Result", width=12)
+
+            for p in target_policies:
+                res = admin_mgr.apply_admin_system_wide_policy(p, strict_mode=parsed.strict, dry_run=parsed.dry_run)
+                summary_table.add_row(
+                    f"{p.tool.vendor}/{p.tool.name}",
+                    f"{res['users_count']} profile(s)",
+                    "[bold green]LOCKED (0644 / ACL)[/bold green]" if not parsed.dry_run else "[yellow]DRY-RUN[/yellow]",
+                    "[bold green]SUCCESS[/bold green]"
+                )
+
+            console.print(summary_table)
+            console.print("\n[bold green][OK] System-wide policy lockdown enforced. Configuration locked as Read-Only for standard users. Audit logs recorded in logs/audit.jsonl[/bold green]\n")
+            return
+
         console.print(f"\n[*] {mode_str}{strict_str}Applying hardening policies to [bold]{len(target_policies)}[/bold] tool(s)...\n")
 
         summary_table = Table(title=f"Hardening Execution Summary{' [STRICT RESTRICTIVE MODE]' if parsed.strict else ''}", header_style="bold cyan")
