@@ -149,40 +149,45 @@ class InstallProgressModal(ModalScreen):
         ("escape", "dismiss_modal", "Close")
     ]
 
-    def __init__(self, tool_id: str, tool_title: str):
+    def __init__(self, tool_id: str, tool_title: str, action: str = "install"):
         super().__init__()
         self.tool_id = tool_id
         self.tool_title = tool_title
+        self.action = action  # "install" or "remove"
         self.engine = HardeningEngine()
         self.is_finished = False
 
     def compose(self) -> ComposeResult:
+        action_verb = "Installing" if self.action == "install" else "Removing"
+        action_icon = "🛡️" if self.action == "install" else "🗑️"
         with VerticalScroll(id="install-container"):
             yield Static(
                 f"[bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]\n"
-                f"[bold cyan]║     🛡️ Installing Security Component: {self.tool_title:<34}║[/]\n"
+                f"[bold cyan]║     {action_icon} {action_verb} Security Component: {self.tool_title:<32}║[/]\n"
                 f"[bold cyan]╚═══════════════════════════════════════════════════════════════════════════╝[/]",
                 id="install-header"
             )
-            yield Label(f"[bold cyan]Component:[/] [bold white]{self.tool_id}[/bold white]  |  [bold cyan]Target OS:[/] [bold]{OSDetector.get_os_type().upper()}[/bold]", id="install-target-info")
+            yield Label(f"[bold cyan]Component:[/] [bold white]{self.tool_id}[/bold white]  |  [bold cyan]Action:[/] [bold yellow]{self.action.upper()}[/bold yellow]  |  [bold cyan]Target OS:[/] [bold]{OSDetector.get_os_type().upper()}[/bold]", id="install-target-info")
             yield ProgressBar(id="install-progress-bar", total=100, show_eta=False)
-            yield Label("Initializing installation pipeline...", id="install-step-label")
+            yield Label(f"Initializing {self.action} pipeline...", id="install-step-label")
             yield Label("[bold white]Streaming Terminal Output & Step Logs:[/bold white]", id="install-output-title")
             yield RichLog(id="install-terminal-log", highlight=True, markup=True)
             yield Button("Close (Esc)", id="btn-close-install", variant="primary", disabled=True)
 
     def on_mount(self) -> None:
-        self.run_install_worker()
+        self.run_worker_routine()
 
     @work(thread=True)
-    def run_install_worker(self) -> None:
+    def run_worker_routine(self) -> None:
         log_widget = self.query_one("#install-terminal-log", RichLog)
         progress_bar = self.query_one("#install-progress-bar", ProgressBar)
         step_label = self.query_one("#install-step-label", Label)
         close_btn = self.query_one("#btn-close-install", Button)
 
+        stream = self.engine.stream_remove_extra_tool(self.tool_id) if self.action == "remove" else self.engine.stream_install_extra_tool(self.tool_id)
+
         final_success = False
-        for item in self.engine.stream_install_extra_tool(self.tool_id):
+        for item in stream:
             event_type = item[0]
             if event_type == "progress":
                 percent = item[1]
@@ -394,6 +399,33 @@ class HardeningApp(App):
         installed_count = sum(1 for p in self.policies if p.is_installed)
         log_view.write(f"[bold cyan][*] OS Detected: {OSDetector.get_os_type().upper()}[/]")
         log_view.write(f"[*] Discovered {len(self.policies)} policies ({installed_count} tools detected on host).")
+
+        self._update_extras_buttons()
+
+    def _update_extras_buttons(self) -> None:
+        """Dynamically updates extra tool buttons (label & color variant) based on host installation status."""
+        try:
+            btn_jail = self.query_one("#btn-install-jail", Button)
+            btn_opengrep = self.query_one("#btn-install-opengrep", Button)
+
+            jail_installed = self.engine.is_extra_tool_installed("ai-jail")
+            opengrep_installed = self.engine.is_extra_tool_installed("opengrep")
+
+            if jail_installed:
+                btn_jail.label = "Remove ai-jail"
+                btn_jail.variant = "error"
+            else:
+                btn_jail.label = "Install ai-jail"
+                btn_jail.variant = "success"
+
+            if opengrep_installed:
+                btn_opengrep.label = "Remove OpenGrep"
+                btn_opengrep.variant = "error"
+            else:
+                btn_opengrep.label = "Install OpenGrep"
+                btn_opengrep.variant = "success"
+        except Exception:
+            pass
 
     def _supports_dlp(self, policy: Optional[HardeningPolicy]) -> bool:
         if not policy:
@@ -651,10 +683,22 @@ class HardeningApp(App):
             log_view.write("[bold green][OK] All supported tools hardening removed.[/]\n")
 
         elif event.button.id == "btn-install-jail":
-            self.push_screen(InstallProgressModal("ai-jail", "ai-jail (Process Sandbox & Isolation)"))
+            jail_installed = self.engine.is_extra_tool_installed("ai-jail")
+            action = "remove" if jail_installed else "install"
+            title = "ai-jail (Process Sandbox & Isolation)"
+            self.push_screen(
+                InstallProgressModal("ai-jail", title, action=action),
+                callback=lambda _: self._update_extras_buttons()
+            )
 
         elif event.button.id == "btn-install-opengrep":
-            self.push_screen(InstallProgressModal("opengrep", "OpenGrep (Static Code Vulnerability Scanner)"))
+            opengrep_installed = self.engine.is_extra_tool_installed("opengrep")
+            action = "remove" if opengrep_installed else "install"
+            title = "OpenGrep (Static Code Vulnerability Scanner)"
+            self.push_screen(
+                InstallProgressModal("opengrep", title, action=action),
+                callback=lambda _: self._update_extras_buttons()
+            )
 
 
 def run_tui():

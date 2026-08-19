@@ -108,6 +108,18 @@ class TestHardeningEngine(unittest.TestCase):
             self.assertIn("passed", check)
             self.assertIn("details", check)
 
+    def test_is_extra_tool_installed_and_removal(self):
+        """Verify dynamic detection of extra tool installation status and removal workflow."""
+        jail_status = self.engine.is_extra_tool_installed("ai-jail")
+        self.assertIsInstance(jail_status, bool)
+
+        opengrep_status = self.engine.is_extra_tool_installed("opengrep")
+        self.assertIsInstance(opengrep_status, bool)
+
+        # Removal routine should complete without unhandled exception
+        remove_res = self.engine.remove_extra_tool("ai-jail")
+        self.assertIsInstance(remove_res, bool)
+
 
 if __name__ == "__main__":
     unittest.main()

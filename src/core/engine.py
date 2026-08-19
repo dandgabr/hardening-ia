@@ -611,6 +611,127 @@ class HardeningEngine:
 
         return results
 
+    def is_extra_tool_installed(self, tool_id: str) -> bool:
+        """Checks if a security extra component (e.g. ai-jail, opengrep) is currently installed on the host."""
+        local_bin = self.repo_root / "scripts" / "extra-tools" / "bin"
+        if tool_id == "ai-jail":
+            cargo_bin = Path.home() / ".cargo" / "bin" / ("ai-jail.exe" if self.os_type == "windows" else "ai-jail")
+            local_user_bin = Path.home() / ".local" / "bin" / "ai-jail"
+            return bool(
+                shutil.which("ai-jail") or
+                cargo_bin.exists() or
+                local_user_bin.exists() or
+                (local_bin / "ai-jail.cmd").exists() or
+                (local_bin / "ai-jail").exists()
+            )
+        elif tool_id == "opengrep":
+            target_bin = local_bin / ("opengrep.exe" if self.os_type == "windows" else "opengrep")
+            return bool(shutil.which("opengrep") or target_bin.exists())
+        return False
+
+    def stream_remove_extra_tool(self, tool_id: str):
+        """
+        Removes/uninstalls a security extra tool and associated wrappers, streaming progress and audit logs.
+        Yields (event_type, payload):
+          - ("log", text_line)
+          - ("progress", percentage_int, step_description)
+          - ("done", success_bool, summary_message)
+        """
+        logger.info(f"Triggering removal of extra tool: {tool_id} on {self.os_type}")
+        yield ("progress", 10, f"Initializing removal for {tool_id} on {self.os_type.upper()}...")
+        yield ("log", f"[bold cyan][*] Removing component:[/] {tool_id} | Host OS: {self.os_type.upper()}")
+
+        local_bin = self.repo_root / "scripts" / "extra-tools" / "bin"
+        removed_items = []
+
+        try:
+            yield ("progress", 35, f"Removing binaries and integration wrappers for {tool_id}...")
+            if tool_id == "ai-jail":
+                cargo_bin = Path.home() / ".cargo" / "bin" / ("ai-jail.exe" if self.os_type == "windows" else "ai-jail")
+                if cargo_bin.exists():
+                    cargo_bin.unlink(missing_ok=True)
+                    removed_items.append(str(cargo_bin))
+                    yield ("log", f"  [green]✓ Removed:[/] {cargo_bin}")
+
+                local_user_bin = Path.home() / ".local" / "bin" / "ai-jail"
+                if local_user_bin.exists():
+                    local_user_bin.unlink(missing_ok=True)
+                    removed_items.append(str(local_user_bin))
+                    yield ("log", f"  [green]✓ Removed:[/] {local_user_bin}")
+
+                for wrapper_name in ["ai-jail", "ai-jail.cmd", "ai-jail.ps1"]:
+                    w_path = local_bin / wrapper_name
+                    if w_path.exists():
+                        w_path.unlink(missing_ok=True)
+                        removed_items.append(str(w_path))
+                        yield ("log", f"  [green]✓ Removed wrapper:[/] {w_path}")
+
+                build_dir = Path.home() / ".cache" / "ai-jail-build"
+                if build_dir.exists():
+                    shutil.rmtree(build_dir, ignore_errors=True)
+                    removed_items.append(str(build_dir))
+                    yield ("log", f"  [green]✓ Cleaned build cache:[/] {build_dir}")
+
+                jail_file = self.repo_root / ".ai-jail"
+                if jail_file.exists():
+                    if jail_file.is_dir():
+                        shutil.rmtree(jail_file, ignore_errors=True)
+                    else:
+                        jail_file.unlink(missing_ok=True)
+                    removed_items.append(str(jail_file))
+                    yield ("log", f"  [green]✓ Cleaned jail state:[/] {jail_file}")
+
+            elif tool_id == "opengrep":
+                for target_name in ["opengrep", "opengrep.exe"]:
+                    bin_path = local_bin / target_name
+                    if bin_path.exists():
+                        bin_path.unlink(missing_ok=True)
+                        removed_items.append(str(bin_path))
+                        yield ("log", f"  [green]✓ Removed binary:[/] {bin_path}")
+
+            yield ("progress", 75, "Verifying clean removal from system environment...")
+            still_in_path = shutil.which(tool_id)
+            if still_in_path:
+                yield ("log", f"[yellow]⚠ Notice:[/] Global system binary detected at {still_in_path} (managed by system package manager).")
+            else:
+                yield ("log", f"[green]✓ Verified:[/] {tool_id} is no longer present in local environment.")
+
+            log_audit_event(
+                event_type="EXTRA_TOOL_REMOVAL",
+                tool_name=tool_id,
+                vendor="community",
+                status="SUCCESS",
+                details={
+                    "removed_items": removed_items,
+                    "os": self.os_type
+                }
+            )
+
+            yield ("progress", 100, f"Removal completed successfully for {tool_id}")
+            yield ("done", True, f"Extra tool '{tool_id}' removed successfully.")
+
+        except Exception as e:
+            err_msg = f"Removal exception: {e}"
+            logger.error(err_msg)
+            yield ("log", f"[bold red][!] {err_msg}[/bold red]")
+            log_audit_event(
+                event_type="EXTRA_TOOL_REMOVAL",
+                tool_name=tool_id,
+                vendor="community",
+                status="ERROR",
+                details={"error": str(e), "os": self.os_type}
+            )
+            yield ("progress", 100, "Removal error encountered")
+            yield ("done", False, err_msg)
+
+    def remove_extra_tool(self, tool_id: str) -> bool:
+        """Removes security extra tool (batch/synchronous mode)."""
+        success = False
+        for item in self.stream_remove_extra_tool(tool_id):
+            if item[0] == "done":
+                success = item[1]
+        return success
+
     def install_extra_tool(self, tool_id: str) -> bool:
         """Runs security extra tool installation automation script (batch/synchronous mode)."""
         success = False
