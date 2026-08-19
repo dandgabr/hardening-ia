@@ -79,6 +79,7 @@ class HelpModal(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close-help":
+            event.stop()
             self.dismiss()
 
 
@@ -139,6 +140,7 @@ class DlpModal(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close-dlp":
+            event.stop()
             self.dismiss()
 
 
@@ -216,6 +218,7 @@ class InstallProgressModal(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close-install":
+            event.stop()
             self.dismiss()
 
 
@@ -682,10 +685,7 @@ class HardeningApp(App):
         dry_run = self.query_one("#chk-dry-run", Checkbox).value
         strict_mode = self.query_one("#chk-strict-mode", Checkbox).value
 
-        if event.button.id == "btn-close-help" or event.button.id == "btn-close-dlp":
-            self.pop_screen()
-
-        elif event.button.id == "btn-help":
+        if event.button.id == "btn-help":
             self.push_screen(HelpModal())
 
         elif event.button.id == "btn-view-dlp":
