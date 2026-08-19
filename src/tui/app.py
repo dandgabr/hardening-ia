@@ -16,6 +16,7 @@ from src.core.os_detector import OSDetector
 from src.core.models import HardeningPolicy
 from src.core.logger import setup_logging
 from src.core.code_analyzer import CodeVulnerabilityScanner
+from src.core.verifier import HardeningVerifier
 
 
 class TextualLogHandler(logging.Handler):
@@ -43,12 +44,13 @@ class HelpModal(ModalScreen):
 
 [bold yellow]Navigation & Selection:[/]
   • [bold white]Up / Down Arrow Keys[/]: Scroll through the list of 14 supported AI tools.
-  • [bold white]Click on any tool[/]: Instantly inspect its full security policy and pending changes.
+  • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]F1 or ?[/]: Toggle this Help screen.
 
 [bold yellow]Core Action Buttons:[/]
   • [bold green]Apply to Selected[/]: Applies hardening policy directly to the highlighted tool.
-  • [bold blue]View DLP Config[/]: Appears only when a tool with DLP support is selected.
+  • [bold yellow]Verify Config[/]: Audits host files and verifies 100% compliance of applied settings.
+  • [bold blue]View DLP Config[/]: Appears when a tool with DLP support is selected.
   • [bold blue]Apply Installed[/]: Hardens only tools detected and installed on this host.
   • [bold orange3]Apply All[/]: Provisions hardened baselines across all 14 supported tools.
   • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement without altering host files.
@@ -134,6 +136,7 @@ class HardeningApp(App):
         ("f1", "toggle_help", "Help"),
         ("question_mark", "toggle_help", "Help"),
         ("d", "view_dlp", "View DLP"),
+        ("v", "verify_config", "Verify Config"),
         ("q", "quit", "Quit")
     ]
 
@@ -214,6 +217,7 @@ class HardeningApp(App):
         self.config_loader = ConfigLoader()
         self.engine = HardeningEngine()
         self.code_scanner = CodeVulnerabilityScanner()
+        self.verifier = HardeningVerifier()
         self.policies: List[HardeningPolicy] = []
 
     def compose(self) -> ComposeResult:
@@ -238,6 +242,7 @@ class HardeningApp(App):
                     yield Static("Select a tool from the catalog to inspect host status, security policies, and DLP settings.", id="policy-info")
                 with Horizontal():
                     yield Button("Apply to Selected", id="btn-apply-selected", variant="success")
+                    yield Button("Verify Config", id="btn-verify-selected", variant="warning")
                     yield Button("View DLP Config", id="btn-view-dlp", variant="primary")
                     yield Checkbox("Dry Run Mode", id="chk-dry-run")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
@@ -246,7 +251,7 @@ class HardeningApp(App):
 
     def on_mount(self) -> None:
         self.title = "Hardening IA Framework"
-        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Multi-OS Risk Classifier & DLP Active"
+        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Verification & SAST Active"
 
         log_view = self.query_one("#log-view", RichLog)
         textual_handler = TextualLogHandler(log_view)
@@ -279,6 +284,25 @@ class HardeningApp(App):
         else:
             log_view = self.query_one("#log-view", RichLog)
             log_view.write("[bold yellow][!] Selected tool does not have active DLP configurations.[/]")
+
+    def action_verify_config(self) -> None:
+        self._run_verification_on_selected()
+
+    def _run_verification_on_selected(self) -> None:
+        log_view = self.query_one("#log-view", RichLog)
+        if not self.selected_policy:
+            log_view.write("[bold red][!] Please select a tool from the catalog first to verify.[/]")
+            return
+
+        report = self.verifier.verify_policy(self.selected_policy)
+        score_style = "bold green" if report.compliance_score == 100.0 else ("bold yellow" if report.compliance_score > 0 else "bold red")
+        log_view.write(f"\n[*] Auditing compliance for {self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}...")
+        log_view.write(f"  Score: [{score_style}]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks} checks passed)[/]")
+
+        for c in report.checks:
+            status_sym = "[green]✓ PASSED[/]" if c.passed else "[red]✗ FAILED[/]"
+            log_view.write(f"    {status_sym} {c.key} (expected: {c.expected}, actual: {c.actual})")
+        log_view.write(f"  Summary: [{score_style}]{report.message}[/]\n")
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
@@ -361,6 +385,9 @@ class HardeningApp(App):
                 log_view.write(f"[bold yellow][!] No DLP configuration defined for {self.selected_policy.tool.name}.[/]")
             else:
                 log_view.write("[bold red][!] Please select a tool first to view its DLP configuration.[/]")
+
+        elif event.button.id == "btn-verify-selected":
+            self._run_verification_on_selected()
 
         elif event.button.id == "btn-apply-selected":
             if not self.selected_policy:

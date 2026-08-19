@@ -1,8 +1,9 @@
-"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, and Rich reporting."""
+"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, verification, and Rich reporting."""
 
 import sys
 import argparse
 import logging
+import unittest
 from pathlib import Path
 from typing import List
 
@@ -17,6 +18,7 @@ from src.core.os_detector import OSDetector
 from src.core.logger import setup_logging, get_logger
 from src.core.command_classifier import CommandRiskClassifier, RiskLevel
 from src.core.code_analyzer import CodeVulnerabilityScanner
+from src.core.verifier import HardeningVerifier
 
 logger = get_logger("cli")
 
@@ -28,6 +30,9 @@ HELP_EPILOG = """
   [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
   [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
   [green]python main.py --apply --dry-run[/]            Simulate policy enforcement without writing files
+  [green]python main.py --verify[/]                     Verify that hardening settings are functional on host
+  [green]python main.py --verify --installed-only[/]    Verify compliance only for installed tools
+  [green]python main.py --test[/]                       Execute automated unit and integration test suite
   [green]python main.py --scan-code[/]                  Run OpenGrep SAST & SCA scan on current workspace
   [green]python main.py --scan-code ./src[/]            Scan a specific directory for code vulnerabilities
   [green]python main.py --check-command "ls -la"[/]     Evaluate command risk tier (LOW/MEDIUM/HIGH/CRITICAL)
@@ -44,6 +49,8 @@ def run_cli(args: List[str]):
     )
     parser.add_argument("--tool", type=str, metavar="NAME", help="Filter by tool or vendor name (e.g. google/antigravity, cursor, claude-code)")
     parser.add_argument("--apply", action="store_true", help="Apply declarative security hardening policies to matching tools")
+    parser.add_argument("--verify", action="store_true", help="Audit host configuration files to verify that hardening is active and functional")
+    parser.add_argument("--test", action="store_true", help="Run automated test suite for policies, classifier, verifier, and scanner")
     parser.add_argument("--list", action="store_true", help="List all available tools and their host installation status")
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
     parser.add_argument("--check-command", type=str, metavar="CMD", help="Evaluate terminal command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
@@ -59,7 +66,7 @@ def run_cli(args: List[str]):
         console = Console()
         console.print(Panel.fit(
             "[bold cyan]Hardening IA[/bold cyan] - Enterprise AI Security Hardening Framework",
-            subtitle="CLI Automation & Security Auditing"
+            subtitle="CLI Automation, Compliance Auditing & Verification"
         ))
         parser.print_help()
         return
@@ -77,7 +84,19 @@ def run_cli(args: List[str]):
         border_style="cyan"
     ))
 
-    # 1. Evaluate command risk if requested
+    # 1. Run Automated Test Suite
+    if parsed.test:
+        console.print("\n[bold cyan][*] Running Hardening IA Automated Test Suite...[/bold cyan]\n")
+        suite = unittest.defaultTestLoader.discover(start_dir="tests", pattern="test_*.py")
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        if result.wasSuccessful():
+            console.print(f"\n[bold green][OK] All {result.testsRun} unit and integration tests PASSED successfully.[/bold green]\n")
+        else:
+            console.print(f"\n[bold red][FAILED] {len(result.failures)} failure(s), {len(result.errors)} error(s) encountered.[/bold red]\n")
+        return
+
+    # 2. Evaluate command risk if requested
     if parsed.check_command:
         risk, requires_approval, reason = CommandRiskClassifier.classify_command(parsed.check_command)
         color = {
@@ -97,7 +116,7 @@ def run_cli(args: List[str]):
         ))
         return
 
-    # 2. SAST Code Vulnerability Scan
+    # 3. SAST Code Vulnerability Scan
     if parsed.scan_code:
         scan_target = Path(parsed.scan_code)
         console.print(f"\n[bold cyan][*] Running OpenGrep SAST & SCA Analysis on:[/] {scan_target.resolve()}\n")
@@ -131,7 +150,49 @@ def run_cli(args: List[str]):
 
     loader = ConfigLoader()
     engine = HardeningEngine()
+    verifier = HardeningVerifier()
     policies = loader.discover_policies()
+
+    # 4. Verify Applied Configurations
+    if parsed.verify:
+        target_policies = policies
+        if parsed.installed_only:
+            target_policies = [p for p in target_policies if p.is_installed]
+
+        if parsed.tool:
+            query = parsed.tool.lower()
+            target_policies = [
+                p for p in target_policies
+                if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
+            ]
+
+        console.print(f"\n[bold cyan][*] Auditing Hardening Compliance across {len(target_policies)} target tool(s)...[/bold cyan]\n")
+
+        table = Table(title="Host Security Hardening Verification Report", header_style="bold magenta")
+        table.add_column("Tool", style="bold white", width=25)
+        table.add_column("Host Status", width=14)
+        table.add_column("Compliance Score", width=18)
+        table.add_column("Audit Findings & Discrepancies", style="dim")
+
+        for p in target_policies:
+            report = verifier.verify_policy(p)
+            installed_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT FOUND[/dim]"
+
+            if report.compliance_score == 100.0:
+                score_badge = f"[bold green]100% ({report.passed_checks}/{report.total_checks})[/bold green]"
+            elif report.compliance_score > 0:
+                score_badge = f"[bold yellow]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks})[/bold yellow]"
+            else:
+                score_badge = "[dim]N/A[/dim]" if not report.settings_file_exists else "[bold red]0% (0/0)[/bold red]"
+
+            discrepancies = [f"Missing '{c.key}'" for c in report.checks if not c.passed]
+            details = ", ".join(discrepancies) if discrepancies else report.message
+
+            table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, score_badge, details)
+
+        console.print(table)
+        console.print("\n[bold green][OK] Verification audit completed. Records written to logs/audit.jsonl[/bold green]\n")
+        return
 
     if parsed.list:
         table = Table(title="AI Tools Catalog & Host Detection", header_style="bold magenta")

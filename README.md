@@ -181,15 +181,22 @@ python main.py -gui
   python main.py --apply --installed-only
   ```
 
-- **Apply hardening to a specific tool:**
+- **Verify that applied hardening configurations are active on the host:**
   ```bash
-  python main.py --tool google/antigravity --apply
-  python main.py --tool cursor --apply
+  python main.py --verify
+  python main.py --verify --installed-only
+  python main.py --tool cursor --verify
   ```
 
-- **Simulate execution (Dry Run):**
+- **Run the automated unit and integration test suite:**
   ```bash
-  python main.py --tool claude-code --apply --dry-run
+  python main.py --test
+  ```
+
+- **Scan workspace for security vulnerabilities (OpenGrep SAST & SCA):**
+  ```bash
+  python main.py --scan-code
+  python main.py --scan-code ./src
   ```
 
 - **Apply hardening across ALL registered tools:**
