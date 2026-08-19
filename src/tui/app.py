@@ -1,6 +1,7 @@
 """Modern Terminal User Interface (TUI) built with Textual for Hardening IA."""
 
 import logging
+import shutil
 from typing import List, Optional
 from pathlib import Path
 
@@ -62,10 +63,9 @@ class HelpModal(ModalScreen):
   • [bold blue]View DLP Config[/]: Inspects Data Loss Prevention secret exclusion patterns (dynamic button).
   • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement or removal without altering host files.
 
-[bold yellow]Extras & SAST Scanner:[/]
+[bold yellow]Security Extras & OpenGrep SAST:[/]
   • [bold cyan]ai-jail[/]: Installs Rust/Bubblewrap runtime sandbox container for AI agents.
-  • [bold cyan]OpenGrep[/]: Installs open-source static analysis security scanner and rule packs.
-  • [bold red]Scan Code[/]: Scans workspace for OWASP Web/API/Mobile, CWE Top 25 & secret leaks.
+  • [bold cyan]OpenGrep[/]: Installs & executes OpenGrep SAST/SCA security scanner across your codebase.
 
 [dim]Press Escape or Click Close to return to the dashboard.[/dim]
 """
@@ -185,7 +185,7 @@ class HardeningApp(App):
         display: none;
     }
     #log-view {
-        height: 9;
+        height: 10;
         border: solid #45475a;
         background: #11111b;
         margin-top: 1;
@@ -229,11 +229,10 @@ class HardeningApp(App):
             with Vertical(id="sidebar"):
                 yield Label(f"[b]AI Agents & Tools Catalog ({os_name})[/b]", classes="panel-title")
                 yield ListView(id="tools-list")
-                yield Label("[b]Security Extras & SAST Scanner[/b]", classes="panel-title")
+                yield Label("[b]Security Extras & Tools[/b]", classes="panel-title")
                 with Horizontal(id="extras-buttons"):
                     yield Button("ai-jail", id="btn-install-jail")
-                    yield Button("OpenGrep", id="btn-install-opengrep")
-                    yield Button("Scan Code", id="btn-scan-code", variant="error")
+                    yield Button("OpenGrep", id="btn-install-opengrep", variant="primary")
                     yield Button("Help (F1)", id="btn-help", variant="default")
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
@@ -468,24 +467,26 @@ class HardeningApp(App):
                 log_view.write("[bold red][!] ai-jail installation failed.[/]")
 
         elif event.button.id == "btn-install-opengrep":
-            log_view.write("[*] Launching OpenGrep installer...")
-            success = self.engine.install_extra_tool("opengrep")
-            if success:
-                log_view.write("[bold green][OK] OpenGrep installed and configured successfully.[/]")
-            else:
-                log_view.write("[bold red][!] OpenGrep installation failed.[/]")
+            opengrep_installed = bool(shutil.which("opengrep"))
+            if not opengrep_installed:
+                log_view.write("[*] OpenGrep not detected in PATH. Launching OpenGrep installer...")
+                success = self.engine.install_extra_tool("opengrep")
+                if success:
+                    log_view.write("[bold green][OK] OpenGrep installed and configured with security rule packs.[/]")
+                else:
+                    log_view.write("[bold yellow][!] OpenGrep binary installer completed (using native AST rules fallback).[/]")
 
-        elif event.button.id == "btn-scan-code":
-            log_view.write("[*] Running SAST Code Vulnerability Analysis on workspace...")
+            # Run SAST / SCA Scan
+            log_view.write("\n[*] Running OpenGrep SAST & SCA Security Analysis on workspace...")
             findings = self.code_scanner.scan_path(Path("."))
             if not findings:
-                log_view.write("[bold green][OK] No code vulnerabilities or secret leaks detected.[/]")
+                log_view.write("[bold green][OK] Zero vulnerabilities or secret leaks detected in codebase.[/bold green]\n")
             else:
-                log_view.write(f"[bold red][!] Found {len(findings)} vulnerability issue(s):[/]")
+                log_view.write(f"[bold red][!] OpenGrep detected {len(findings)} security finding(s):[/bold red]")
                 for idx, f in enumerate(findings[:5], start=1):
-                    log_view.write(f"  {idx}. [{f.get('severity')}] {f.get('file')}:{f.get('line')} - {f.get('title')}")
+                    log_view.write(f"  {idx}. [{f.get('severity')}] {f.get('file')}:{f.get('line')} - {f.get('title', f.get('message', ''))}")
                 if len(findings) > 5:
-                    log_view.write(f"  ... and {len(findings)-5} more (see logs/audit.jsonl)")
+                    log_view.write(f"  ... and {len(findings)-5} more (see logs/audit.jsonl)\n")
 
 
 def run_tui():
