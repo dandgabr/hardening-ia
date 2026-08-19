@@ -631,7 +631,11 @@ class HardeningApp(App):
         overrides_lines = []
         for k, v in native_overrides.items():
             escaped_k = escape(str(k))
-            escaped_v = escape(str(v))
+            if isinstance(v, list):
+                val_str = ", ".join(str(item) for item in v)
+                escaped_v = escape(f"[{val_str}]")
+            else:
+                escaped_v = escape(str(v))
             overrides_lines.append(f"  [cyan]•[/] [bold white]{escaped_k}[/bold white] [green]➔[/green] [bold yellow]{escaped_v}[/bold yellow]")
         overrides_text = "\n".join(overrides_lines) if overrides_lines else "  [dim]Standard baseline configuration[/dim]"
 
