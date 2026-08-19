@@ -156,9 +156,16 @@ python main.py --scan-code
 python main.py --scan-code ./src
 ```
 
-### 3. Install All Extras
+### 3. Check Status & Uninstall Extras
 ```bash
+# Query host installation and diagnostic status:
+python main.py --status-extra
+
+# Install all components and run post-install diagnostics:
 python main.py --install-extra all
+
+# Uninstall and remove extra security components cleanly:
+python main.py --remove-extra all
 ```
 
 ---

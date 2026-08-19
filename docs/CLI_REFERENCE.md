@@ -83,8 +83,10 @@ sudo python main.py --apply --admin --strict
 | `--check-command <CMD>`| — | String | Evaluates a shell command against the multi-OS Command Risk Matrix. |
 | `--scan-code [PATH]` | — | Path (Optional)| Runs static code security analysis (SAST/SCA). Default: current directory (`.`). |
 | `--install-extra <T>` | — | String | Installs additional isolation components (`ai-jail`, `opengrep`, `all`). |
+| `--remove-extra <T>` | — | String | Removes/uninstalls isolation components and local bridge wrappers (`ai-jail`, `opengrep`, `all`). |
+| `--status-extra` | — | Flag | Displays host installation and diagnostic test suite status for extra security tools. |
 | `--dry-run` | — | Flag | Simulates operations in memory without modifying any files on disk. |
-| `--test` | — | Flag | Runs the complete automated unit and integration test suite (31 tests). |
+| `--test` | — | Flag | Runs the complete automated unit and integration test suite (33 tests). |
 | `--verbose`, `-v` | — | Flag | Enables verbose debug logging output. |
 | `-h`, `--help` | — | Flag | Displays formatted help message with parameter explanations and examples. |
 
@@ -278,14 +280,24 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-### 4.9 Security Components & Extras Installation
+### 4.9 Security Components & Extras Management
+
+#### `--status-extra`
+- **Description:** Queries the host environment and displays a formatted diagnostic table showing whether `ai-jail` and `OpenGrep` are installed, along with results from their multi-step diagnostic test suites.
+- **Usage:**
+  ```bash
+  python main.py --status-extra
+  ./main.sh --status-extra
+  ```
 
 #### `--install-extra <TOOL>`
 - **Supported Arguments:** `ai-jail`, `opengrep`, or `all`.
-- **Description:** Executes isolated installation scripts for runtime sandboxes and static analysis engines:
+- **Description:** Executes isolated installation pipelines with automated dependency resolution, compilation, and post-installation diagnostic testing:
+  - **Pre-Check Fast Path:** Checks if the tool or its prerequisites (e.g. `bubblewrap`, `git`, `curl` on Linux; `wsl` on Windows) are already present on the system. If dependencies are already satisfied, it automatically skips the package manager installation phase.
   - `ai-jail`: Process-level namespace/container isolation sandbox.
-  - `opengrep`: Fast, local static code analysis engine.
-  - `all`: Installs both security components.
+  - `opengrep`: Fast, local static code analysis AST engine and AI security rule packs.
+  - `all`: Installs and verifies both components.
+  - **Automated Diagnostic Suite:** Immediately executes a 3-step diagnostic test suite (Binary Discovery, Isolation Engine, Functional Smoke Test) upon completion.
 - **Usage:**
   ```bash
   python main.py --install-extra opengrep
@@ -293,12 +305,22 @@ sudo python main.py --apply --admin --strict
   python main.py --install-extra all
   ```
 
+#### `--remove-extra <TOOL>`
+- **Supported Arguments:** `ai-jail`, `opengrep`, or `all`.
+- **Description:** Safely uninstalls and removes security extra components, cleaning binary wrappers, local shim scripts (`~/.local/bin`, `scripts/extra-tools/bin/`), build caches (`~/.cache/ai-jail-build`), and state files while generating structured audit logs in `logs/audit.jsonl`.
+- **Usage:**
+  ```bash
+  python main.py --remove-extra opengrep
+  python main.py --remove-extra ai-jail
+  python main.py --remove-extra all
+  ```
+
 ---
 
 ### 4.10 Automated Test Suite & Diagnostics
 
 #### `--test`
-- **Description:** Discovers and runs the complete `unittest` test suite (31 tests) covering risk classifiers, SAST scanner, hardening engine, compliance verifier, OS detector, and admin manager.
+- **Description:** Discovers and runs the complete `unittest` test suite (33 tests) covering risk classifiers, SAST scanner, hardening engine, compliance verifier, OS detector, dynamic extra tool management, and admin manager.
 - **Usage:**
   ```bash
   python main.py --test

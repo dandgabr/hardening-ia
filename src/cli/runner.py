@@ -46,6 +46,8 @@ HELP_EPILOG = """
   [green]python main.py --check-command "ls -la"[/]     Evaluate command risk tier (LOW/MEDIUM/HIGH/CRITICAL)
   [green]python main.py --check-command "rm -rf /" --strict[/] Check command in strict restrictive mode
   [green]python main.py --install-extra all[/]          Install runtime sandboxes (ai-jail) and OpenGrep
+  [green]python main.py --remove-extra all[/]           Remove extra security tools and integration wrappers
+  [green]python main.py --status-extra[/]               Inspect installation status and diagnostics for extra components
 """
 
 
@@ -68,7 +70,9 @@ def run_cli(args: List[str]):
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
     parser.add_argument("--check-command", type=str, metavar="CMD", help="Evaluate terminal command risk level (LOW, MEDIUM, HIGH, CRITICAL)")
     parser.add_argument("--dry-run", action="store_true", help="Simulate policy application or removal without modifying configuration files")
-    parser.add_argument("--install-extra", type=str, metavar="TOOL", help="Install extra security isolation tool: 'ai-jail', 'opengrep', or 'all'")
+    parser.add_argument("--install-extra", type=str, metavar="TOOL", help="Install extra security component: 'ai-jail', 'opengrep', or 'all'")
+    parser.add_argument("--remove-extra", type=str, metavar="TOOL", help="Remove/uninstall extra security component: 'ai-jail', 'opengrep', or 'all'")
+    parser.add_argument("--status-extra", action="store_true", help="Display installation, diagnostic status, and environment integration for extra security tools")
     parser.add_argument("--scan-code", type=str, nargs="?", const=".", metavar="PATH", help="Scan workspace or directory for AI-generated code vulnerabilities")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose debug logging")
     parser.add_argument("--cli", action="store_true", help="Explicitly force CLI mode")
@@ -288,15 +292,60 @@ def run_cli(args: List[str]):
         console.print(table)
         return
 
+    if parsed.status_extra:
+        console.print(f"\n[bold cyan][*] Security Extras & Isolation Tools Status ({os_name}):[/bold cyan]\n")
+        table = Table(title="Security Extras Diagnostic Status", header_style="bold magenta")
+        table.add_column("Component", style="bold white", width=16)
+        table.add_column("Role / Purpose", style="cyan", width=34)
+        table.add_column("Host Status", width=18)
+        table.add_column("Diagnostics", width=18)
+        table.add_column("Details", style="dim")
+
+        extras = [
+            ("ai-jail", "Process Sandbox & Namespace Isolation"),
+            ("opengrep", "Static AST Vulnerability & Secret Scanner")
+        ]
+
+        for tool_id, purpose in extras:
+            is_inst = engine.is_extra_tool_installed(tool_id)
+            diag = engine.verify_extra_tool_installation(tool_id)
+            diag_pass = all(c["passed"] for c in diag)
+            status_str = "[bold green]INSTALLED[/bold green]" if is_inst else "[dim]NOT INSTALLED[/dim]"
+            diag_str = "[bold green]PASSED (100%)[/bold green]" if (is_inst and diag_pass) else ("[yellow]WARNED[/yellow]" if is_inst else "[dim]N/A[/dim]")
+            details_list = [f"{c['name']}: {'PASS' if c['passed'] else 'WARN'}" for c in diag]
+            details_str = ", ".join(details_list) if is_inst else "Run --install-extra to configure"
+            table.add_row(tool_id, purpose, status_str, diag_str, details_str)
+
+        console.print(table)
+        console.print("")
+        return
+
     if parsed.install_extra:
         tools_to_install = ["ai-jail", "opengrep"] if parsed.install_extra.lower() == "all" else [parsed.install_extra]
         for t in tools_to_install:
-            console.print(f"\n[bold yellow][*] Installing extra security component:[/] {t}...")
-            success = engine.install_extra_tool(t)
-            if success:
-                console.print(f"[bold green][OK] Extra tool '{t}' installed successfully.[/bold green]\n")
-            else:
-                console.print(f"[bold red][!] Installation script for '{t}' failed or not found for {os_name}.[/bold red]\n")
+            console.print(f"\n[bold cyan][*] Launching installation pipeline for:[/] [bold white]{t}[/bold white]...")
+            for item in engine.stream_install_extra_tool(t):
+                if item[0] == "log":
+                    console.print(f"  {item[1]}")
+                elif item[0] == "done":
+                    if item[1]:
+                        console.print(f"[bold green][OK] {item[2]}[/bold green]\n")
+                    else:
+                        console.print(f"[bold red][!] {item[2]}[/bold red]\n")
+        return
+
+    if parsed.remove_extra:
+        tools_to_remove = ["ai-jail", "opengrep"] if parsed.remove_extra.lower() == "all" else [parsed.remove_extra]
+        for t in tools_to_remove:
+            console.print(f"\n[bold yellow][*] Launching removal pipeline for:[/] [bold white]{t}[/bold white]...")
+            for item in engine.stream_remove_extra_tool(t):
+                if item[0] == "log":
+                    console.print(f"  {item[1]}")
+                elif item[0] == "done":
+                    if item[1]:
+                        console.print(f"[bold green][OK] {item[2]}[/bold green]\n")
+                    else:
+                        console.print(f"[bold red][!] {item[2]}[/bold red]\n")
         return
 
     # 5. Remove / Revert Policies
