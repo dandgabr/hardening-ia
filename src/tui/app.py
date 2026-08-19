@@ -290,8 +290,7 @@ class HardeningApp(App):
         margin-bottom: 0;
     }
     #extras-buttons Button {
-        min-width: 8;
-        max-width: 12;
+        width: 1fr;
         height: 1;
         border: none;
         margin-right: 1;
@@ -453,9 +452,8 @@ class HardeningApp(App):
                 yield ListView(id="tools-list")
                 yield Label("[b]Security Extras & Tools[/b]", classes="panel-title")
                 with Horizontal(id="extras-buttons"):
-                    yield Button("ai-jail", id="btn-install-jail", variant="success")
-                    yield Button("OpenGrep", id="btn-install-opengrep", variant="success")
-                    yield Button("Help (H)", id="btn-help", variant="default")
+                    yield Button("ai-jail", id="btn-install-jail", variant="default")
+                    yield Button("OpenGrep", id="btn-install-opengrep", variant="default")
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
@@ -525,7 +523,7 @@ class HardeningApp(App):
         self.sub_title = f"Host: {OSDetector.get_os_type().upper()} | Terminal: {w}x{h} | Installed: {installed_count}/{len(self.policies)} | Strict: {'ON' if self.strict_mode else 'OFF'}"
 
     def _update_extras_buttons(self) -> None:
-        """Dynamically updates extra tool buttons (label & color variant) based on host installation status."""
+        """Dynamically updates extra tool buttons (tool name & green/red color) based on host installation status."""
         try:
             btn_jail = self.query_one("#btn-install-jail", Button)
             btn_opengrep = self.query_one("#btn-install-opengrep", Button)
@@ -533,19 +531,12 @@ class HardeningApp(App):
             jail_installed = self.engine.is_extra_tool_installed("ai-jail")
             opengrep_installed = self.engine.is_extra_tool_installed("opengrep")
 
-            if jail_installed:
-                btn_jail.label = "Remove ai-jail"
-                btn_jail.variant = "error"
-            else:
-                btn_jail.label = "Install ai-jail"
-                btn_jail.variant = "success"
+            # Green (success) if installed, Red (error) if not installed
+            btn_jail.label = "ai-jail"
+            btn_jail.variant = "success" if jail_installed else "error"
 
-            if opengrep_installed:
-                btn_opengrep.label = "Remove OpenGrep"
-                btn_opengrep.variant = "error"
-            else:
-                btn_opengrep.label = "Install OpenGrep"
-                btn_opengrep.variant = "success"
+            btn_opengrep.label = "OpenGrep"
+            btn_opengrep.variant = "success" if opengrep_installed else "error"
         except Exception:
             pass
 
