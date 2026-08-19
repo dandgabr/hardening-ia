@@ -50,21 +50,21 @@ class HelpModal(ModalScreen):
   • [bold white]Up / Down Arrow Keys[/]: Scroll through the list of 14 supported AI tools.
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]F1 or ?[/]: Toggle this Help screen.
-  • [bold white]S[/]: Toggle Regras Restritivas (Strict Mode).
+  • [bold white]S[/]: Toggle Strict Mode.
 
 [bold yellow]The 3 Policy Application Modes:[/]
   1. [bold green]Apply Selected[/]: Applies hardening policy strictly to the selected tool.
   2. [bold blue]Apply All Installed[/]: Automatically detects all tools present on this host OS and hardens them.
   3. [bold orange3]Apply All Supported[/]: Proactively provisions standard config directories and hardened baselines for ALL 14 tools.
 
-[bold yellow]Regras Restritivas (Strict Mode):[/]
-  • [bold red]Bloqueio Explícito de Caminhos Perigosos[/]: Bloqueia o acesso a caminhos sensíveis do sistema sem nem perguntar ao usuário.
-  • [bold red]Denied Patterns Explícitos[/]: Rejeição automática de comandos críticos (`rm -rf /`, `mkfs`, `dd`, `diskpart`, etc.).
-  • [bold green]Modo Padrão[/]: Restringe caminhos perigosos mas sempre solicita autorização prévia ao operador humano.
+[bold yellow]Strict Restrictive Mode:[/]
+  • [bold red]Explicit Dangerous Paths Blocking[/]: Blocks access to sensitive system paths immediately without asking.
+  • [bold red]Explicit Denied Patterns[/]: Automatic rejection of critical commands (`rm -rf /`, `mkfs`, `dd`, `diskpart`, etc.).
+  • [bold green]Standard Mode[/]: Restricts dangerous paths and requires explicit operator confirmation before access.
 
-[bold yellow]Rate Limit & Timeouts Configurados:[/]
-  • [bold white]Rate Limit:[/] `30 requisições por minuto` (burst de 10).
-  • [bold white]Timeouts:[/] `30s` para comandos de terminal, `60s` para execução geral.
+[bold yellow]Configured Rate Limits & Timeouts:[/]
+  • [bold white]Rate Limit:[/] `30 requests per minute` (burst of 10).
+  • [bold white]Timeouts:[/] `30s` for terminal commands, `60s` for general session execution.
 
 [dim]Press Escape or Click Close to return to the dashboard.[/dim]
 """
@@ -252,10 +252,10 @@ class HardeningApp(App):
                     yield Button("Apply All Installed", id="btn-apply-installed", variant="primary")
                     yield Button("Apply All Supported", id="btn-apply-all-supported", variant="warning")
                     yield Button("Verify Config", id="btn-verify-selected", variant="default")
-                    yield Button("Corrigir Compliance", id="btn-fix-compliance", variant="success")
+                    yield Button("Fix Compliance", id="btn-fix-compliance", variant="success")
                     yield Button("View DLP Config", id="btn-view-dlp", variant="default")
                     yield Checkbox("Dry Run", id="chk-dry-run")
-                    yield Checkbox("Regras Restritivas", id="chk-strict-mode")
+                    yield Checkbox("Strict Mode", id="chk-strict-mode")
                 with Horizontal(id="remove-action-buttons"):
                     yield Button("Remove Selected", id="btn-remove-selected", variant="error")
                     yield Button("Remove All Installed", id="btn-remove-installed", variant="error")
@@ -335,9 +335,9 @@ class HardeningApp(App):
         log_view.write(f"  Summary: [{score_style}]{report.message}[/]")
 
         if report.compliance_score < 100.0:
-            log_view.write("[bold yellow][!] Divergências detectadas. Clique no botão 'Corrigir Compliance' para ajustar automaticamente para 100%.[/bold yellow]\n")
+            log_view.write("[bold yellow][!] Discrepancies detected. Click 'Fix Compliance' to auto-remediate to 100%.[/bold yellow]\n")
         else:
-            log_view.write("[bold green][OK] 100% de conformidade com os baselines de segurança atingida.[/bold green]\n")
+            log_view.write("[bold green][OK] 100% compliance with security baselines achieved.[/bold green]\n")
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
@@ -386,21 +386,21 @@ class HardeningApp(App):
         dlp_badge = f"[bold green]{dlp_count} Protected Secret Patterns (Click 'View DLP Config' button to inspect)[/bold green]" if has_dlp else "[dim]No DLP rules defined for this tool category[/dim]"
 
         mode_badge = (
-            "[bold red]🔴 REGRAS RESTRITIVAS (STRICT) ATIVAS (Bloqueio Total / Denied Patterns Ativos / Sem Perguntas)[/bold red]"
+            "[bold red]🔴 STRICT RESTRICTIVE MODE ACTIVE (Immediate Denial / Critical Patterns Active / Zero Prompting)[/bold red]"
             if self.strict_mode else
-            "[bold green]🟢 MODO PADRÃO ATIVO (Sempre Perguntar Antes de Acessar / Confirmação Prévia)[/bold green]"
+            "[bold green]🟢 STANDARD MODE ACTIVE (Prompt Before Access / Operator Confirmation Required)[/bold green]"
         )
 
         danger_action = (
-            "[bold red]BLOQUEIO EXPLÍCITO & TOTAL (Bloquear e nem perguntar)[/bold red]"
+            "[bold red]IMMEDIATE EXPLICIT BLOCK (Block immediately without prompting)[/bold red]"
             if self.strict_mode else
-            "[bold yellow]SEMPRE PERGUNTAR ANTES DE ACESSAR (Confirmação Obrigatória)[/bold yellow]"
+            "[bold yellow]ALWAYS PROMPT BEFORE ACCESS (Confirmation Required)[/bold yellow]"
         )
 
         critical_action = (
-            "[bold red]DENIED PATTERNS ATIVOS (Rejeição Automática sem Confirmação)[/bold red]"
+            "[bold red]DENIED PATTERNS ACTIVE (Automatic Rejection without Confirmation)[/bold red]"
             if self.strict_mode else
-            "[bold yellow]Confirmação Estrita em Múltiplas Etapas[/bold yellow]"
+            "[bold yellow]Strict Multi-Step Operator Confirmation[/bold yellow]"
         )
 
         dangerous_paths = SecurityPolicyManager.get_dangerous_paths_for_os(os_type)
@@ -416,7 +416,7 @@ class HardeningApp(App):
 [dim]{escaped_desc}[/dim]
 [bold yellow]═══════════════════════════════════════════════════════════════════════[/]
 
-[bold yellow]🛡️ STATUS DO MODO DE SEGURANÇA:[/] {mode_badge}
+[bold yellow]🛡️ SECURITY MODE STATUS:[/] {mode_badge}
 
 [bold green]📁 TARGET FILE PATHS & RULES LOCATION ({os_type.upper()}):[/]
   [cyan]• Settings File:[/] [white]{settings_path}[/]
@@ -425,12 +425,12 @@ class HardeningApp(App):
 [bold green]⚙️ CONFIGURATION OVERRIDES TO BE APPLIED ({len(native_overrides)} settings):[/]
 {overrides_text}
 
-[bold green]🛡️ CONTROLES DE SEGURANÇA & GUARDRAILS ({os_type.upper()}):[/]
-  [cyan]• Restrição a Caminhos Perigosos:[/] {danger_action}
-    [dim]Monitorando: {sample_danger}[/dim]
-  [cyan]• Comandos Críticos & Destrutivos:[/] {critical_action}
-  [cyan]• Rate Limit Configurado:[/] [bold cyan]30 req/min (Burst 10, Max USD $10.00)[/bold cyan]
-  [cyan]• Timeouts Configurados:[/] [bold cyan]30s Comando / 60s Sessão / 15s Rede[/bold cyan]
+[bold green]🛡️ SECURITY CONTROLS & GUARDRAILS ({os_type.upper()}):[/]
+  [cyan]• Dangerous Paths Restriction:[/] {danger_action}
+    [dim]Monitoring: {sample_danger}[/dim]
+  [cyan]• Critical & Destructive Commands:[/] {critical_action}
+  [cyan]• Configured Rate Limit:[/] [bold cyan]30 req/min (Burst 10, Max USD $10.00)[/bold cyan]
+  [cyan]• Configured Timeouts:[/] [bold cyan]30s Command / 60s Session / 15s Network[/bold cyan]
   [cyan]• Runtime Sandbox Isolation:[/] {'[bold green]ENFORCED (Bypass Disallowed)[/bold green]' if sandbox_enforced else '[yellow]Optional[/yellow]'}
   [cyan]• Zero-Telemetry & Crash Reporting:[/] {'[bold green]SHUTDOWN (DO_NOT_TRACK=1)[/bold green]' if telemetry_off else '[yellow]Enabled[/yellow]'}
   [cyan]• Data Loss Prevention (DLP):[/] {dlp_badge}
@@ -464,7 +464,7 @@ class HardeningApp(App):
                 log_view.write("[bold red][!] Please select a tool from the catalog first to fix compliance.[/]")
                 return
             mode_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
-            log_view.write(f"\n[*] {mode_prefix}Remediando configurações e alinhando baselines para [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+            log_view.write(f"\n[*] {mode_prefix}Remediating configuration baseline for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.verifier.remediate_policy(self.selected_policy, strict_mode=strict_mode)
             if res.success:
                 log_view.write(f"  [bold green][OK] {res.message}[/bold green]")

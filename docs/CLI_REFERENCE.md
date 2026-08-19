@@ -1,128 +1,128 @@
-# 📖 Guia Completo de Comandos, Parâmetros e Argumentos (CLI & TUI Reference)
+# 📖 Complete Commands, Parameters, and Arguments Reference Manual (CLI & TUI)
 
-Este documento fornece a especificação técnica e o manual de referência completo para todos os comandos, scripts de inicialização, flags, parâmetros, modos de execução e comportamentos do **Hardening IA Framework**.
-
----
-
-## 📑 Tabela de Conteúdos
-
-1. [Scripts de Inicialização (Launchers)](#1-scripts-de-inicialização-launchers)
-2. [Sintaxe Geral da CLI](#2-sintaxe-geral-da-cli)
-3. [Tabela Resumo de Parâmetros e Flags](#3-tabela-resumo-de-parâmetros-e-flags)
-4. [Detalhamento de Comandos e Parâmetros](#4-detalhamento-de-comandos-e-parâmetros)
-   - [4.1 Modos de Interface](#41-modos-de-interface)
-   - [4.2 Descoberta e Listagem de Ferramentas](#42-descoberta-e-listagem-de-ferramentas)
-   - [4.3 Aplicação e Reversão de Hardening](#43-aplicação-e-reversão-de-hardening)
-   - [4.4 Modo Restritivo (Strict Mode)](#44-modo-restritivo-strict-mode)
-   - [4.5 Auditoria de Compliance e Auto-Remediação](#45-auditoria-de-compliance-e-auto-remediação)
-   - [4.6 Modo Administrador Corporativo (System-Wide & Read-Only Locking)](#46-modo-administrador-corporativo-system-wide--read-only-locking)
-   - [4.7 Avaliação de Risco de Comandos (Command Risk Matrix)](#47-avaliação-de-risco-de-comandos-command-risk-matrix)
-   - [4.8 Análise de Vulnerabilidades em Código (SAST & SCA Scanner)](#48-análise-de-vulnerabilidades-em-código-sast--sca-scanner)
-   - [4.9 Instalação de Componentes Extras](#49-instalação-de-componentes-extras)
-   - [4.10 Execução de Testes Automatizados e Diagnóstico](#410-execução-de-testes-automatizados-e-diagnóstico)
-5. [Atalhos da Interface Gráfica Terminal (TUI)](#5-atalhos-da-interface-gráfica-terminal-tui)
-6. [Variáveis de Ambiente e Logs](#6-variáveis-de-ambiente-e-logs)
-7. [Códigos de Saída (Exit Codes)](#7-códigos-de-saída-exit-codes)
+This document provides the complete technical specification and user manual for all commands, launcher scripts, flags, parameters, execution modes, and behaviors within the **Hardening IA Framework**.
 
 ---
 
-## 1. Scripts de Inicialização (Launchers)
+## 📑 Table of Contents
 
-O framework disponibiliza scripts idempotentes para inicialização rápida e gestão automática de ambiente virtual (`.venv`):
+1. [Launcher Scripts](#1-launcher-scripts)
+2. [General CLI Syntax](#2-general-cli-syntax)
+3. [Summary Table of Parameters & Flags](#3-summary-table-of-parameters--flags)
+4. [Detailed Parameter & Subcommand Reference](#4-detailed-parameter--subcommand-reference)
+   - [4.1 Interface Modes](#41-interface-modes)
+   - [4.2 Tool Catalog & Discovery](#42-tool-catalog--discovery)
+   - [4.3 Policy Application & Rollback](#43-policy-application--rollback)
+   - [4.4 Strict Restrictive Mode](#44-strict-restrictive-mode)
+   - [4.5 Compliance Verification & Auto-Remediation](#45-compliance-verification--auto-remediation)
+   - [4.6 Enterprise Administrator Mode (System-Wide & Read-Only Locking)](#46-enterprise-administrator-mode-system-wide--read-only-locking)
+   - [4.7 Command Risk Matrix Evaluation](#47-command-risk-matrix-evaluation)
+   - [4.8 SAST & SCA Code Vulnerability Scanner](#48-sast--sca-code-vulnerability-scanner)
+   - [4.9 Security Components & Extras Installation](#49-security-components--extras-installation)
+   - [4.10 Automated Test Suite & Diagnostics](#410-automated-test-suite--diagnostics)
+5. [Terminal User Interface (TUI) Keybindings](#5-terminal-user-interface-tui-keybindings)
+6. [Environment Variables & Logging](#6-environment-variables--logging)
+7. [Exit Codes](#7-exit-codes)
 
-| Script | Sistema Operacional | Descrição | Exemplo de Execução |
+---
+
+## 1. Launcher Scripts
+
+The framework includes idempotent launcher scripts for cross-platform execution and automatic virtual environment (`.venv`) lifecycle management:
+
+| Script | Operating System | Description | Example Usage |
 | :--- | :--- | :--- | :--- |
-| `main.sh` | Linux / macOS | Script Bash com verificação e ativação automática do `.venv` | `./main.sh [argumentos]` |
-| `main.ps1` | Windows | Script PowerShell 5.1+ / Core com elevação e gestão de `.venv` | `.\main.ps1 [argumentos]` |
-| `main.cmd` | Windows | Script Batch para Command Prompt tradicional | `main.cmd [argumentos]` |
-| `main.py` | Multiplataforma | Ponto de entrada direto via interpretador Python | `python main.py [argumentos]` |
+| `main.sh` | Linux / macOS | POSIX Bash launcher with automatic `.venv` detection and activation | `./main.sh [arguments]` |
+| `main.ps1` | Windows | PowerShell 5.1+ / Core script with environment and execution policy handling | `.\main.ps1 [arguments]` |
+| `main.cmd` | Windows | Batch script for standard Command Prompt execution | `main.cmd [arguments]` |
+| `main.py` | Cross-Platform | Direct Python entry point | `python main.py [arguments]` |
 
 > [!NOTE]
-> Todos os scripts de inicialização são idempotentes: caso o ambiente virtual `.venv` já exista no diretório, ele não será recriado, preservando as dependências instaladas.
+> All launcher scripts are idempotent: if the `.venv` virtual environment already exists in the project directory, it will not be recreated, preserving pre-installed dependencies.
 
 ---
 
-## 2. Sintaxe Geral da CLI
+## 2. General CLI Syntax
 
 ```bash
-python main.py [MODO] [AÇÃO] [FILTROS] [MODIFICADORES] [OPÇÕES]
+python main.py [MODE] [ACTION] [FILTERS] [MODIFIERS] [OPTIONS]
 ```
 
-### Exemplos Básicos:
+### Quick Usage Examples:
 ```bash
-# Executar a interface gráfica no terminal:
+# Launch the interactive Terminal User Interface:
 python main.py
 
-# Aplicar hardening estrito em ferramentas instaladas:
+# Apply strict hardening to host-installed tools:
 python main.py --apply --installed-only --strict
 
-# Auditar e corrigir compliance de 100%:
+# Audit compliance and automatically remediate discrepancies to 100%:
 python main.py --verify --fix
 
-# Enforçar políticas de administrador com bloqueio somente leitura:
+# Enforce system-wide administrative hardening with read-only permission locks:
 sudo python main.py --apply --admin --strict
 ```
 
 ---
 
-## 3. Tabela Resumo de Parâmetros e Flags
+## 3. Summary Table of Parameters & Flags
 
-| Parâmetro / Flag | Alias | Tipo de Dado | Descrição |
+| Parameter / Flag | Alias | Data Type | Description |
 | :--- | :--- | :--- | :--- |
-| `-gui`, `--gui` | — | Flag | Inicia a interface visual interativa no terminal (Textual TUI). |
-| `--cli` | — | Flag | Força explicitamente a execução em modo texto / headless. |
-| `--list` | — | Flag | Lista as 14 ferramentas suportadas e seus status de detecção. |
-| `--installed-only` | — | Flag | Restringe a execução apenas às ferramentas detectadas no host. |
-| `--tool <NAME>` | — | String | Filtra a ação para uma ferramenta específica (ex: `cursor`, `google/antigravity`). |
-| `--apply` | — | Flag | Aplica as políticas declarativas de segurança nos arquivos de configuração. |
-| `--strict` | `--restrictive` | Flag | Ativa o modo restritivo (bloqueio explícito de caminhos perigosos e escrita). |
-| `--remove` | `--revert` | Flag | Reverte cirurgicamente as modificações e restaura backups. |
-| `--verify` | — | Flag | Realiza a auditoria de compliance e validação dos arquivos locais. |
-| `--fix` | `--remediate` | Flag | Corrige automaticamente todas as divergências elevando o score para 100%. |
-| `--admin` | `--system-wide` | Flag | **[Apenas CLI]** Verifica privilégios de Admin/Root e bloqueia arquivos como Read-Only para todos os usuários. |
-| `--check-command <CMD>`| — | String | Avalia o nível de risco de uma instrução shell na Risk Matrix. |
-| `--scan-code [PATH]` | — | Path (Opcional)| Executa análise estática de vulnerabilidades e segredos (SAST/SCA). Default: `.`. |
-| `--install-extra <T>` | — | String | Instala ferramentas adicionais de isolamento (`ai-jail`, `opengrep`, `all`). |
-| `--dry-run` | — | Flag | Simula as operações em memória sem escrever alterações em disco. |
-| `--test` | — | Flag | Executa a suíte completa de 31 testes unitários e de integração. |
-| `--verbose`, `-v` | — | Flag | Ativa logs detalhados de depuração (DEBUG level). |
-| `-h`, `--help` | — | Flag | Exibe a mensagem de ajuda formatada com exemplos práticos. |
+| `-gui`, `--gui` | — | Flag | Launches the interactive full-screen Terminal User Interface (Textual TUI). |
+| `--cli` | — | Flag | Explicitly forces headless / command-line execution mode. |
+| `--list` | — | Flag | Lists all 14 supported AI tools, categories, and detection status. |
+| `--installed-only` | — | Flag | Restricts any operation strictly to tools detected on the host machine. |
+| `--tool <NAME>` | — | String | Filters execution to a specific tool (e.g. `cursor`, `google/antigravity`). |
+| `--apply` | — | Flag | Applies declarative security hardening policies to target tools. |
+| `--strict` | `--restrictive` | Flag | Enables Strict Mode (explicit critical denials, dangerous paths blocked, auto-write disabled). |
+| `--remove` | `--revert` | Flag | Surgically removes hardening overrides and restores configuration backups. |
+| `--verify` | — | Flag | Audits host configuration files and generates a compliance verification report. |
+| `--fix` | `--remediate` | Flag | Automatically remediates non-compliant baseline settings to 100% compliance. |
+| `--admin` | `--system-wide` | Flag | **[CLI Only]** Verifies Admin/Root elevation and enforces Read-Only file locks across all users. |
+| `--check-command <CMD>`| — | String | Evaluates a shell command against the multi-OS Command Risk Matrix. |
+| `--scan-code [PATH]` | — | Path (Optional)| Runs static code security analysis (SAST/SCA). Default: current directory (`.`). |
+| `--install-extra <T>` | — | String | Installs additional isolation components (`ai-jail`, `opengrep`, `all`). |
+| `--dry-run` | — | Flag | Simulates operations in memory without modifying any files on disk. |
+| `--test` | — | Flag | Runs the complete automated unit and integration test suite (31 tests). |
+| `--verbose`, `-v` | — | Flag | Enables verbose debug logging output. |
+| `-h`, `--help` | — | Flag | Displays formatted help message with parameter explanations and examples. |
 
 ---
 
-## 4. Detalhamento de Comandos e Parâmetros
+## 4. Detailed Parameter & Subcommand Reference
 
-### 4.1 Modos de Interface
+### 4.1 Interface Modes
 
 #### `--gui` / `-gui`
-- **Descrição:** Inicia a interface gráfica baseada em terminal (Textual TUI) em tela cheia com navegação por mouse e teclado, logs em tempo real e guias temáticas.
-- **Uso:**
+- **Description:** Launches the full-screen terminal graphical user interface powered by Textual. Provides mouse and keyboard navigation, live streaming log viewer, DLP inspector modal, and security guardrail panels.
+- **Usage:**
   ```bash
   python main.py
   python main.py --gui
   ```
 
 #### `--cli`
-- **Descrição:** Força a execução puramente por linha de comando, ideal para scripts CI/CD, automações em batch ou execuções não-interativas.
-- **Uso:**
+- **Description:** Forces headless CLI mode, ideal for automated scripts, CI/CD pipelines, and cron jobs.
+- **Usage:**
   ```bash
   python main.py --cli --list
   ```
 
 ---
 
-### 4.2 Descoberta e Listagem de Ferramentas
+### 4.2 Tool Catalog & Discovery
 
 #### `--list`
-- **Descrição:** Exibe uma tabela Rich contendo o catálogo completo das 14 ferramentas suportadas, categoria (`ide`, `cli`, `agentic`), fornecedor e status de presença no host.
-- **Uso:**
+- **Description:** Outputs a Rich table showing all 14 supported AI tools, vendor metadata, category (`ide`, `cli`, `agentic`), and live host detection status.
+- **Usage:**
   ```bash
   python main.py --list
   ```
 
 #### `--installed-only`
-- **Descrição:** Modificador de filtro que restringe qualquer operação subsequente (`--list`, `--apply`, `--remove`, `--verify`) apenas às ferramentas detectadas ativas na máquina.
-- **Uso:**
+- **Description:** Filter modifier that restricts subsequent operations (`--list`, `--apply`, `--remove`, `--verify`) exclusively to tools discovered on the local machine.
+- **Usage:**
   ```bash
   python main.py --list --installed-only
   python main.py --apply --installed-only
@@ -130,9 +130,9 @@ sudo python main.py --apply --admin --strict
   ```
 
 #### `--tool <NAME>`
-- **Argumento esperado:** Nome da ferramenta (`cursor`, `copilot`, `antigravity`, `claude-code`, etc.) ou formato `vendor/name` (`anysphere/cursor`, `anthropic/claude-code`).
-- **Descrição:** Filtra a execução para atingir exclusivamente a ferramenta especificada.
-- **Uso:**
+- **Expected Argument:** Tool name (e.g. `cursor`, `copilot`, `antigravity`, `claude-code`) or `vendor/name` format (`anysphere/cursor`, `anthropic/claude-code`).
+- **Description:** Targets execution to a single tool.
+- **Usage:**
   ```bash
   python main.py --tool cursor --apply
   python main.py --tool google/antigravity --verify
@@ -141,30 +141,30 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-### 4.3 Aplicação e Reversão de Hardening
+### 4.3 Policy Application & Rollback
 
 #### `--apply`
-- **Descrição:** Aplica as políticas declarativas de hardening definidas em `configs/tools/`. Cria backups automáticos antes de modificar qualquer arquivo, preserva configurações customizadas de usuários e injeta regras de segurança específicas do sistema operacional.
-- **Uso:**
+- **Description:** Applies declarative security hardening policies defined in `configs/tools/`. Creates timestamped configuration backups before modifications, preserves user custom settings/providers, and deploys OS-specific security policy rule files.
+- **Usage:**
   ```bash
-  # Aplicar em todas as ferramentas instaladas:
+  # Apply hardening to host-installed tools:
   python main.py --apply --installed-only
 
-  # Provisionar configurações para todas as 14 ferramentas suportadas:
+  # Provision hardening for all 14 supported tools:
   python main.py --apply
   ```
 
 #### `--remove` / `--revert`
-- **Descrição:** Reverte cirurgicamente todas as modificações aplicadas pelo framework, removendo overrides de segurança e restaurando os valores anteriores sem afetar extensões ou provedores personalizados.
-- **Uso:**
+- **Description:** Surgically removes all hardening overrides applied by the framework, restoring previous user configuration values without breaking custom extensions or configured AI providers.
+- **Usage:**
   ```bash
   python main.py --remove --installed-only
   python main.py --tool cursor --remove
   ```
 
 #### `--dry-run`
-- **Descrição:** Executa todo o pipeline de resolução de políticas, cálculo de diffs e checagem de permissões **sem gravar nenhuma alteração em disco**.
-- **Uso:**
+- **Description:** Executes policy resolution, diff calculations, and permission validations **without writing any files to disk**.
+- **Usage:**
   ```bash
   python main.py --apply --dry-run
   python main.py --remove --dry-run
@@ -172,15 +172,15 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-### 4.4 Modo Restritivo (Strict Mode)
+### 4.4 Strict Restrictive Mode
 
 #### `--strict` / `--restrictive`
-- **Descrição:** Eleva o nível de proteção para o patamar máximo de isolamento:
-  1. **Bloqueio Explícito de Comandos Críticos:** Bloqueia comandos destrutivos (`rm -rf /`, `mkfs`, `format`, `dd if=/dev/zero`, `diskpart`, etc.) sem questionar.
-  2. **Bloqueio de Caminhos Perigosos do SO:** Acesso a diretórios sensíveis (`/etc`, `/boot`, `~/.ssh`, `~/.aws`, `C:\Windows`, `/System`, etc.) é barrado sumariamente.
-  3. **Desativação de Auto-Aprovação em Edições de Arquivos:** Desativa aceitação automática de diffs e edições autônomas (`acceptEdits: False`, `autoApply: False`, `auto_write_files: False`).
-  4. **Rate Limits & Timeouts Ativos:** Limite estrito de 30 req/min e timeouts de 30s para comandos.
-- **Uso:**
+- **Description:** Elevates hardening to maximum security isolation:
+  1. **Explicit Critical Command Blocking:** Blocks destructive commands (`rm -rf /`, `mkfs`, `format`, `dd if=/dev/zero`, `diskpart`, etc.) immediately without asking.
+  2. **OS Dangerous Paths Blocked:** Immediate denial of access to sensitive system paths (`/etc`, `/boot`, `~/.ssh`, `~/.aws`, `C:\Windows`, `/System`, etc.).
+  3. **File Edit Auto-Approval Disabled:** Disables autonomous file modifications and auto-accepting diffs (`acceptEdits: False`, `autoApply: False`, `auto_write_files: False`), enforcing Human-in-the-Loop review.
+  4. **Active Rate Limits & Timeouts:** Strict threshold of 30 req/min and 30s command execution timeouts.
+- **Usage:**
   ```bash
   python main.py --apply --strict
   python main.py --apply --installed-only --strict
@@ -189,11 +189,11 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-### 4.5 Auditoria de Compliance e Auto-Remediação
+### 4.5 Compliance Verification & Auto-Remediation
 
 #### `--verify`
-- **Descrição:** Realiza a auditoria estática dos arquivos de configuração locais e regras implantadas, calculando um índice percentual de conformidade de 0% a 100% por ferramenta.
-- **Uso:**
+- **Description:** Performs static audits on local configuration files and deployed rule files, calculating a 0% to 100% compliance score per tool.
+- **Usage:**
   ```bash
   python main.py --verify
   python main.py --verify --installed-only
@@ -201,57 +201,57 @@ sudo python main.py --apply --admin --strict
   ```
 
 #### `--fix` / `--remediate`
-- **Descrição:** Quando combinado com `--verify`, identifica qualquer configuração ausente ou divergente, repara os parâmetros faltantes e atualiza o relatório de auditoria para **100% de compliance**.
-- **Uso:**
+- **Description:** When combined with `--verify`, automatically remediates any missing or non-compliant configuration keys, raising the compliance score to **100%**.
+- **Usage:**
   ```bash
-  # Auditar e corrigir divergências em modo padrão:
+  # Audit and auto-remediate in standard mode:
   python main.py --verify --fix
 
-  # Auditar e corrigir divergências em modo restritivo:
+  # Audit and auto-remediate in strict mode:
   python main.py --verify --installed-only --strict --fix
   ```
 
 ---
 
-### 4.6 Modo Administrador Corporativo (System-Wide & Read-Only Locking)
+### 4.6 Enterprise Administrator Mode (System-Wide & Read-Only Locking)
 
-#### `--admin` / `--system-wide` *(Exclusivo via CLI)*
-- **Descrição:** Funcionalidade corporativa para administradores de sistemas e equipes de segurança:
-  1. **Validação de Elevação:** Exige e verifica privilégios de Administrador/Root (`sudo` em Linux/macOS ou `Run as Administrator` no Windows).
-  2. **Varredura Multi-Usuário:** Mapeia todos os perfis de usuários locais da máquina (`/home/*`, `/root`, `/etc/skel`, `/Users/*`, `C:\Users\*`).
-  3. **Bloqueio Somente Leitura (Read-Only Locking):**
-     - **Linux / macOS:** Aplica `chown root:root` (ou `root:wheel`) e `chmod 644` nos arquivos e `chmod 755` nos diretórios.
-     - **Windows:** Aplica ACLs NTFS restritivas via `icacls` concedendo `BUILTIN\Administrators:F` e `BUILTIN\Users:R` (removendo permissão de escrita de usuários comuns).
-     - **Efeito:** Os usuários conseguem usar seus assistentes de IA, mas **não conseguem editar, sobrescrever ou desativar as políticas de segurança**.
-  4. **Desativação Global de Telemetria:** Implanta script em `/etc/profile.d/hardening-ia-telemetry.sh` (Linux/macOS) ou variáveis de ambiente de máquina (Windows).
-- **Uso:**
+#### `--admin` / `--system-wide` *(CLI Exclusive)*
+- **Description:** Enterprise feature designed for systems administrators and security teams:
+  1. **Elevation Check:** Validates Administrator / Root privileges (`sudo` on Linux/macOS or `Run as Administrator` on Windows).
+  2. **Multi-User Profile Scan:** Discovers all local user profile directories (`/home/*`, `/root`, `/etc/skel`, `/Users/*`, `C:\Users\*`).
+  3. **Read-Only Permission Locking:**
+     - **Linux / macOS:** Sets `chown root:root` (or `root:wheel`), `chmod 644` on configuration files and `chmod 755` on directories.
+     - **Windows:** Configures restrictive NTFS ACLs via `icacls`, granting `BUILTIN\Administrators:F`, `NT AUTHORITY\SYSTEM:F` and `BUILTIN\Users:R` (removing write permissions for regular users).
+     - **Impact:** Standard users can run their AI tools normally, but **cannot edit, overwrite, tamper with, or disable security policies**.
+  4. **Global Telemetry Shutdown:** Deploys `/etc/profile.d/hardening-ia-telemetry.sh` (Linux/macOS) or machine environment variables (Windows).
+- **Usage:**
   ```bash
-  # Linux & macOS (com sudo):
+  # Linux & macOS (with sudo):
   sudo python main.py --apply --admin --installed-only
   sudo python main.py --apply --admin --strict
   sudo python main.py --verify --admin
 
-  # Windows (PowerShell ou Prompt de Comando como Administrador):
+  # Windows (Elevated PowerShell / CMD):
   python main.py --apply --admin --installed-only
   python main.py --apply --admin --strict
   python main.py --verify --admin
   ```
 
 > [!IMPORTANT]
-> A flag `--admin` é intencionalmente omitida da interface gráfica interativa (TUI) e deve ser executada exclusivamente via terminal com elevação de privilégios.
+> The `--admin` flag is intentionally omitted from the interactive GUI (TUI) and is strictly accessible via elevated CLI execution.
 
 ---
 
-### 4.7 Avaliação de Risco de Comandos (Command Risk Matrix)
+### 4.7 Command Risk Matrix Evaluation
 
 #### `--check-command <CMD>`
-- **Argumento esperado:** Linha de comando a ser avaliada entre aspas (ex: `"rm -rf /"`, `"git status"`, `"sudo apt-get update"`).
-- **Descrição:** Avalia a instrução na matriz de risco e políticas de segurança do sistema operacional ativo, classificando-a em:
-  - `LOW`: Comandos de leitura e diagnóstico (execução segura automática).
-  - `MEDIUM`: Comandos de desenvolvimento e escrita local (exige confirmação do operador).
-  - `HIGH`: Comandos administrativos e modificação de rede/serviços (exige confirmação explícita).
-  - `CRITICAL`: Comandos destrutivos ou violações de caminhos perigosos (bloqueio em modo estrito).
-- **Uso:**
+- **Expected Argument:** Command string enclosed in quotes (e.g. `"rm -rf /"`, `"git status"`, `"sudo systemctl restart nginx"`).
+- **Description:** Evaluates a terminal command against the OS security policy and assigns a risk tier:
+  - `LOW`: Read-only and diagnostic commands (auto-executable).
+  - `MEDIUM`: State-modifying development commands (requires confirmation).
+  - `HIGH`: Administrative, network, and privilege-altering commands (requires explicit operator confirmation).
+  - `CRITICAL`: Destructive commands or dangerous path access (blocked immediately in strict mode).
+- **Usage:**
   ```bash
   python main.py --check-command "ls -la"
   python main.py --check-command "cat /etc/shadow"
@@ -261,32 +261,32 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-### 4.8 Análise de Vulnerabilidades em Código (SAST & SCA Scanner)
+### 4.8 SAST & SCA Code Vulnerability Scanner
 
 #### `--scan-code [PATH]`
-- **Argumento esperado:** (Opcional) Caminho relativo ou absoluto do diretório/arquivo a ser auditado. Default: diretório atual (`.`).
-- **Descrição:** Executa o mecanismo de análise estática de código (SAST) e análise de composição de software (SCA) baseado no OpenGrep com regras especializadas em vulnerabilidades comuns em código gerado por IA (Command Injection, SQL Injection, Path Traversal, Credenciais Hardcoded, Uso inseguro de Deserialização).
-- **Uso:**
+- **Expected Argument:** (Optional) Relative or absolute target path. Default: current directory (`.`).
+- **Description:** Executes OpenGrep static analysis (SAST) and composition analysis (SCA) configured with rules targeting vulnerabilities prevalent in AI-generated code (Command Injection, SQL Injection, Path Traversal, Hardcoded Secrets, Insecure Deserialization).
+- **Usage:**
   ```bash
-  # Escanear o diretório corrente do projeto:
+  # Scan current project workspace:
   python main.py --scan-code
 
-  # Escanear pasta específica:
+  # Scan a specific directory:
   python main.py --scan-code ./src
-  python main.py --scan-code /caminho/do/projeto
+  python main.py --scan-code /path/to/project
   ```
 
 ---
 
-### 4.9 Instalação de Componentes Extras
+### 4.9 Security Components & Extras Installation
 
 #### `--install-extra <TOOL>`
-- **Argumentos suportados:** `ai-jail`, `opengrep` ou `all`.
-- **Descrição:** Executa os instaladores de segurança isolados para o sistema operacional em uso:
-  - `ai-jail`: Sandboxing em nível de processo baseado em namespaces/containers.
-  - `opengrep`: Motor de análise estática de código rápido e local.
-  - `all`: Instala ambos os componentes.
-- **Uso:**
+- **Supported Arguments:** `ai-jail`, `opengrep`, or `all`.
+- **Description:** Executes isolated installation scripts for runtime sandboxes and static analysis engines:
+  - `ai-jail`: Process-level namespace/container isolation sandbox.
+  - `opengrep`: Fast, local static code analysis engine.
+  - `all`: Installs both security components.
+- **Usage:**
   ```bash
   python main.py --install-extra opengrep
   python main.py --install-extra ai-jail
@@ -295,64 +295,64 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-### 4.10 Execução de Testes Automatizados e Diagnóstico
+### 4.10 Automated Test Suite & Diagnostics
 
 #### `--test`
-- **Descrição:** Descobre e executa toda a suíte de testes unitários e de integração (`unittest`) cobrindo classificadores de risco, analisador SAST, engine de hardening, verificador de compliance, detector de SO e gerenciador administrativo.
-- **Uso:**
+- **Description:** Discovers and runs the complete `unittest` test suite (31 tests) covering risk classifiers, SAST scanner, hardening engine, compliance verifier, OS detector, and admin manager.
+- **Usage:**
   ```bash
   python main.py --test
   ./main.sh --test
   ```
 
 #### `--verbose` / `-v`
-- **Descrição:** Habilita nível de log `DEBUG`, detalhando cada arquivo lido, chaves JSON inspecionadas e chamadas de subprocesso.
-- **Uso:**
+- **Description:** Enables `DEBUG` log output, displaying internal JSON diffs, evaluated files, and subprocess details.
+- **Usage:**
   ```bash
   python main.py --apply --verbose
   ```
 
 ---
 
-## 5. Atalhos da Interface Gráfica Terminal (TUI)
+## 5. Terminal User Interface (TUI) Keybindings
 
-Ao executar `python main.py` (ou `main.sh` / `main.ps1` sem argumentos), a TUI disponibiliza os seguintes atalhos de teclado:
+When launching `python main.py` (or `main.sh` / `main.ps1` without arguments), the interactive interface supports the following keyboard shortcuts:
 
-| Tecla | Ação Executada |
+| Key | Action |
 | :---: | :--- |
-| `q` | **Sair:** Fecha a aplicação com segurança. |
-| `a` | **Aplicar Hardening:** Aplica a política na ferramenta atualmente selecionada. |
-| `s` | **Alternar Modo Restritivo:** Ativa ou desativa a checkbox de *Regras Restritivas*. |
-| `r` | **Reverter Política:** Remove o hardening e restaura configurações da ferramenta selecionada. |
-| `v` | **Verificar Compliance:** Audita a ferramenta selecionada e exibe o relatório de conformidade. |
-| `f` | **Corrigir Compliance:** Auto-remedia as divergências elevando o score para 100%. |
-| `t` | **Executar Testes:** Roda a suíte completa de testes automatizados. |
-| `d` | **Modo Dry-Run:** Alterna a checkbox de simulação (sem escrita em disco). |
-| `c` | **Limpar Logs:** Limpa a janela inferior de logs em tempo real. |
-| `1` - `4` | **Navegar Guias:** Alterna entre *Ferramentas*, *Auditoria*, *Risco de Comandos* e *Scanner SAST*. |
+| `q` | **Quit:** Safely closes the application. |
+| `a` | **Apply Hardening:** Applies the policy to the currently selected tool. |
+| `s` | **Toggle Strict Mode:** Toggles the *Strict Mode* checkbox. |
+| `r` | **Revert Policy:** Removes hardening and restores original configuration for selected tool. |
+| `v` | **Verify Config:** Audits the selected tool and prints compliance findings. |
+| `f` | **Fix Compliance:** Auto-remediates discrepancies, raising score to 100%. |
+| `t` | **Run Tests:** Executes the automated test suite. |
+| `d` | **Toggle Dry-Run:** Toggles simulation mode (no disk writes). |
+| `c` | **Clear Logs:** Clears the live streaming log panel. |
+| `1` - `4` | **Switch Views:** Navigates between *Tools*, *Audit Trail*, *Command Risk*, and *SAST Scanner*. |
 
 ---
 
-## 6. Variáveis de Ambiente e Logs
+## 6. Environment Variables & Logging
 
-### Variáveis de Ambiente Enforçadas pelo Framework:
-- `DO_NOT_TRACK=1`: Padrão internacional de bloqueio de telemetria e rastreamento.
-- `CLAUDE_TELEMETRY_DISABLED=1`: Desativa coleta de analytics em ferramentas Anthropic.
-- `CLAUDE_CODE_ENABLE_TELEMETRY=0`: Desativa telemetria no Claude Code CLI.
-- `ANTHROPIC_TELEMETRY_DISABLED=1`: Bloqueio global de telemetria de agentes.
+### Environment Variables Enforced by the Framework:
+- `DO_NOT_TRACK=1`: International standard for disabling telemetry and tracking across developer tools.
+- `CLAUDE_TELEMETRY_DISABLED=1`: Disables telemetry in Anthropic developer tools.
+- `CLAUDE_CODE_ENABLE_TELEMETRY=0`: Disables analytics in Claude Code CLI.
+- `ANTHROPIC_TELEMETRY_DISABLED=1`: Global agent analytics shutdown.
 
-### Arquivos de Log e Auditoria:
-- `logs/hardening.log`: Log rotativo de execução técnica (máximo 10MB por arquivo, até 5 rotações).
-- `logs/audit.jsonl`: Registro imutável de auditoria em formato JSON Lines contendo timestamps, eventos (`POLICY_APPLIED`, `POLICY_REVERTED`, `ADMIN_SYSTEM_WIDE_ENFORCEMENT`, `VERIFICATION_AUDIT`), ferramentas e status.
+### Log Files & Audit Trail:
+- `logs/hardening.log`: Technical execution log with automatic rotation (10 MB per file, 5 backups).
+- `logs/audit.jsonl`: Immutable JSON Lines audit log recording timestamps, events (`POLICY_APPLIED`, `POLICY_REVERTED`, `ADMIN_SYSTEM_WIDE_ENFORCEMENT`, `VERIFICATION_AUDIT`), tool names, and execution status.
 
 ---
 
-## 7. Códigos de Saída (Exit Codes)
+## 7. Exit Codes
 
-O utilitário CLI retorna códigos de saída padrão para integração em pipelines de automação e scripts de CI/CD:
+The CLI returns standard process exit codes for integration into automation and CI/CD pipelines:
 
-| Código | Significado | Descrição |
+| Exit Code | Meaning | Description |
 | :---: | :--- | :--- |
-| `0` | **Success** | A operação foi concluída com sucesso e sem violações. |
-| `1` | **Error / Elevation Failure** | Erro de execução, privilégios insuficientes para `--admin` ou falha nos testes unitários. |
-| `2` | **Invalid Argument** | Parâmetro inválido ou sintaxe incorreta fornecida ao `argparse`. |
+| `0` | **Success** | The operation completed successfully without errors. |
+| `1` | **Error / Elevation Required** | Execution failure, insufficient privileges for `--admin`, or failing unit tests. |
+| `2` | **Invalid Argument** | Invalid CLI parameter or incorrect syntax supplied. |
