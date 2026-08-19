@@ -47,25 +47,20 @@ class HelpModal(ModalScreen):
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]F1 or ?[/]: Toggle this Help screen.
 
-[bold yellow]Core Action Buttons:[/]
-  • [bold green]Apply to Selected[/]: Applies hardening policy directly to the highlighted tool.
+[bold yellow]The 3 Application Modes:[/]
+  1. [bold green]Apply Selected[/]: Applies hardening policy strictly to the selected tool.
+  2. [bold blue]Apply All Installed[/]: Automatically detects all tools present on this host OS and hardens them.
+  3. [bold orange3]Apply All Supported[/]: Proactively provisions standard config directories and hardened baselines for ALL 14 tools (even if not yet installed).
+
+[bold yellow]Audit & DLP Tools:[/]
   • [bold yellow]Verify Config[/]: Audits host files and verifies 100% compliance of applied settings.
-  • [bold blue]View DLP Config[/]: Appears when a tool with DLP support is selected.
-  • [bold blue]Apply Installed[/]: Hardens only tools detected and installed on this host.
-  • [bold orange3]Apply All[/]: Provisions hardened baselines across all 14 supported tools.
+  • [bold blue]View DLP Config[/]: Inspects Data Loss Prevention secret exclusion patterns (dynamic button).
   • [bold yellow]Dry Run Mode[/]: Simulates policy enforcement without altering host files.
 
 [bold yellow]Extras & SAST Scanner:[/]
   • [bold cyan]ai-jail[/]: Installs Rust/Bubblewrap runtime sandbox container for AI agents.
   • [bold cyan]OpenGrep[/]: Installs open-source static analysis security scanner and rule packs.
   • [bold red]Scan Code[/]: Scans workspace for OWASP Web/API/Mobile, CWE Top 25 & secret leaks.
-
-[bold yellow]Security Hardening Pillars Enforced:[/]
-  1. [bold green]Zero-Telemetry Lockdown[/]: Enforces DO_NOT_TRACK and disables cloud telemetry/crash logs.
-  2. [bold green]Runtime Sandboxing[/]: Restricts agent tools and subagents to project workspaces.
-  3. [bold green]Multi-OS Command Risk Matrix[/]: LOW commands auto-execute; MEDIUM+ require approval.
-  4. [bold green]DLP Secret Exclusions[/]: Blocks ~/.ssh, ~/.aws, ~/.kube, .env, and API keys.
-  5. [bold green]OS ACL Lockdown[/]: Applies NTFS ACLs (Windows) or chmod 700/600 (Linux/macOS).
 
 [dim]Press Escape or Click Close to return to the dashboard.[/dim]
 """
@@ -150,13 +145,13 @@ class HardeningApp(App):
         height: 1fr;
     }
     #sidebar {
-        width: 38%;
+        width: 36%;
         height: 1fr;
         padding: 1;
         border-right: solid #45475a;
     }
     #details-panel {
-        width: 62%;
+        width: 64%;
         height: 1fr;
         padding: 1;
     }
@@ -164,16 +159,18 @@ class HardeningApp(App):
         text-style: bold;
         color: #89b4fa;
         margin-bottom: 1;
+        margin-top: 1;
     }
     #tools-list {
         height: 1fr;
         border: solid #45475a;
         background: #11111b;
     }
-    #action-buttons, #extras-buttons {
+    #apply-action-buttons, #extras-buttons {
         layout: horizontal;
         height: auto;
         margin-top: 1;
+        margin-bottom: 1;
     }
     Button {
         margin-right: 1;
@@ -183,7 +180,7 @@ class HardeningApp(App):
         display: none;
     }
     #log-view {
-        height: 11;
+        height: 10;
         border: solid #45475a;
         background: #11111b;
         margin-top: 1;
@@ -227,31 +224,31 @@ class HardeningApp(App):
             with Vertical(id="sidebar"):
                 yield Label(f"[b]AI Agents & Tools Catalog ({os_name})[/b]", classes="panel-title")
                 yield ListView(id="tools-list")
-                with Horizontal(id="action-buttons"):
-                    yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
-                    yield Button("Apply All", id="btn-apply-all", variant="warning")
-                    yield Button("Help (F1)", id="btn-help", variant="default")
                 yield Label("[b]Security Extras & SAST Scanner[/b]", classes="panel-title")
                 with Horizontal(id="extras-buttons"):
                     yield Button("ai-jail", id="btn-install-jail")
                     yield Button("OpenGrep", id="btn-install-opengrep")
                     yield Button("Scan Code", id="btn-scan-code", variant="error")
+                    yield Button("Help (F1)", id="btn-help", variant="default")
             with Vertical(id="details-panel"):
                 yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
                     yield Static("Select a tool from the catalog to inspect host status, security policies, and DLP settings.", id="policy-info")
-                with Horizontal():
-                    yield Button("Apply to Selected", id="btn-apply-selected", variant="success")
-                    yield Button("Verify Config", id="btn-verify-selected", variant="warning")
-                    yield Button("View DLP Config", id="btn-view-dlp", variant="primary")
-                    yield Checkbox("Dry Run Mode", id="chk-dry-run")
+                yield Label("[b]Policy Application Controls (3 Modes)[/b]", classes="panel-title")
+                with Horizontal(id="apply-action-buttons"):
+                    yield Button("Apply Selected", id="btn-apply-selected", variant="success")
+                    yield Button("Apply All Installed", id="btn-apply-installed", variant="primary")
+                    yield Button("Apply All Supported", id="btn-apply-all-supported", variant="warning")
+                    yield Button("Verify Config", id="btn-verify-selected", variant="default")
+                    yield Button("View DLP Config", id="btn-view-dlp", variant="default")
+                    yield Checkbox("Dry Run", id="chk-dry-run")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
                 yield RichLog(id="log-view", highlight=True, markup=True)
         yield Footer()
 
     def on_mount(self) -> None:
         self.title = "Hardening IA Framework"
-        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | Verification & SAST Active"
+        self.sub_title = f"Host Platform: {OSDetector.get_os_type().upper()} | 3 Application Modes & SAST Active"
 
         log_view = self.query_one("#log-view", RichLog)
         textual_handler = TextualLogHandler(log_view)
@@ -393,13 +390,16 @@ class HardeningApp(App):
             if not self.selected_policy:
                 log_view.write("[bold red][!] Please select a tool from the catalog first.[/]")
                 return
+            mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
+            log_view.write(f"[*] {mode_prefix}Applying hardening to [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.engine.apply_policy(self.selected_policy, dry_run=dry_run)
             status_style = "bold green" if res.success else "bold red"
-            log_view.write(f"[{status_style}]{res.message}[/]")
+            log_view.write(f"  [{status_style}]{res.message}[/]")
 
         elif event.button.id == "btn-apply-installed":
             installed_policies = [p for p in self.policies if p.is_installed]
-            log_view.write(f"[*] Applying policies to {len(installed_policies)} INSTALLED tools...")
+            mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
+            log_view.write(f"\n[*] {mode_prefix}Applying policies to {len(installed_policies)} INSTALLED tools on host...")
             if not installed_policies:
                 log_view.write("[bold yellow][!] No installed AI tools detected on this host.[/]")
                 return
@@ -407,13 +407,16 @@ class HardeningApp(App):
                 res = self.engine.apply_policy(p, dry_run=dry_run)
                 status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            log_view.write("[bold green][OK] Host-installed tools hardening completed.[/]\n")
 
-        elif event.button.id == "btn-apply-all":
-            log_view.write(f"[*] Applying policies across ALL {len(self.policies)} tools...")
+        elif event.button.id == "btn-apply-all-supported":
+            mode_prefix = "[bold yellow][DRY RUN][/bold yellow] " if dry_run else ""
+            log_view.write(f"\n[*] {mode_prefix}Proactively provisioning standard configs across ALL {len(self.policies)} supported tools...")
             for p in self.policies:
                 res = self.engine.apply_policy(p, dry_run=dry_run)
                 status = "[green][OK][/]" if res.success else "[red][FAILED][/]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            log_view.write("[bold green][OK] All 14 supported tools provisioned and hardened in standard directories.[/]\n")
 
         elif event.button.id == "btn-install-jail":
             log_view.write("[*] Launching ai-jail installer...")
