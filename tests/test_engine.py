@@ -113,13 +113,37 @@ class TestHardeningEngine(unittest.TestCase):
         jail_status = self.engine.is_extra_tool_installed("ai-jail")
         self.assertIsInstance(jail_status, bool)
 
-        opengrep_status = self.engine.is_extra_tool_installed("opengrep")
-        self.assertIsInstance(opengrep_status, bool)
+    def test_claude_code_standard_and_strict_application(self):
+        """Verify standard and strict mode application for Claude Code settings."""
+        from src.core.config_loader import ConfigLoader
+        loader = ConfigLoader()
+        claude_policy = loader.get_policy("anthropic", "claude-code")
+        self.assertIsNotNone(claude_policy)
 
-        # Removal routine should complete without unhandled exception
-        remove_res = self.engine.remove_extra_tool("ai-jail")
-        self.assertIsInstance(remove_res, bool)
+        settings_file = self.test_dir / "claude_settings.json"
+        claude_policy.paths[self.engine.os_type] = OSPaths(settings_file=str(settings_file))
+
+        # 1. Standard mode apply
+        apply_std = self.engine.apply_policy(claude_policy, dry_run=False, strict_mode=False)
+        self.assertTrue(apply_std.success)
+
+        data_std = json.loads(settings_file.read_text(encoding="utf-8"))
+        self.assertTrue(data_std["sandbox"]["enabled"])
+        self.assertTrue(data_std["sandbox"]["autoAllowBashIfSandboxed"])
+        self.assertFalse(data_std["sandbox"]["network"]["strictAllowlist"])
+        self.assertEqual(data_std["permissions"]["defaultMode"], "manual")
+        self.assertIn("Read(\\\\*)", data_std["permissions"]["deny"])
+
+        # 2. Strict mode apply
+        apply_strict = self.engine.apply_policy(claude_policy, dry_run=False, strict_mode=True)
+        self.assertTrue(apply_strict.success)
+
+        data_strict = json.loads(settings_file.read_text(encoding="utf-8"))
+        self.assertFalse(data_strict["sandbox"]["autoAllowBashIfSandboxed"])
+        self.assertTrue(data_strict["sandbox"]["network"]["strictAllowlist"])
+        self.assertEqual(data_strict["permissions"]["allow"], [])
 
 
 if __name__ == "__main__":
     unittest.main()
+

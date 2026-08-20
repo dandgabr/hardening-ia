@@ -49,6 +49,29 @@ class TestHardeningVerifier(unittest.TestCase):
         self.assertTrue(report.settings_file_exists)
         self.assertEqual(sum(1 for c in report.checks if not c.passed and c.key != "env_do_not_track"), 0)
 
+    def test_claude_code_verification_standard_and_strict(self):
+        """Verifier should audit standard and strict Claude Code configurations."""
+        from src.core.config_loader import ConfigLoader
+        from src.core.engine import HardeningEngine
+        loader = ConfigLoader()
+        claude_policy = loader.get_policy("anthropic", "claude-code")
+        self.assertIsNotNone(claude_policy)
+
+        settings_file = self.test_dir / "claude_verify_settings.json"
+        claude_policy.paths[self.verifier.os_type] = OSPaths(settings_file=str(settings_file))
+        engine = HardeningEngine()
+
+        # 1. Apply standard mode and verify
+        engine.apply_policy(claude_policy, dry_run=False, strict_mode=False)
+        report_std = self.verifier.verify_policy(claude_policy, strict_mode=False)
+        self.assertGreaterEqual(report_std.compliance_score, 90.0)
+
+        # 2. Apply strict mode and verify
+        engine.apply_policy(claude_policy, dry_run=False, strict_mode=True)
+        report_strict = self.verifier.verify_policy(claude_policy, strict_mode=True)
+        self.assertGreaterEqual(report_strict.compliance_score, 90.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

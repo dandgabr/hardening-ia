@@ -25,7 +25,7 @@ The following table lists the official configuration keys and their recommended 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/google/antigravity/hardening_policy.yaml`](../../../../configs/tools/google/antigravity/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/google/antigravity/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/google/antigravity/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

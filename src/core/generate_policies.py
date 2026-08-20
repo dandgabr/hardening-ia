@@ -115,34 +115,91 @@ POLICIES_DATABASE = [
         "vendor": "anthropic",
         "name": "claude-code",
         "category": "cli",
-        "description": "Claude Code CLI - Agentic command line assistant with autonomous tools",
+        "description": "Claude Code CLI - Agentic command line assistant with autonomous tools and enterprise sandboxing",
         "paths": {
             "windows": {
                 "config_dir": "%USERPROFILE%\\.claude",
-                "settings_file": "%USERPROFILE%\\.claude\\config.json",
-                "rules_dir": "%USERPROFILE%\\.claude\\rules"
+                "settings_file": "%USERPROFILE%\\.claude\\settings.json",
+                "rules_dir": "%USERPROFILE%\\.claude\\rules",
+                "managed_settings_file": "%ProgramData%\\ClaudeCode\\managed-settings.json"
             },
             "linux": {
                 "config_dir": "~/.claude",
-                "settings_file": "~/.claude/config.json",
-                "rules_dir": "~/.claude/rules"
+                "settings_file": "~/.claude/settings.json",
+                "rules_dir": "~/.claude/rules",
+                "managed_settings_file": "/etc/claude-code/managed-settings.json"
             },
             "macos": {
                 "config_dir": "~/.claude",
-                "settings_file": "~/.claude/config.json",
-                "rules_dir": "~/.claude/rules"
+                "settings_file": "~/.claude/settings.json",
+                "rules_dir": "~/.claude/rules",
+                "managed_settings_file": "/Library/Application Support/ClaudeCode/managed-settings.json"
             }
         },
         "policies": {
             "sandbox": {
                 "enforce_sandbox": True,
-                "allowBypassSandbox": False
+                "allowUnsandboxedCommands": False,
+                "failIfUnavailable": True,
+                "autoAllowBashIfSandboxed": True,
+                "filesystem": {
+                    "disabled": False,
+                    "denyWrite": [
+                        r"C:\Windows", r"C:\Windows\System32", r"C:\Program Files",
+                        r"C:\Program Files (x86)", r"C:\ProgramData",
+                        "/etc", "/boot", "/root", "/sys", "/proc", "/dev",
+                        "/var/log", "/usr/bin", "/usr/sbin", "/sbin", "/bin",
+                        "/System", "/Library", "/private"
+                    ],
+                    "denyRead": [
+                        "**/.env*", "**/*.pem", "**/*.key",
+                        "~/.ssh", "~/.aws", "~/.azure", "~/.kube", "~/.gnupg",
+                        "~/.git-credentials", "~/.netrc", "~/.docker/config.json",
+                        "~/.credentials.json", "~/.claude.json",
+                        r"%USERPROFILE%\.ssh", r"%USERPROFILE%\.aws",
+                        r"%USERPROFILE%\.azure", r"%USERPROFILE%\.kube",
+                        r"%USERPROFILE%\AppData\Local\Microsoft\Credentials",
+                        r"%USERPROFILE%\AppData\Roaming\Microsoft\Vault"
+                    ]
+                },
+                "network": {
+                    "strictAllowlist": False,
+                    "allowedDomains": [
+                        "github.com", "*.github.com", "*.githubusercontent.com",
+                        "registry.npmjs.org", "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
+                    ],
+                    "deniedDomains": [
+                        "169.254.169.254", "metadata.google.internal", "100.100.100.200",
+                        "localhost", "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
+                    ]
+                },
+                "credentials": {
+                    "allowPlaintextInject": False,
+                    "envVars": [
+                        {"name": "ANTHROPIC_API_KEY", "mode": "deny"},
+                        {"name": "ANTHROPIC_AUTH_TOKEN", "mode": "deny"},
+                        {"name": "AWS_ACCESS_KEY_ID", "mode": "deny"},
+                        {"name": "AWS_SECRET_ACCESS_KEY", "mode": "deny"},
+                        {"name": "AWS_SESSION_TOKEN", "mode": "deny"},
+                        {"name": "AZURE_CLIENT_SECRET", "mode": "deny"},
+                        {"name": "GITHUB_TOKEN", "mode": "deny"},
+                        {"name": "GH_TOKEN", "mode": "deny"},
+                        {"name": "OPENAI_API_KEY", "mode": "deny"},
+                        {"name": "GEMINI_API_KEY", "mode": "deny"},
+                        {"name": "DATABASE_URL", "mode": "deny"},
+                        {"name": "DB_PASSWORD", "mode": "deny"}
+                    ]
+                }
             },
             "approvals": {
                 "permissionMode": "manual",
+                "defaultMode": "manual",
                 "autoApprove": [],
                 "acceptEdits": False,
-                "dangerouslySkipPermissions": False
+                "dangerouslySkipPermissions": False,
+                "disableBypassPermissionsMode": "disable",
+                "disableAutoMode": "disable",
+                "permissionExplainerEnabled": True
             },
             "rate_limit": DEFAULT_RATE_LIMIT,
             "timeout": DEFAULT_TIMEOUT,
@@ -155,26 +212,226 @@ POLICIES_DATABASE = [
                 "enable_telemetry": False,
                 "CLAUDE_CODE_ENABLE_TELEMETRY": 0,
                 "CLAUDE_TELEMETRY_DISABLED": True,
+                "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 1,
+                "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": 1,
+                "DISABLE_TELEMETRY": 1,
+                "DISABLE_AUTOUPDATER": 1,
+                "feedbackSurveyRate": 0,
+                "autoMemoryEnabled": False,
+                "disableArtifact": True,
                 "audit_logging": True
             },
             "strict_rules": {
                 "action": "block_without_prompting",
                 "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
                 "native_overrides": {
+                    "permissions": {
+                        "defaultMode": "manual",
+                        "disableBypassPermissionsMode": "disable",
+                        "disableAutoMode": "disable",
+                        "allow": []
+                    },
+                    "sandbox": {
+                        "enabled": True,
+                        "autoAllowBashIfSandboxed": False,
+                        "allowUnsandboxedCommands": False,
+                        "failIfUnavailable": True,
+                        "filesystem": {
+                            "allowManagedReadPathsOnly": True
+                        },
+                        "network": {
+                            "strictAllowlist": True,
+                            "allowManagedDomainsOnly": True
+                        }
+                    },
+                    "disableSideloadFlags": True,
+                    "allowManagedHooksOnly": True,
+                    "allowManagedPermissionRulesOnly": True,
+                    "allowManagedMcpServersOnly": True,
                     "acceptEdits": False,
                     "permissionMode": "manual",
-                    "autoApprove": [],
-                    "deniedCommands": [
-                        "rm -rf /", "rm -rf /*", "mkfs*", "dd if=/dev/zero*", "dd if=/dev/urandom*",
-                        "format*", "diskpart*", "cipher /w", "diskutil eraseDisk*"
-                    ],
-                    "disallowedPaths": [
-                        "/etc/**", "/boot/**", "/root/**", "~/.ssh/**", "~/.aws/**",
-                        "C:\\Windows\\**", "C:\\Program Files\\**", "/System/**", "/Library/**"
-                    ]
+                    "autoApprove": []
                 }
             },
             "native_settings_override": {
+                "$schema": "https://json.schemastore.org/claude-code-settings.json",
+                "permissions": {
+                    "defaultMode": "manual",
+                    "disableBypassPermissionsMode": "disable",
+                    "disableAutoMode": "disable",
+                    "deny": [
+                        "Read(//**/.env*)",
+                        "Read(//**/*.env*)",
+                        "Read(//**/*.pem)",
+                        "Read(//**/*.key)",
+                        "Read(//**/*.pfx)",
+                        "Read(//**/*.p12)",
+                        "Read(//**/*_rsa)",
+                        "Read(//**/*_ed25519)",
+                        "Read(~/.ssh/**)",
+                        "Read(~/.aws/**)",
+                        "Read(~/.azure/**)",
+                        "Read(~/.kube/**)",
+                        "Read(~/.gnupg/**)",
+                        "Read(~/.git-credentials)",
+                        "Read(~/.netrc)",
+                        "Read(~/.docker/config.json)",
+                        "Read(~/.credentials.json)",
+                        "Read(~/.claude.json)",
+                        "Read(//c/**/.env*)",
+                        "Read(//c/Windows/**)",
+                        "Read(//c/Program Files/**)",
+                        "Read(//c/ProgramData/**)",
+                        "Read(\\\\*)",
+                        "Edit(\\\\*)",
+                        "Write(\\\\*)",
+                        "Read(//etc/**)",
+                        "Read(//boot/**)",
+                        "Read(//root/**)",
+                        "Read(//sys/**)",
+                        "Read(//proc/**)",
+                        "Read(//System/**)",
+                        "Read(//Library/**)",
+                        "Read(//private/**)",
+                        "Edit(//**/.git/hooks/**)",
+                        "Edit(//**/.git/config)",
+                        "Write(//**/.git/hooks/**)",
+                        "Write(//**/.git/config)",
+                        "WebFetch(domain:169.254.169.254)",
+                        "WebFetch(domain:metadata.google.internal)",
+                        "WebFetch(domain:100.100.100.200)",
+                        "WebFetch(domain:localhost)",
+                        "WebFetch(domain:127.0.0.1)",
+                        "WebFetch(domain:0.0.0.0)",
+                        "WebFetch(domain:[::1])",
+                        "Bash(dangerouslyDisableSandbox:true)",
+                        "Bash(rm -rf /*)",
+                        "Bash(rm -rf /)",
+                        "Bash(rm -rf /etc*)",
+                        "Bash(rm -rf /boot*)",
+                        "Bash(rm -rf /root*)",
+                        "Bash(rm -rf /System*)",
+                        "Bash(mkfs*)",
+                        "Bash(dd if=/dev/zero*)",
+                        "Bash(dd if=/dev/urandom*)",
+                        "Bash(wipefs*)",
+                        "Bash(fdisk*)",
+                        "Bash(gdisk*)",
+                        "Bash(parted*)",
+                        "Bash(lvreduce*)",
+                        "Bash(diskutil eraseDisk*)",
+                        "Bash(diskutil partitionDisk*)",
+                        "Bash(chmod -R 777 /*)",
+                        "Bash(chown -R nobody /*)",
+                        "Bash(mv /* /dev/null*)",
+                        "Bash(curl *|*sh*)",
+                        "Bash(wget *|*sh*)",
+                        "Bash(curl *|*bash*)",
+                        "Bash(wget *|*bash*)",
+                        "PowerShell(format*)",
+                        "PowerShell(Format-Volume*)",
+                        "PowerShell(Clear-Disk*)",
+                        "PowerShell(Initialize-Disk*)",
+                        "PowerShell(Remove-Partition*)",
+                        "PowerShell(Resize-Partition*)",
+                        "PowerShell(diskpart*)",
+                        "PowerShell(cipher /w*)",
+                        "PowerShell(chkdsk /f*)",
+                        "PowerShell(Remove-Item *-Recurse *C:\\Windows*)",
+                        "PowerShell(del */f */s */q *C:\\Windows*)",
+                        "PowerShell(rd */s */q *C:\\*)",
+                        "PowerShell(Set-MpPreference *-DisableRealtimeMonitoring*)"
+                    ],
+                    "allow": [],
+                    "ask": [
+                        "Bash(*)",
+                        "PowerShell(*)",
+                        "Edit(*)",
+                        "Write(*)",
+                        "WebFetch(*)"
+                    ]
+                },
+                "sandbox": {
+                    "enabled": True,
+                    "autoAllowBashIfSandboxed": True,
+                    "allowUnsandboxedCommands": False,
+                    "failIfUnavailable": True,
+                    "filesystem": {
+                        "disabled": False,
+                        "denyWrite": [
+                            r"C:\Windows", r"C:\Windows\System32", r"C:\Program Files",
+                            r"C:\Program Files (x86)", r"C:\ProgramData",
+                            "/etc", "/boot", "/root", "/sys", "/proc", "/dev",
+                            "/var/log", "/usr/bin", "/usr/sbin", "/sbin", "/bin",
+                            "/System", "/Library", "/private"
+                        ],
+                        "denyRead": [
+                            "**/.env*", "**/*.pem", "**/*.key",
+                            "~/.ssh", "~/.aws", "~/.azure", "~/.kube", "~/.gnupg",
+                            "~/.git-credentials", "~/.netrc", "~/.docker/config.json",
+                            "~/.credentials.json", "~/.claude.json",
+                            r"%USERPROFILE%\.ssh", r"%USERPROFILE%\.aws",
+                            r"%USERPROFILE%\.azure", r"%USERPROFILE%\.kube",
+                            r"%USERPROFILE%\AppData\Local\Microsoft\Credentials",
+                            r"%USERPROFILE%\AppData\Roaming\Microsoft\Vault"
+                        ]
+                    },
+                    "network": {
+                        "strictAllowlist": False,
+                        "allowedDomains": [
+                            "github.com", "*.github.com", "*.githubusercontent.com",
+                            "registry.npmjs.org", "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
+                        ],
+                        "deniedDomains": [
+                            "169.254.169.254", "metadata.google.internal", "100.100.100.200",
+                            "localhost", "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
+                        ]
+                    },
+                    "credentials": {
+                        "allowPlaintextInject": False,
+                        "envVars": [
+                            {"name": "ANTHROPIC_API_KEY", "mode": "deny"},
+                            {"name": "ANTHROPIC_AUTH_TOKEN", "mode": "deny"},
+                            {"name": "AWS_ACCESS_KEY_ID", "mode": "deny"},
+                            {"name": "AWS_SECRET_ACCESS_KEY", "mode": "deny"},
+                            {"name": "AWS_SESSION_TOKEN", "mode": "deny"},
+                            {"name": "AZURE_CLIENT_SECRET", "mode": "deny"},
+                            {"name": "GITHUB_TOKEN", "mode": "deny"},
+                            {"name": "GH_TOKEN", "mode": "deny"},
+                            {"name": "OPENAI_API_KEY", "mode": "deny"},
+                            {"name": "GEMINI_API_KEY", "mode": "deny"},
+                            {"name": "DATABASE_URL", "mode": "deny"},
+                            {"name": "DB_PASSWORD", "mode": "deny"}
+                        ]
+                    }
+                },
+                "permissionExplainerEnabled": True,
+                "feedbackSurveyRate": 0,
+                "autoMemoryEnabled": False,
+                "disableArtifact": True,
+                "disableDeepLinkRegistration": "disable",
+                "disableSkillShellExecution": True,
+                "disableRemoteControl": True,
+                "remoteControlAtStartup": False,
+                "disableClaudeAiConnectors": True,
+                "strictPluginOnlyCustomization": True,
+                "browserExternalPageTools": "disabled",
+                "disableBrowserExternalNavigation": True,
+                "disableMobileSimulatorTools": True,
+                "respectGitignore": True,
+                "cleanupPeriodDays": 7,
+                "autoUpdatesChannel": "stable",
+                "env": {
+                    "DO_NOT_TRACK": "1",
+                    "CLAUDE_DISABLE_TELEMETRY": "1",
+                    "CLAUDE_TELEMETRY_DISABLED": "1",
+                    "CLAUDE_CODE_ENABLE_TELEMETRY": "0",
+                    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+                    "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1",
+                    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
+                    "DISABLE_TELEMETRY": "1",
+                    "DISABLE_AUTOUPDATER": "1"
+                },
                 "permissionMode": "manual",
                 "autoApprove": [],
                 "acceptEdits": False,

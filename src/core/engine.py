@@ -29,6 +29,16 @@ class HardeningEngine:
         b_dir.mkdir(parents=True, exist_ok=True)
         return b_dir
 
+    @staticmethod
+    def _deep_update(target: dict, source: dict) -> dict:
+        """Recursively updates target dict with source dict, preserving nested dict hierarchies."""
+        for k, v in source.items():
+            if isinstance(v, dict) and isinstance(target.get(k), dict):
+                HardeningEngine._deep_update(target[k], v)
+            else:
+                target[k] = v
+        return target
+
     def apply_policy(self, policy: HardeningPolicy, dry_run: bool = False, strict_mode: bool = False) -> ExecutionResult:
         """Applies hardening policy controls with automatic full backup, differential tracking, and optional strict mode."""
         tool_name = policy.tool.name
@@ -44,14 +54,15 @@ class HardeningEngine:
             os_paths = policy.paths.get(self.os_type)
             if os_paths:
                 if os_paths.settings_file:
+                    import copy
                     settings_path = OSDetector.expand_path(os_paths.settings_file)
-                    native_overrides = dict(policy.policies.get("native_settings_override", {}))
+                    native_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
 
                     # Incorporate strict rules and explicit denied patterns if requested
                     if strict_mode:
                         strict_rules = policy.policies.get("strict_rules", {})
                         if strict_rules and "native_overrides" in strict_rules:
-                            native_overrides.update(strict_rules["native_overrides"])
+                            self._deep_update(native_overrides, strict_rules["native_overrides"])
                         native_overrides["security.strict_mode"] = True
                         native_overrides["security.dangerousPaths.action"] = "block"
                         native_overrides["security.approvals.bypass_allowed"] = False
@@ -153,10 +164,12 @@ class HardeningEngine:
             if os_paths:
                 # 1. Surgically revert overrides in settings file
                 if os_paths.settings_file:
+                    import copy
                     settings_path = OSDetector.expand_path(os_paths.settings_file)
-                    native_overrides = dict(policy.policies.get("native_settings_override", {}))
+                    native_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
                     strict_overrides = policy.policies.get("strict_rules", {}).get("native_overrides", {})
-                    native_overrides.update(strict_overrides)
+                    if strict_overrides:
+                        self._deep_update(native_overrides, strict_overrides)
                     native_overrides["security.strict_mode"] = True
                     native_overrides["security.dangerousPaths.action"] = "block"
                     native_overrides["security.approvals.bypass_allowed"] = False

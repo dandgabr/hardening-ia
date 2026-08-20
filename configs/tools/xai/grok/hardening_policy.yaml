@@ -72,6 +72,8 @@ policies:
     - ~/.config/gh
     - ~/.npmrc
     - ~/.pypirc
+    - ~/.credentials.json
+    - ~/.claude.json
     windows:
     - C:\Windows
     - C:\Windows\System32
@@ -96,6 +98,9 @@ policies:
     - '%USERPROFILE%\_netrc'
     - '%USERPROFILE%\.npmrc'
     - '%USERPROFILE%\.pypirc'
+    - '%USERPROFILE%\.credentials.json'
+    - '%USERPROFILE%\.claude.json'
+    - \\*
     macos:
     - /System
     - /System/Library
@@ -126,6 +131,8 @@ policies:
     - ~/.git-credentials
     - ~/.netrc
     - ~/.config/gh
+    - ~/.credentials.json
+    - ~/.claude.json
   dlp:
     block_sensitive_paths:
     - '**/.env*'
@@ -169,6 +176,8 @@ policies:
       - gdisk\s+
       - parted\s+
       - lvreduce\s+
+      - dangerouslyDisableSandbox
+      - 169\.254\.169\.254
       windows:
       - format-volume\s+
       - 'format\s+[a-zA-Z]:'
@@ -182,6 +191,9 @@ policies:
       - remove-item\s+.*-recurse\s+c:\\windows
       - del\s+/f\s+/s\s+/q\s+c:\\windows
       - rd\s+/s\s+/q\s+c:\\
+      - set-mppreference\s+.*-disablerealtimemonitoring
+      - dangerouslyDisableSandbox
+      - 169\.254\.169\.254
       macos:
       - diskutil\s+eraseDisk
       - diskutil\s+partitionDisk
@@ -193,6 +205,8 @@ policies:
       - asr\s+--restore
       - rm\s+-(?:r|f|rf|fr)\s+/(?:\s|$|\*)
       - rm\s+-(?:r|f|rf|fr)\s+/System
+      - dangerouslyDisableSandbox
+      - 169\.254\.169\.254
     native_overrides:
       sandbox_strict: true
       denied_patterns:

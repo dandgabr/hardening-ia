@@ -38,7 +38,13 @@ except Exception as e:
     if [ "$TELEMETRY_OFF" = "1" ]; then
         export DO_NOT_TRACK=1
         export CLAUDE_DISABLE_TELEMETRY=1
-        echo "[INFO] Enforced global telemetry lockdown (DO_NOT_TRACK=1, CLAUDE_DISABLE_TELEMETRY=1)"
+        export CLAUDE_TELEMETRY_DISABLED=1
+        export CLAUDE_CODE_ENABLE_TELEMETRY=0
+        export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+        export CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1
+        export DISABLE_TELEMETRY=1
+        export DISABLE_AUTOUPDATER=1
+        echo "[INFO] Enforced global telemetry lockdown (DO_NOT_TRACK=1, CLAUDE_DISABLE_TELEMETRY=1, CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1)"
     fi
 
     # 2. Permissions Lockdown on Target Config Directory

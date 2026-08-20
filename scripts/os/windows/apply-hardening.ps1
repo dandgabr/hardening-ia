@@ -63,9 +63,15 @@ except Exception as e:
             if (-not $DryRun) {
                 [Environment]::SetEnvironmentVariable("DO_NOT_TRACK", "1", "User")
                 [Environment]::SetEnvironmentVariable("CLAUDE_DISABLE_TELEMETRY", "1", "User")
-                Write-Output "[INFO] Enforced global telemetry lockdown (DO_NOT_TRACK=1, CLAUDE_DISABLE_TELEMETRY=1)"
+                [Environment]::SetEnvironmentVariable("CLAUDE_TELEMETRY_DISABLED", "1", "User")
+                [Environment]::SetEnvironmentVariable("CLAUDE_CODE_ENABLE_TELEMETRY", "0", "User")
+                [Environment]::SetEnvironmentVariable("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1", "User")
+                [Environment]::SetEnvironmentVariable("CLAUDE_CODE_SUBPROCESS_ENV_SCRUB", "1", "User")
+                [Environment]::SetEnvironmentVariable("DISABLE_TELEMETRY", "1", "User")
+                [Environment]::SetEnvironmentVariable("DISABLE_AUTOUPDATER", "1", "User")
+                Write-Output "[INFO] Enforced global telemetry lockdown (DO_NOT_TRACK=1, CLAUDE_DISABLE_TELEMETRY=1, SUBPROCESS_ENV_SCRUB=1)"
             } else {
-                Write-Output "[INFO] [DRY-RUN] Would set user environment variables DO_NOT_TRACK=1, CLAUDE_DISABLE_TELEMETRY=1"
+                Write-Output "[INFO] [DRY-RUN] Would set user environment variables DO_NOT_TRACK=1, CLAUDE_DISABLE_TELEMETRY=1, SUBPROCESS_ENV_SCRUB=1"
             }
         }
 

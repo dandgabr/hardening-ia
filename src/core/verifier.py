@@ -48,8 +48,30 @@ class HardeningVerifier:
         self.repo_root = repo_root or Path(__file__).resolve().parent.parent.parent
         self.os_type = OSDetector.get_os_type()
 
+    @staticmethod
+    def _deep_update(target: dict, source: dict) -> dict:
+        """Recursively updates target dict with source dict, preserving nested dict hierarchies."""
+        for k, v in source.items():
+            if isinstance(v, dict) and isinstance(target.get(k), dict):
+                HardeningVerifier._deep_update(target[k], v)
+            else:
+                target[k] = v
+        return target
+
+    def _flatten_dict(self, d: dict, parent_key: str = "") -> Dict[str, Any]:
+        """Flattens a nested dictionary into dotted key paths for granular verification."""
+        items: Dict[str, Any] = {}
+        for k, v in d.items():
+            new_key = f"{parent_key}.{k}" if parent_key else k
+            if isinstance(v, dict):
+                items.update(self._flatten_dict(v, new_key))
+            else:
+                items[new_key] = v
+        return items
+
     def verify_policy(self, policy: HardeningPolicy, strict_mode: Optional[bool] = None) -> PolicyVerificationReport:
         """Audits a single tool policy against the host environment."""
+        import copy
         tool_name = policy.tool.name
         vendor = policy.tool.vendor
         path_info = policy.paths.get(self.os_type)
@@ -96,23 +118,30 @@ class HardeningVerifier:
             is_strict = bool(
                 current_settings.get("security.strict_mode") is True
                 or self._get_nested_value(current_settings, "security.strict_mode") is True
+                or self._get_nested_value(current_settings, "sandbox.network.strictAllowlist") is True
             )
 
         # 1. Prepare expected overrides (standard + strict if applicable)
-        expected_overrides = dict(policy.policies.get("native_settings_override", {}))
+        expected_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
         if is_strict:
             strict_conf = policy.policies.get("strict_rules", {})
             if strict_conf and "native_overrides" in strict_conf:
-                expected_overrides.update(strict_conf["native_overrides"])
+                self._deep_update(expected_overrides, strict_conf["native_overrides"])
             expected_overrides["security.strict_mode"] = True
             expected_overrides["security.dangerousPaths.action"] = "block"
             expected_overrides["security.approvals.bypass_allowed"] = False
             expected_overrides["security.approvals.auto_apply_edits"] = False
             expected_overrides["security.approvals.require_write_approval"] = True
 
-        for key, expected_val in expected_overrides.items():
+        flattened_checks = self._flatten_dict(expected_overrides)
+        for key, expected_val in flattened_checks.items():
+            if key == "$schema":
+                continue
             actual_val = self._get_nested_value(current_settings, key)
-            passed = (actual_val == expected_val)
+            if isinstance(expected_val, list) and isinstance(actual_val, list):
+                passed = (sorted(str(x) for x in actual_val) == sorted(str(x) for x in expected_val)) or (actual_val == expected_val)
+            else:
+                passed = (actual_val == expected_val)
 
             report.checks.append(CheckResult(
                 key=key,

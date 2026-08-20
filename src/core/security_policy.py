@@ -53,7 +53,9 @@ DANGEROUS_PATHS_BY_OS: Dict[str, List[str]] = {
         "~/.netrc",
         "~/.config/gh",
         "~/.npmrc",
-        "~/.pypirc"
+        "~/.pypirc",
+        "~/.credentials.json",
+        "~/.claude.json"
     ],
     "windows": [
         # System sensitive directories & files
@@ -80,7 +82,10 @@ DANGEROUS_PATHS_BY_OS: Dict[str, List[str]] = {
         r"%USERPROFILE%\.git-credentials",
         r"%USERPROFILE%\_netrc",
         r"%USERPROFILE%\.npmrc",
-        r"%USERPROFILE%\.pypirc"
+        r"%USERPROFILE%\.pypirc",
+        r"%USERPROFILE%\.credentials.json",
+        r"%USERPROFILE%\.claude.json",
+        r"\\*"
     ],
     "macos": [
         # System sensitive directories & files (SIP & Core)
@@ -113,7 +118,9 @@ DANGEROUS_PATHS_BY_OS: Dict[str, List[str]] = {
         "~/.bash_history",
         "~/.git-credentials",
         "~/.netrc",
-        "~/.config/gh"
+        "~/.config/gh",
+        "~/.credentials.json",
+        "~/.claude.json"
     ]
 }
 
@@ -142,7 +149,9 @@ CRITICAL_DENIED_PATTERNS_BY_OS: Dict[str, List[str]] = {
         r"fdisk\s+",
         r"gdisk\s+",
         r"parted\s+",
-        r"lvreduce\s+"
+        r"lvreduce\s+",
+        r"dangerouslyDisableSandbox",
+        r"169\.254\.169\.254"
     ],
     "windows": [
         r"format-volume\s+",
@@ -156,7 +165,10 @@ CRITICAL_DENIED_PATTERNS_BY_OS: Dict[str, List[str]] = {
         r"chkdsk\s+/f",
         r"remove-item\s+.*-recurse\s+c:\\windows",
         r"del\s+/f\s+/s\s+/q\s+c:\\windows",
-        r"rd\s+/s\s+/q\s+c:\\"
+        r"rd\s+/s\s+/q\s+c:\\",
+        r"set-mppreference\s+.*-disablerealtimemonitoring",
+        r"dangerouslyDisableSandbox",
+        r"169\.254\.169\.254"
     ],
     "macos": [
         r"diskutil\s+eraseDisk",
@@ -168,7 +180,9 @@ CRITICAL_DENIED_PATTERNS_BY_OS: Dict[str, List[str]] = {
         r"dd\s+if=/dev/zero\s+of=/dev/r?disk",
         r"asr\s+--restore",
         r"rm\s+-(?:r|f|rf|fr)\s+/(?:\s|$|\*)",
-        r"rm\s+-(?:r|f|rf|fr)\s+/System"
+        r"rm\s+-(?:r|f|rf|fr)\s+/System",
+        r"dangerouslyDisableSandbox",
+        r"169\.254\.169\.254"
     ]
 }
 
@@ -293,7 +307,15 @@ The following paths are designated as sensitive operating system and credential 
 
 ---
 
-## ⏱️ 2. Rate Limits & Execution Timeouts
+## 🌐 2. Network & Cloud Metadata Guardrails (Anti-SSRF)
+
+- **Cloud Instance Metadata Service (IMDS):** Access to `169.254.169.254` and `metadata.google.internal` is strictly BLOCKED.
+- **Local Services & Loopback:** WebFetch, network probes, and tools must not target `localhost`, `127.0.0.1`, `0.0.0.0`, or internal subnet addresses.
+- **Windows WebDAV / UNC Boundaries:** Access to UNC/WebDAV paths (`\\\\*`) is forbidden to prevent credential hash exfiltration.
+
+---
+
+## ⏱️ 3. Rate Limits & Execution Timeouts
 
 To prevent runaway agent loops, denial of service, and excessive cloud API billing, you MUST adhere to:
 
@@ -306,7 +328,7 @@ To prevent runaway agent loops, denial of service, and excessive cloud API billi
 
 ---
 
-## 🛑 3. Critical Destructive Anti-Patterns & Denied Commands
+## 🛑 4. Critical Destructive Anti-Patterns & Denied Commands
 
 {critical_rule}
 
@@ -314,10 +336,11 @@ To prevent runaway agent loops, denial of service, and excessive cloud API billi
 - **Filesystem Purge:** Recursive deletion of root or critical directories (`rm -rf /`, `Remove-Item -Recurse C:\\`).
 - **Denial of Service:** Fork bombs (`:(){{:|:&}};:`), recursive full permission escalation (`chmod -R 777 /`).
 - **Unverified Remote Pipe:** Piping remote payloads directly into shell (`curl ... | bash`, `wget ... | sh`).
+- **Security & Sandbox Bypass:** Disabling sandbox (`dangerouslyDisableSandbox`, `--dangerously-skip-permissions`) or tampering with endpoint protection (`Set-MpPreference -DisableRealtimeMonitoring`).
 
 ---
 
-## 📋 4. Compliance & SIEM Audit Logging
+## 📋 5. Compliance & SIEM Audit Logging
 
 Every tool execution, path inspection, and policy evaluation is recorded to `logs/audit.jsonl` with cryptographic timestamps for compliance verification.
 """

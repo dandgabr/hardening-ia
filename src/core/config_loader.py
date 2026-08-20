@@ -80,3 +80,14 @@ class ConfigLoader:
         except Exception as e:
             logger.error(f"Error parsing policy file {yaml_path}: {e}")
             return None
+
+    def get_policy(self, vendor: str, name: str) -> Optional[HardeningPolicy]:
+        """Retrieves a specific policy by vendor and tool name."""
+        target_path = self.configs_root / vendor.lower() / name.lower() / "hardening_policy.yaml"
+        if target_path.exists():
+            return self.load_policy(target_path)
+        for p in self.discover_policies():
+            if p.tool.vendor.lower() == vendor.lower() and p.tool.name.lower() == name.lower():
+                return p
+        return None
+

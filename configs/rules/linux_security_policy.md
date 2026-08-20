@@ -1,4 +1,4 @@
-# Linux Agent Security Policy, Dangerous Paths & Execution Guardrails
+# LINUX Agent Security Policy, Dangerous Paths & Execution Guardrails
 
 ## 🛡️ Operating Mode: STANDARD HARDENING MODE (Human-in-the-Loop & Confirmation)
 
@@ -49,13 +49,23 @@ The following paths are designated as sensitive operating system and credential 
 - `~/.config/gh`
 - `~/.npmrc`
 - `~/.pypirc`
+- `~/.credentials.json`
+- `~/.claude.json`
 
 ### Path Access Rule:
-🟡 **MANDATORY CONFIRMATION:** You MUST explicitly prompt and obtain operator confirmation BEFORE reading, writing, or traversing any of these dangerous paths. In Strict Mode, access is BLOCKED unconditionally without prompting.
+🟡 **MANDATORY CONFIRMATION:** You MUST explicitly prompt and obtain operator confirmation BEFORE reading, writing, or traversing any of these dangerous paths.
 
 ---
 
-## ⏱️ 2. Rate Limits & Execution Timeouts
+## 🌐 2. Network & Cloud Metadata Guardrails (Anti-SSRF)
+
+- **Cloud Instance Metadata Service (IMDS):** Access to `169.254.169.254` and `metadata.google.internal` is strictly BLOCKED.
+- **Local Services & Loopback:** WebFetch, network probes, and tools must not target `localhost`, `127.0.0.1`, `0.0.0.0`, or internal subnet addresses.
+- **Windows WebDAV / UNC Boundaries:** Access to UNC/WebDAV paths (`\\*`) is forbidden to prevent credential hash exfiltration.
+
+---
+
+## ⏱️ 3. Rate Limits & Execution Timeouts
 
 To prevent runaway agent loops, denial of service, and excessive cloud API billing, you MUST adhere to:
 
@@ -68,17 +78,18 @@ To prevent runaway agent loops, denial of service, and excessive cloud API billi
 
 ---
 
-## 🛑 3. Critical Destructive Anti-Patterns & Denied Commands
+## 🛑 4. Critical Destructive Anti-Patterns & Denied Commands
 
-🟠 **CRITICAL MULTI-STEP CONFIRMATION:** Destructive commands are prohibited by default and require strict operator verification. (In Strict Mode, these are automatically REJECTED and DENIED without prompting).
+🟠 **CRITICAL MULTI-STEP CONFIRMATION:** Destructive commands are prohibited by default and require strict operator verification.
 
-- **Disk & Partition Destruction:** Formatting (`mkfs`, `mkfs.ext4`, `mkfs.xfs`, `mkswap`), zeroing (`dd if=/dev/zero`, `dd if=/dev/urandom`), partition destruction (`fdisk`, `gdisk`, `parted`, `wipefs`), logical volume reduction (`lvreduce`).
-- **Filesystem Purge:** Recursive deletion of root or critical directories (`rm -rf /`, `rm -rf /*`, `rm -rf /etc`, `rm -rf /boot`, `rm -rf /root`).
-- **Denial of Service:** Fork bombs (`:(){ :|:& };:`), recursive full permission escalation (`chmod -R 777 /`, `chown -R nobody /`).
+- **Disk & Partition Destruction:** Formatting (`mkfs`, `format`, `newfs`), zeroing (`dd if=/dev/zero`, `cipher /w`), table manipulation (`fdisk`, `gdisk`, `diskpart`, `diskutil eraseDisk`).
+- **Filesystem Purge:** Recursive deletion of root or critical directories (`rm -rf /`, `Remove-Item -Recurse C:\`).
+- **Denial of Service:** Fork bombs (`:(){:|:&};:`), recursive full permission escalation (`chmod -R 777 /`).
 - **Unverified Remote Pipe:** Piping remote payloads directly into shell (`curl ... | bash`, `wget ... | sh`).
+- **Security & Sandbox Bypass:** Disabling sandbox (`dangerouslyDisableSandbox`, `--dangerously-skip-permissions`) or tampering with endpoint protection (`Set-MpPreference -DisableRealtimeMonitoring`).
 
 ---
 
-## 📋 4. Compliance & SIEM Audit Logging
+## 📋 5. Compliance & SIEM Audit Logging
 
 Every tool execution, path inspection, and policy evaluation is recorded to `logs/audit.jsonl` with cryptographic timestamps for compliance verification.
