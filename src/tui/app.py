@@ -56,12 +56,13 @@ class HelpModal(ModalScreen):
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]H, F1 or ?[/]: Toggle this Help screen.
   • [bold white]V[/]: Verify selected tool's configuration compliance.
+  • [bold white]F[/]: Fix and auto-remediate compliance discrepancies.
   • [bold white]D[/]: View Data Loss Prevention (DLP) configuration.
   • [bold white]S[/]: Toggle Strict Mode.
 
 [bold yellow]Verification & Compliance Remediation:[/]
   • [bold magenta]Verify Selected (V)[/]: Audits host config files against security baselines and calculates a real-time compliance score (0-100%).
-  • [bold green]Fix Compliance[/]: Automatically remediates all detected discrepancies, patching config files directly to achieve 100% baseline compliance.
+  • [bold green]Fix Compliance (F)[/]: Automatically remediates all detected discrepancies, patching config files directly to achieve 100% baseline compliance.
 
 [bold yellow]The 3 Policy Application Modes:[/]
   1. [bold green]Apply Selected[/]: Applies hardening policy strictly to the selected tool.
@@ -246,7 +247,8 @@ class HardeningApp(App):
         ("f1", "toggle_help", "Help"),
         ("question_mark", "toggle_help", "Help"),
         ("d", "view_dlp", "View DLP"),
-        ("v", "verify_config", "Verify Config"),
+        ("v", "verify_config", "Verify"),
+        ("f", "fix_compliance", "Fix"),
         ("s", "toggle_strict", "Strict Mode"),
         ("q", "quit", "Quit")
     ]
@@ -469,8 +471,6 @@ class HardeningApp(App):
                     yield Button("Apply", id="btn-apply-selected", variant="success")
                     yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
                     yield Button("Apply All", id="btn-apply-all-supported", variant="warning")
-                    yield Button("Verify", id="btn-verify-selected", variant="default")
-                    yield Button("Fix", id="btn-fix-compliance", variant="success")
                     yield Button("DLP", id="btn-view-dlp", variant="default")
                     yield Checkbox("Dry Run", id="chk-dry-run")
                     yield Checkbox("Strict", id="chk-strict-mode")
@@ -576,6 +576,24 @@ class HardeningApp(App):
     def action_verify_config(self) -> None:
         self._run_verification_on_selected()
 
+    def action_fix_compliance(self) -> None:
+        self._run_fix_on_selected()
+
+    def _run_fix_on_selected(self) -> None:
+        log_view = self.query_one("#log-view", RichLog)
+        strict_mode = self.strict_mode
+        if not self.selected_policy:
+            log_view.write("[bold red][!] Please select a tool from the catalog first to fix compliance.[/]")
+            return
+        mode_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
+        log_view.write(f"\n[*] {mode_prefix}Remediating configuration baseline for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+        res = self.verifier.remediate_policy(self.selected_policy, strict_mode=strict_mode)
+        if res.success:
+            log_view.write(f"  [bold green][OK] {res.message}[/bold green]")
+            self._run_verification_on_selected()
+        else:
+            log_view.write(f"  [bold red][!] {res.message}[/bold red]")
+
     def _run_verification_on_selected(self) -> None:
         log_view = self.query_one("#log-view", RichLog)
         if not self.selected_policy:
@@ -597,7 +615,7 @@ class HardeningApp(App):
         log_view.write(f"  Summary: [{score_style}]{report.message}[/]")
 
         if report.compliance_score < 100.0:
-            log_view.write("[bold yellow][!] Discrepancies detected. Click 'Fix Compliance' to auto-remediate to 100%.[/bold yellow]\n")
+            log_view.write("[bold yellow][!] Discrepancies detected. Press 'F' to auto-remediate configuration baseline to 100%.[/bold yellow]\n")
         else:
             log_view.write("[bold green][OK] 100% compliance with security baselines achieved.[/bold green]\n")
 
@@ -718,22 +736,6 @@ class HardeningApp(App):
                 log_view.write(f"[bold yellow][!] No DLP configuration defined for {self.selected_policy.tool.name}.[/]")
             else:
                 log_view.write("[bold red][!] Please select a tool first to view its DLP configuration.[/]")
-
-        elif event.button.id == "btn-verify-selected":
-            self._run_verification_on_selected()
-
-        elif event.button.id == "btn-fix-compliance":
-            if not self.selected_policy:
-                log_view.write("[bold red][!] Please select a tool from the catalog first to fix compliance.[/]")
-                return
-            mode_prefix = "[bold red][STRICT][/bold red] " if strict_mode else ""
-            log_view.write(f"\n[*] {mode_prefix}Remediating configuration baseline for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
-            res = self.verifier.remediate_policy(self.selected_policy, strict_mode=strict_mode)
-            if res.success:
-                log_view.write(f"  [bold green][OK] {res.message}[/bold green]")
-                self._run_verification_on_selected()
-            else:
-                log_view.write(f"  [bold red][!] {res.message}[/bold red]")
 
         elif event.button.id == "btn-apply-selected":
             if not self.selected_policy:
