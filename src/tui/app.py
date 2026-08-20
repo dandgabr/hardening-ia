@@ -55,7 +55,13 @@ class HelpModal(ModalScreen):
   • [bold white]Up / Down Arrow Keys[/]: Scroll through the list of 14 supported AI tools.
   • [bold white]Click on any tool[/]: Instantly inspect its full security policy, DLP, and pending changes.
   • [bold white]H, F1 or ?[/]: Toggle this Help screen.
+  • [bold white]V[/]: Verify selected tool's configuration compliance.
+  • [bold white]D[/]: View Data Loss Prevention (DLP) configuration.
   • [bold white]S[/]: Toggle Strict Mode.
+
+[bold yellow]Verification & Compliance Remediation:[/]
+  • [bold magenta]Verify Selected (V)[/]: Audits host config files against security baselines and calculates a real-time compliance score (0-100%).
+  • [bold green]Fix Compliance[/]: Automatically remediates all detected discrepancies, patching config files directly to achieve 100% baseline compliance.
 
 [bold yellow]The 3 Policy Application Modes:[/]
   1. [bold green]Apply Selected[/]: Applies hardening policy strictly to the selected tool.
