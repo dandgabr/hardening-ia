@@ -308,29 +308,24 @@ class HardeningEngine:
                 except Exception as e:
                     logger.warning(f"Could not write backup file: {e}")
 
-            # Manifest recording exact previous values of target keys
+            # Manifest recording exact previous values of target keys (created only on initial apply)
             manifest_file = b_dir / "restore_manifest.json"
-            manifest = {
-                "file": str(path),
-                "created_at": timestamp,
-                "file_existed_before": file_existed,
-                "original_keys": {}
-            }
-            for k in overrides.keys():
-                if k in current_data:
-                    manifest["original_keys"][k] = {
-                        "existed": True,
-                        "value": current_data[k]
-                    }
-                else:
-                    manifest["original_keys"][k] = {
-                        "existed": False,
-                        "value": None
-                    }
-            try:
-                manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-            except Exception as e:
-                logger.warning(f"Could not write restore manifest: {e}")
+            if not manifest_file.exists():
+                manifest = {
+                    "file": str(path),
+                    "created_at": timestamp,
+                    "file_existed_before": file_existed,
+                    "original_keys": {}
+                }
+                for k in overrides.keys():
+                    if k in current_data:
+                        manifest["original_keys"][k] = {"existed": True, "value": current_data[k]}
+                    else:
+                        manifest["original_keys"][k] = {"existed": False, "value": None}
+                try:
+                    manifest_file.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+                except Exception as e:
+                    logger.warning(f"Could not write restore manifest: {e}")
 
         diffs = self._deep_merge(current_data, overrides)
 
