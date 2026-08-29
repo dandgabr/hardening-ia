@@ -275,8 +275,11 @@ class HardeningTUIApp(App):
         margin-bottom: 1;
     }
     Button {
+        height: 1;
+        min-width: 8;
+        padding: 0 1;
         margin-right: 1;
-        min-width: 12;
+        border: none;
     }
     #help-container, #dlp-container, #risk-container {
         background: #1e293b;
