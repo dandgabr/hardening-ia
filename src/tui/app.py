@@ -55,7 +55,7 @@ class HelpModal(ModalScreen):
 
 [bold yellow]Navigation & Keyboard Shortcuts:[/]
   • [bold white]Up / Down Arrow Keys[/]: Scroll through the catalog of 21 supported AI tools.
-  • [bold white]Enter / Click[/]: Select a tool to inspect configuration, policies, and DLP settings.
+  • [bold white]Enter / Click[/]: Select a tool to inspect live configuration, policies, and DLP settings.
   • [bold white]V[/]: [bold magenta]Verify[/] selected tool's configuration compliance on disk.
   • [bold white]D[/]: [bold cyan]DLP Inspector[/] for data loss prevention & dangerous OS paths.
   • [bold white]S[/]: [bold red]Toggle Strict Mode[/] (Zero-trust guardrails, immediate path blocking).
@@ -66,8 +66,8 @@ class HelpModal(ModalScreen):
   • [bold white]Q[/]: Quit application.
 
 [bold yellow]Top Bar Status Indicators:[/]
-  • [bold red]STRICT: [ON][/bold red] / [dim]STRICT: [OFF][/dim]: Shows whether zero-trust lockdown is active.
-  • [bold yellow]DRY-RUN: [ON][/bold yellow] / [dim]DRY-RUN: [OFF][/dim]: Shows whether simulation mode is active.
+  • [bold red]🛡️ STRICT: ON[/bold red] / [dim]STRICT: OFF[/dim]: Shows whether zero-trust lockdown is active.
+  • [bold yellow]⚠️ DRY-RUN: ON[/bold yellow] / [dim]DRY-RUN: OFF[/dim]: Shows whether simulation mode is active.
 
 [bold yellow]Button Actions Explained:[/]
   • [bold green]Apply[/]: Hardens the currently selected tool.
@@ -255,7 +255,7 @@ class HardeningTUIApp(App):
         padding: 1;
     }
     #policy-details {
-        height: 48%;
+        height: 52%;
         background: #0f172a;
         border: solid #334155;
         padding: 1;
@@ -326,7 +326,7 @@ class HardeningTUIApp(App):
                 yield Label(f"[b]AI Agents & Tools ({os_name}) - 21 Tools[/b]", classes="panel-title")
                 yield ListView(id="tools-list")
             with Vertical(id="details-panel"):
-                yield Label("[b]Security Policy & Risk Controls[/b]", classes="panel-title")
+                yield Label("[b]Security Policy & Live Status[/b]", classes="panel-title")
                 with VerticalScroll(id="policy-details"):
                     yield Static("Select a tool from the catalog to inspect host status, security policies, and DLP settings.", id="policy-info")
                 yield Label("[b]Policy Actions & Enforcement[/b]", classes="panel-title")
@@ -379,19 +379,46 @@ class HardeningTUIApp(App):
         settings_file = paths.settings_file if paths else "N/A"
         inst_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT INSTALLED[/dim]"
 
+        # Live verification audit of actual on-disk configuration
+        report = self.verifier.verify_policy(p, strict_mode=self.strict_mode)
+        if report.compliance_score == 100.0:
+            score_badge = f"[bold green]{report.compliance_score:.0f}% (FULLY COMPLIANT)[/bold green]"
+        elif report.compliance_score >= 80.0:
+            score_badge = f"[bold yellow]{report.compliance_score:.1f}% (PARTIALLY COMPLIANT)[/bold yellow]"
+        elif report.compliance_score > 0.0:
+            score_badge = f"[bold orange3]{report.compliance_score:.1f}% (NEEDS ATTENTION)[/bold orange3]"
+        else:
+            score_badge = "[bold red]0% (NOT HARDENED / MISSING)[/bold red]"
+
+        strict_badge = "[bold red]ENABLED (Zero-Trust)[/bold red]" if self.strict_mode else "[dim]STANDARD (Interactive)[/dim]"
+        dry_badge = "[bold yellow]ACTIVE (Simulation)[/bold yellow]" if self.dry_run else "[dim]DISABLED (Live)[/dim]"
+
         info_text = f"""
 [bold cyan]Tool:[/] [bold white]{p.tool.vendor}/{p.tool.name}[/bold white]  |  [bold cyan]Status:[/] {inst_badge}  |  [bold cyan]Category:[/] [yellow]{p.tool.category.upper()}[/yellow]
-[bold cyan]Description:[/] {p.tool.description}
+[bold cyan]Live Compliance Score:[/] {score_badge} ({report.passed_checks}/{report.total_checks} checks active on disk)
 [bold cyan]Primary Settings Path:[/] [white]{settings_file}[/white]
-[bold cyan]Strict Mode:[/] {'[bold red]ENABLED (Zero-Trust)[/bold red]' if self.strict_mode else '[dim]STANDARD (Interactive)[/dim]'}  |  [bold cyan]Dry Run:[/] {'[bold yellow]ACTIVE (Simulation)[/bold yellow]' if self.dry_run else '[dim]DISABLED (Live)[/dim]'}
+[bold cyan]Strict Mode:[/] {strict_badge}  |  [bold cyan]Dry Run:[/] {dry_badge}
 
-[bold yellow]Active Hardening Overrides:[/]
+[bold yellow]Active Hardening Overrides (Live On-Disk Status):[/]
 """
-        overrides = p.policies.get("native_settings_override", {})
-        for k, v in list(overrides.items())[:8]:
-            info_text += f"  • [cyan]{k}:[/] [white]{v}[/white]\n"
-        if len(overrides) > 8:
-            info_text += f"  [dim]... and {len(overrides) - 8} more controls[/dim]\n"
+        if report.checks:
+            for c in report.checks[:12]:
+                if c.passed:
+                    info_text += f"  [bold green]✔[/bold green] [cyan]{c.key}:[/] [white]{c.expected}[/white] [dim green](Active on disk)[/dim green]\n"
+                elif c.actual == "[MISSING]":
+                    info_text += f"  [dim yellow]○[/dim yellow] [cyan]{c.key}:[/] [white]{c.expected}[/white] [dim yellow](Not applied / Missing)[/dim yellow]\n"
+                else:
+                    info_text += f"  [bold red]✘[/bold red] [cyan]{c.key}:[/] [white]{c.expected}[/white] [bold red](Current: {c.actual})[/bold red]\n"
+            if len(report.checks) > 12:
+                info_text += f"  [dim]... and {len(report.checks) - 12} more live controls[/dim]\n"
+        else:
+            overrides = dict(p.policies.get("native_settings_override", {}))
+            if self.strict_mode:
+                overrides.update(p.policies.get("strict_rules", {}).get("native_overrides", {}))
+            for k, v in list(overrides.items())[:8]:
+                info_text += f"  • [cyan]{k}:[/] [white]{v}[/white]\n"
+            if len(overrides) > 8:
+                info_text += f"  [dim]... and {len(overrides) - 8} more controls[/dim]\n"
 
         self.query_one("#policy-info", Static).update(info_text)
 
@@ -438,6 +465,7 @@ class HardeningTUIApp(App):
         score_color = "green" if report.compliance_score == 100.0 else ("yellow" if report.compliance_score >= 80.0 else "red")
         log_view.write(f"\n[*] Compliance Audit for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]:")
         log_view.write(f"  Score: [{score_color}]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks})[/{score_color}] - {report.message}")
+        self._update_details()
 
     def _run_fix_all_installed(self) -> None:
         log_view = self.query_one("#log-view", RichLog)
@@ -449,6 +477,7 @@ class HardeningTUIApp(App):
                 log_view.write(f"  [bold green][OK][/bold green] {p.tool.vendor}/{p.tool.name}: 100% compliant")
             else:
                 log_view.write(f"  [bold red][FAILED][/bold red] {p.tool.vendor}/{p.tool.name}: {res.message}")
+        self._update_details()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id
@@ -460,11 +489,12 @@ class HardeningTUIApp(App):
             log_view.write(f"\n[*] {mode_badge}Applying hardening to [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.engine.apply_policy(self.selected_policy, dry_run=dry_run, strict_mode=self.strict_mode)
             if res.success:
-                log_view.write(f"  [bold green][OK] Applied successfully.[/bold green]")
+                log_view.write(f"  [bold green][OK] Applied successfully ({len(res.diffs)} settings).[/bold green]")
                 if not dry_run:
                     self._run_verification_on_selected()
             else:
                 log_view.write(f"  [bold red][ERROR] {res.message}[/bold red]")
+            self._update_details()
         elif btn_id == "btn-apply-installed":
             installed = [p for p in self.policies if p.is_installed]
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
@@ -473,6 +503,7 @@ class HardeningTUIApp(App):
                 res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=self.strict_mode)
                 status = "[bold green]OK[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            self._update_details()
         elif btn_id == "btn-apply-all-supported":
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
             log_view.write(f"\n[*] {mode_badge}Applying hardening to ALL {len(self.policies)} supported tools...")
@@ -480,11 +511,13 @@ class HardeningTUIApp(App):
                 res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=self.strict_mode)
                 status = "[bold green]OK[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            self._update_details()
         elif btn_id == "btn-remove-selected" and self.selected_policy:
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
             log_view.write(f"\n[*] {mode_badge}Reverting hardening from [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.engine.remove_policy(self.selected_policy, dry_run=dry_run)
             log_view.write(f"  [bold green][OK] Removed.[/bold green]" if res.success else f"  [bold red][ERROR] {res.message}[/bold red]")
+            self._update_details()
         elif btn_id == "btn-remove-installed":
             installed = [p for p in self.policies if p.is_installed]
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
@@ -493,6 +526,7 @@ class HardeningTUIApp(App):
                 res = self.engine.remove_policy(p, dry_run=dry_run)
                 status = "[bold green]REMOVED[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            self._update_details()
 
 
 def run_tui():
