@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from src.core.models import HardeningPolicy
 from src.core.os_detector import OSDetector
 from src.core.logger import get_logger, log_audit_event
+from src.core.path_utils import get_app_root
 
 logger = get_logger("verifier")
 
@@ -45,7 +46,7 @@ class HardeningVerifier:
     """Verifies that hardening policies and security baselines are actively applied and functional."""
 
     def __init__(self, repo_root: Optional[Path] = None):
-        self.repo_root = repo_root or Path(__file__).resolve().parent.parent.parent
+        self.repo_root = repo_root or get_app_root()
         self.os_type = OSDetector.get_os_type()
 
     @staticmethod

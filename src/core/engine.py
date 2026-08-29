@@ -13,15 +13,19 @@ from src.core.models import HardeningPolicy, ExecutionResult, SettingDiff
 from src.core.os_detector import OSDetector
 from src.core.logger import get_logger, log_audit_event
 from src.core.security_policy import SecurityPolicyManager
+from src.core.path_utils import get_app_root, get_configs_dir, get_scripts_dir
 
 logger = get_logger("engine")
 
 
 class HardeningEngine:
     def __init__(self, repo_root: Optional[Path] = None):
-        self.repo_root = repo_root or Path(__file__).resolve().parent.parent.parent
+        self.repo_root = repo_root or get_app_root()
         self.os_type = OSDetector.get_os_type()
-        self.backups_dir = self.repo_root / "backups"
+        if getattr(sys, "frozen", False):
+            self.backups_dir = Path("~/.hardening-ia/backups").expanduser()
+        else:
+            self.backups_dir = self.repo_root / "backups"
 
     def _get_tool_backup_dir(self, vendor: str, tool_name: str) -> Path:
         """Returns the isolated backup directory for a specific tool."""

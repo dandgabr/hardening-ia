@@ -187,6 +187,20 @@ python main.py -gui
 
 ---
 
+## 📦 Standalone Native Binaries (No Python Required)
+
+Pre-compiled standalone executables are available for direct execution with zero system dependencies:
+
+| OS | Executable Format | Release Package | Quick Start |
+| :--- | :--- | :--- | :--- |
+| **Linux** | ELF 64-bit | `hardening-ia-linux-x86_64.tar.gz` | `tar -xzf hardening-ia-linux-x86_64.tar.gz && ./hardening-ia` |
+| **Windows** | PE32+ Executable | `hardening-ia-windows-x64.zip` | Unzip and run `.\hardening-ia.exe` |
+| **macOS** | Mach-O Universal | `hardening-ia-macos-universal.tar.gz` | `tar -xzf hardening-ia-macos-universal.tar.gz && ./hardening-ia` |
+
+For full instructions, SHA-256 checksum verification, and local build instructions, see the [Binary Distribution Guide](docs/BINARY_DISTRIBUTION.md).
+
+---
+
 ## 📊 Logging & Security Auditing
 
 Hardening IA maintains comprehensive structured audit trails:

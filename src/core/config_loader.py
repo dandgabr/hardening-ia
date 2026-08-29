@@ -7,6 +7,7 @@ import yaml
 from src.core.models import HardeningPolicy, ToolMeta, OSPaths
 from src.core.os_detector import OSDetector
 from src.core.logger import get_logger
+from src.core.path_utils import get_tools_configs_dir
 
 logger = get_logger("config_loader")
 
@@ -14,7 +15,7 @@ logger = get_logger("config_loader")
 class ConfigLoader:
     def __init__(self, configs_root: Optional[Path] = None):
         if configs_root is None:
-            self.configs_root = Path(__file__).resolve().parent.parent.parent / "configs" / "tools"
+            self.configs_root = get_tools_configs_dir()
         else:
             self.configs_root = configs_root
 
