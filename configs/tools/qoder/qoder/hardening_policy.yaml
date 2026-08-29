@@ -215,7 +215,10 @@ policies:
   native_settings_override:
     telemetry.shareData: false
     security.executionConsent: always
+    security.autoApplyEdits: false
     security.sandbox: true
+    agent.allowNonWorkspaceAccess: false
+    mcp.requireUserConfirmation: true
     dlp.maskEnvSecrets: true
     executionTimeout: 60
     rateLimitRpm: 30

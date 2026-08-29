@@ -236,7 +236,9 @@ class OSDetector:
             "qoder": ["qoder", "qoder.exe"],
             "codebuddy": ["codebuddy", "codebuddy.exe"],
             "kimi": ["kimi", "kimi.exe"],
-            "grok": ["grok", "xai", "grok.exe"]
+            "grok": ["grok", "xai", "grok.exe"],
+            "zai-cli": ["zai", "zai-cli", "zai.exe", "zai-cli.exe", "z-ai"],
+            "zcode": ["zcode", "zcode.exe", "z-code", "z-code.exe"]
         }
 
         candidates = binary_aliases.get(tool_name, [tool_name, f"{tool_name}.exe"])
@@ -270,7 +272,9 @@ class OSDetector:
             "cline": ["cline", "claude-dev", "@cline/cline"],
             "opencode": ["opencode", "@opencode/cli"],
             "kilo-code": ["kilo-code", "@kilo/code"],
-            "antigravity": ["@google/antigravity", "antigravity-cli"]
+            "antigravity": ["@google/antigravity", "antigravity-cli"],
+            "zai-cli": ["zai-cli", "@zai/cli", "z-ai-cli", "zcode-cli"],
+            "zcode": ["zcode", "@zai/zcode"]
         }
         if tool_name in npm_mapping:
             for pkg in npm_mapping[tool_name]:
@@ -285,7 +289,9 @@ class OSDetector:
             "codex": ["openai-codex", "codex-cli"],
             "kimi": ["kimi-cli", "moonshot-kimi"],
             "grok": ["xai-grok", "grok-cli"],
-            "qoder": ["qoder-agent", "qoder"]
+            "qoder": ["qoder-agent", "qoder"],
+            "zai-cli": ["zai-cli", "z-ai", "zai-agent"],
+            "zcode": ["zcode-agent", "zcode"]
         }
         if tool_name in pip_mapping:
             for pkg in pip_mapping[tool_name]:
@@ -301,7 +307,9 @@ class OSDetector:
             "antigravity": ["antigravity.exe", "antigravity", "agy.exe", "agy"],
             "claude-code": ["claude.exe", "claude"],
             "qoder": ["qoder.exe", "qoder"],
-            "codebuddy": ["codebuddy.exe", "codebuddy"]
+            "codebuddy": ["codebuddy.exe", "codebuddy"],
+            "zai-cli": ["zai.exe", "zai", "zai-cli.exe", "zai-cli"],
+            "zcode": ["zcode.exe", "zcode", "z-code.exe", "z-code"]
         }
         if tool_name in proc_mapping:
             for proc in proc_mapping[tool_name]:
@@ -318,7 +326,9 @@ class OSDetector:
             "codebuddy": ["codebuddy", "code-buddy"],
             "antigravity": ["google.antigravity", "antigravity"],
             "qoder": ["qoder", "qoder-ai"],
-            "cursor": ["cursor"]
+            "cursor": ["cursor"],
+            "zai-cli": ["zai", "zai-cli", "z-ai"],
+            "zcode": ["zcode", "z-code", "zai.zcode"]
         }
         if tool_name in ext_mapping:
             for ext in ext_mapping[tool_name]:

@@ -1,4 +1,4 @@
-"""Generates industry-standard, fully hardened declarative YAML policies for all 14 AI tools."""
+"""Generates industry-standard, fully hardened declarative YAML policies for all 16 AI tools."""
 
 import yaml
 from pathlib import Path
@@ -92,7 +92,9 @@ POLICIES_DATABASE = [
                     ],
                     "toolPermissions": "deny-critical",
                     "autoApplyEdits": False,
-                    "approvals.require_approval_for_write": True
+                    "approvals.require_approval_for_write": True,
+                    "mcp.allowUnsandboxedServers": False,
+                    "subagents.allowAutonomousSpawning": False
                 }
             },
             "native_settings_override": {
@@ -102,6 +104,12 @@ POLICIES_DATABASE = [
                 "enableTerminalSandbox": True,
                 "allowNonWorkspaceAccess": False,
                 "hooks.enforceGuardrails": True,
+                "mcp.requireConsent": True,
+                "mcp.allowUnsandboxedServers": False,
+                "subagents.requireParentApproval": True,
+                "subagents.allowAutonomousSpawning": False,
+                "dlp.maskSecrets": True,
+                "slashCommands.enforceApproval": True,
                 "security.sandbox.default_enforced": True,
                 "security.approvals.bypass_allowed": False,
                 "timeout.command_timeout_seconds": 30,
@@ -145,32 +153,26 @@ POLICIES_DATABASE = [
                 "filesystem": {
                     "disabled": False,
                     "denyWrite": [
-                        r"C:\Windows", r"C:\Windows\System32", r"C:\Program Files",
-                        r"C:\Program Files (x86)", r"C:\ProgramData",
-                        "/etc", "/boot", "/root", "/sys", "/proc", "/dev",
-                        "/var/log", "/usr/bin", "/usr/sbin", "/sbin", "/bin",
+                        "C:\\Windows", "C:\\Windows\\System32", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\ProgramData",
+                        "/etc", "/boot", "/root", "/sys", "/proc", "/dev", "/var/log", "/usr/bin", "/usr/sbin", "/sbin", "/bin",
                         "/System", "/Library", "/private"
                     ],
                     "denyRead": [
-                        "**/.env*", "**/*.pem", "**/*.key",
-                        "~/.ssh", "~/.aws", "~/.azure", "~/.kube", "~/.gnupg",
-                        "~/.git-credentials", "~/.netrc", "~/.docker/config.json",
-                        "~/.credentials.json", "~/.claude.json",
-                        r"%USERPROFILE%\.ssh", r"%USERPROFILE%\.aws",
-                        r"%USERPROFILE%\.azure", r"%USERPROFILE%\.kube",
-                        r"%USERPROFILE%\AppData\Local\Microsoft\Credentials",
-                        r"%USERPROFILE%\AppData\Roaming\Microsoft\Vault"
+                        "**/.env*", "**/*.pem", "**/*.key", "~/.ssh", "~/.aws", "~/.azure", "~/.kube", "~/.gnupg",
+                        "~/.git-credentials", "~/.netrc", "~/.docker/config.json", "~/.credentials.json", "~/.claude.json",
+                        "%USERPROFILE%\\.ssh", "%USERPROFILE%\\.aws", "%USERPROFILE%\\.azure", "%USERPROFILE%\\.kube",
+                        "%USERPROFILE%\\AppData\\Local\\Microsoft\\Credentials", "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Vault"
                     ]
                 },
                 "network": {
                     "strictAllowlist": False,
                     "allowedDomains": [
-                        "github.com", "*.github.com", "*.githubusercontent.com",
-                        "registry.npmjs.org", "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
+                        "github.com", "*.github.com", "*.githubusercontent.com", "registry.npmjs.org",
+                        "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
                     ],
                     "deniedDomains": [
-                        "169.254.169.254", "metadata.google.internal", "100.100.100.200",
-                        "localhost", "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
+                        "169.254.169.254", "metadata.google.internal", "100.100.100.200", "localhost",
+                        "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
                     ]
                 },
                 "credentials": {
@@ -206,19 +208,12 @@ POLICIES_DATABASE = [
             "dangerous_paths": DANGEROUS_PATHS_BY_OS,
             "dlp": {
                 "block_sensitive_paths": COMMON_DLP_PATHS,
-                "disable_code_training_sharing": True
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
             },
             "telemetry": {
                 "enable_telemetry": False,
-                "CLAUDE_CODE_ENABLE_TELEMETRY": 0,
-                "CLAUDE_TELEMETRY_DISABLED": True,
-                "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": 1,
-                "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": 1,
-                "DISABLE_TELEMETRY": 1,
-                "DISABLE_AUTOUPDATER": 1,
-                "feedbackSurveyRate": 0,
-                "autoMemoryEnabled": False,
-                "disableArtifact": True,
+                "enable_crash_reporting": False,
                 "audit_logging": True
             },
             "strict_rules": {
@@ -226,130 +221,81 @@ POLICIES_DATABASE = [
                 "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
                 "native_overrides": {
                     "permissions": {
-                        "defaultMode": "manual",
+                        "defaultMode": "plan",
                         "disableBypassPermissionsMode": "disable",
                         "disableAutoMode": "disable",
-                        "allow": []
+                        "allow": [],
+                        "deny": [
+                            "Bash(rm -rf /*)", "Bash(rm -rf /etc*)", "Bash(rm -rf /boot*)", "Bash(rm -rf /root*)",
+                            "Bash(dd if=/dev/zero*)", "Bash(dd if=/dev/urandom*)", "Bash(mkfs*)", "Bash(wipefs*)",
+                            "Bash(fdisk*)", "Bash(gdisk*)", "Bash(parted*)", "Bash(lvreduce*)", "Bash(format-volume*)",
+                            "Bash(format *:*)", "Bash(clear-disk*)", "Bash(diskpart*)", "Bash(cipher /w*)",
+                            "Bash(diskutil eraseDisk*)", "Bash(diskutil partitionDisk*)",
+                            "Bash(set-mppreference -disablerealtimemonitoring*)", "Bash(chmod -R 777 /*)",
+                            "Bash(chown -R nobody /*)", "Bash(wget *|sh)", "Bash(curl *|sh)", "Bash(wget *|bash)", "Bash(curl *|bash)",
+                            "Bash(:(){ :|:& };:)", "Bash(dangerouslyDisableSandbox:true)",
+                            "Read(//*)", "Read(\\\\*)",
+                            "WebFetch(domain:169.254.169.254)", "WebFetch(domain:metadata.google.internal)",
+                            "WebFetch(domain:100.100.100.200)", "WebFetch(domain:localhost)",
+                            "WebFetch(domain:127.0.0.1)", "WebFetch(domain:0.0.0.0)", "WebFetch(domain:[::1])",
+                            "WebFetch(domain:*.local)", "WebFetch(domain:*.internal)",
+                            "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.azure/**)", "Read(~/.kube/**)",
+                            "Read(~/.gnupg/**)", "Read(~/.git-credentials)", "Read(~/.netrc)", "Read(~/.docker/config.json)",
+                            "Read(**/.env*)", "Read(**/*.pem)", "Read(**/*.key)", "Read(**/*.pfx)", "Read(**/*.p12)",
+                            "Read(**/*_rsa)", "Read(**/*_ed25519)", "Read(~/.credentials.json)", "Read(~/.claude.json)",
+                            "Edit(~/.ssh/**)", "Edit(~/.aws/**)", "Edit(~/.kube/**)", "Edit(/etc/**)", "Edit(/boot/**)", "Edit(C:\\Windows\\**)",
+                            "Write(~/.ssh/**)", "Write(~/.aws/**)", "Write(~/.kube/**)", "Write(/etc/**)", "Write(/boot/**)", "Write(C:\\Windows\\**)"
+                        ],
+                        "ask": ["Bash(*)", "PowerShell(*)", "Edit(*)", "Write(*)", "WebFetch(*)"]
                     },
                     "sandbox": {
                         "enabled": True,
                         "autoAllowBashIfSandboxed": False,
                         "allowUnsandboxedCommands": False,
                         "failIfUnavailable": True,
-                        "filesystem": {
-                            "allowManagedReadPathsOnly": True
-                        },
                         "network": {
                             "strictAllowlist": True,
-                            "allowManagedDomainsOnly": True
+                            "allowedDomains": [
+                                "github.com", "*.github.com", "*.githubusercontent.com", "registry.npmjs.org",
+                                "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
+                            ],
+                            "deniedDomains": [
+                                "169.254.169.254", "metadata.google.internal", "100.100.100.200", "localhost",
+                                "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
+                            ]
                         }
-                    },
-                    "disableSideloadFlags": True,
-                    "allowManagedHooksOnly": True,
-                    "allowManagedPermissionRulesOnly": True,
-                    "allowManagedMcpServersOnly": True,
-                    "acceptEdits": False,
-                    "permissionMode": "manual",
-                    "autoApprove": []
+                    }
                 }
             },
             "native_settings_override": {
-                "$schema": "https://json.schemastore.org/claude-code-settings.json",
                 "permissions": {
                     "defaultMode": "manual",
                     "disableBypassPermissionsMode": "disable",
                     "disableAutoMode": "disable",
-                    "deny": [
-                        "Read(//**/.env*)",
-                        "Read(//**/*.env*)",
-                        "Read(//**/*.pem)",
-                        "Read(//**/*.key)",
-                        "Read(//**/*.pfx)",
-                        "Read(//**/*.p12)",
-                        "Read(//**/*_rsa)",
-                        "Read(//**/*_ed25519)",
-                        "Read(~/.ssh/**)",
-                        "Read(~/.aws/**)",
-                        "Read(~/.azure/**)",
-                        "Read(~/.kube/**)",
-                        "Read(~/.gnupg/**)",
-                        "Read(~/.git-credentials)",
-                        "Read(~/.netrc)",
-                        "Read(~/.docker/config.json)",
-                        "Read(~/.credentials.json)",
-                        "Read(~/.claude.json)",
-                        "Read(//c/**/.env*)",
-                        "Read(//c/Windows/**)",
-                        "Read(//c/Program Files/**)",
-                        "Read(//c/ProgramData/**)",
-                        "Read(\\\\*)",
-                        "Edit(\\\\*)",
-                        "Write(\\\\*)",
-                        "Read(//etc/**)",
-                        "Read(//boot/**)",
-                        "Read(//root/**)",
-                        "Read(//sys/**)",
-                        "Read(//proc/**)",
-                        "Read(//System/**)",
-                        "Read(//Library/**)",
-                        "Read(//private/**)",
-                        "Edit(//**/.git/hooks/**)",
-                        "Edit(//**/.git/config)",
-                        "Write(//**/.git/hooks/**)",
-                        "Write(//**/.git/config)",
-                        "WebFetch(domain:169.254.169.254)",
-                        "WebFetch(domain:metadata.google.internal)",
-                        "WebFetch(domain:100.100.100.200)",
-                        "WebFetch(domain:localhost)",
-                        "WebFetch(domain:127.0.0.1)",
-                        "WebFetch(domain:0.0.0.0)",
-                        "WebFetch(domain:[::1])",
-                        "Bash(dangerouslyDisableSandbox:true)",
-                        "Bash(rm -rf /*)",
-                        "Bash(rm -rf /)",
-                        "Bash(rm -rf /etc*)",
-                        "Bash(rm -rf /boot*)",
-                        "Bash(rm -rf /root*)",
-                        "Bash(rm -rf /System*)",
-                        "Bash(mkfs*)",
-                        "Bash(dd if=/dev/zero*)",
-                        "Bash(dd if=/dev/urandom*)",
-                        "Bash(wipefs*)",
-                        "Bash(fdisk*)",
-                        "Bash(gdisk*)",
-                        "Bash(parted*)",
-                        "Bash(lvreduce*)",
-                        "Bash(diskutil eraseDisk*)",
-                        "Bash(diskutil partitionDisk*)",
-                        "Bash(chmod -R 777 /*)",
-                        "Bash(chown -R nobody /*)",
-                        "Bash(mv /* /dev/null*)",
-                        "Bash(curl *|*sh*)",
-                        "Bash(wget *|*sh*)",
-                        "Bash(curl *|*bash*)",
-                        "Bash(wget *|*bash*)",
-                        "PowerShell(format*)",
-                        "PowerShell(Format-Volume*)",
-                        "PowerShell(Clear-Disk*)",
-                        "PowerShell(Initialize-Disk*)",
-                        "PowerShell(Remove-Partition*)",
-                        "PowerShell(Resize-Partition*)",
-                        "PowerShell(diskpart*)",
-                        "PowerShell(cipher /w*)",
-                        "PowerShell(chkdsk /f*)",
-                        "PowerShell(Remove-Item *-Recurse *C:\\Windows*)",
-                        "PowerShell(del */f */s */q *C:\\Windows*)",
-                        "PowerShell(rd */s */q *C:\\*)",
-                        "PowerShell(Set-MpPreference *-DisableRealtimeMonitoring*)"
+                    "allow": [
+                        "Read(cwd:*)", "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+                        "Bash(ls:*)", "Bash(dir:*)", "Bash(pwd:*)", "Bash(find:*)", "Bash(grep:*)", "Bash(rg:*)"
                     ],
-                    "allow": [],
-                    "ask": [
-                        "Bash(*)",
-                        "PowerShell(*)",
-                        "Edit(*)",
-                        "Write(*)",
-                        "WebFetch(*)"
-                    ]
+                    "deny": [
+                        "Bash(rm -rf /*)", "Bash(rm -rf /etc*)", "Bash(rm -rf /boot*)", "Bash(rm -rf /root*)",
+                        "Bash(dd if=/dev/zero*)", "Bash(dd if=/dev/urandom*)", "Bash(mkfs*)", "Bash(wipefs*)",
+                        "Bash(fdisk*)", "Bash(gdisk*)", "Bash(parted*)", "Bash(lvreduce*)", "Bash(format-volume*)",
+                        "Bash(format *:*)", "Bash(clear-disk*)", "Bash(diskpart*)", "Bash(cipher /w*)",
+                        "Bash(diskutil eraseDisk*)", "Bash(diskutil partitionDisk*)",
+                        "Bash(set-mppreference -disablerealtimemonitoring*)", "Bash(chmod -R 777 /*)",
+                        "Bash(chown -R nobody /*)", "Bash(wget *|sh)", "Bash(curl *|sh)", "Bash(wget *|bash)", "Bash(curl *|bash)",
+                        "Bash(:(){ :|:& };:)", "Bash(dangerouslyDisableSandbox:true)",
+                        "Read(//*)", "Read(\\\\*)",
+                        "WebFetch(domain:169.254.169.254)", "WebFetch(domain:metadata.google.internal)",
+                        "WebFetch(domain:100.100.100.200)", "WebFetch(domain:localhost)",
+                        "WebFetch(domain:127.0.0.1)", "WebFetch(domain:0.0.0.0)", "WebFetch(domain:[::1])",
+                        "WebFetch(domain:*.local)", "WebFetch(domain:*.internal)",
+                        "Read(~/.ssh/**)", "Read(~/.aws/**)", "Read(~/.azure/**)", "Read(~/.kube/**)",
+                        "Read(~/.gnupg/**)", "Read(~/.git-credentials)", "Read(~/.netrc)", "Read(~/.docker/config.json)",
+                        "Read(**/.env*)", "Read(**/*.pem)", "Read(**/*.key)", "Read(**/*.pfx)", "Read(**/*.p12)",
+                        "Read(**/*_rsa)", "Read(**/*_ed25519)", "Read(~/.credentials.json)", "Read(~/.claude.json)"
+                    ],
+                    "ask": ["Bash(*)", "PowerShell(*)", "Edit(*)", "Write(*)", "WebFetch(*)"]
                 },
                 "sandbox": {
                     "enabled": True,
@@ -359,32 +305,26 @@ POLICIES_DATABASE = [
                     "filesystem": {
                         "disabled": False,
                         "denyWrite": [
-                            r"C:\Windows", r"C:\Windows\System32", r"C:\Program Files",
-                            r"C:\Program Files (x86)", r"C:\ProgramData",
-                            "/etc", "/boot", "/root", "/sys", "/proc", "/dev",
-                            "/var/log", "/usr/bin", "/usr/sbin", "/sbin", "/bin",
+                            "C:\\Windows", "C:\\Windows\\System32", "C:\\Program Files", "C:\\Program Files (x86)", "C:\\ProgramData",
+                            "/etc", "/boot", "/root", "/sys", "/proc", "/dev", "/var/log", "/usr/bin", "/usr/sbin", "/sbin", "/bin",
                             "/System", "/Library", "/private"
                         ],
                         "denyRead": [
-                            "**/.env*", "**/*.pem", "**/*.key",
-                            "~/.ssh", "~/.aws", "~/.azure", "~/.kube", "~/.gnupg",
-                            "~/.git-credentials", "~/.netrc", "~/.docker/config.json",
-                            "~/.credentials.json", "~/.claude.json",
-                            r"%USERPROFILE%\.ssh", r"%USERPROFILE%\.aws",
-                            r"%USERPROFILE%\.azure", r"%USERPROFILE%\.kube",
-                            r"%USERPROFILE%\AppData\Local\Microsoft\Credentials",
-                            r"%USERPROFILE%\AppData\Roaming\Microsoft\Vault"
+                            "**/.env*", "**/*.pem", "**/*.key", "~/.ssh", "~/.aws", "~/.azure", "~/.kube", "~/.gnupg",
+                            "~/.git-credentials", "~/.netrc", "~/.docker/config.json", "~/.credentials.json", "~/.claude.json",
+                            "%USERPROFILE%\\.ssh", "%USERPROFILE%\\.aws", "%USERPROFILE%\\.azure", "%USERPROFILE%\\.kube",
+                            "%USERPROFILE%\\AppData\\Local\\Microsoft\\Credentials", "%USERPROFILE%\\AppData\\Roaming\\Microsoft\\Vault"
                         ]
                     },
                     "network": {
                         "strictAllowlist": False,
                         "allowedDomains": [
-                            "github.com", "*.github.com", "*.githubusercontent.com",
-                            "registry.npmjs.org", "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
+                            "github.com", "*.github.com", "*.githubusercontent.com", "registry.npmjs.org",
+                            "*.npmjs.org", "pypi.org", "files.pythonhosted.org"
                         ],
                         "deniedDomains": [
-                            "169.254.169.254", "metadata.google.internal", "100.100.100.200",
-                            "localhost", "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
+                            "169.254.169.254", "metadata.google.internal", "100.100.100.200", "localhost",
+                            "127.0.0.1", "0.0.0.0", "[::1]", "*.local", "*.internal"
                         ]
                     },
                     "credentials": {
@@ -481,7 +421,9 @@ POLICIES_DATABASE = [
                 "native_overrides": {
                     "github.copilot.editor.enableAutoCompletions": True,
                     "github.copilot.chat.localeOverride": "en",
-                    "github.copilot.chat.autoApplyEdits": False
+                    "github.copilot.chat.autoApplyEdits": False,
+                    "chat.tools.global.autoApprove": False,
+                    "chat.agent.allowTerminal": False
                 }
             },
             "native_settings_override": {
@@ -500,6 +442,14 @@ POLICIES_DATABASE = [
                 },
                 "github.copilot.editor.enableAutoCompletions": True,
                 "github.copilot.chat.localeOverride": "en",
+                "github.copilot.chat.terminal.autoExecute": False,
+                "github.copilot.chat.autoApplyEdits": False,
+                "chat.tools.global.autoApprove": False,
+                "chat.tools.eligibleForAutoApproval": [],
+                "chat.tools.confirm": "always",
+                "chat.agent.allowTerminal": False,
+                "chat.editing.confirmEditRequestRemoval": True,
+                "chat.commandCenter.enabled": True,
                 "telemetry.telemetryLevel": "off"
             }
         }
@@ -551,7 +501,9 @@ POLICIES_DATABASE = [
                     ],
                     "cursor.terminal.strictExecution": True,
                     "cursor.composer.autoApply": False,
-                    "cursor.chat.autoApply": False
+                    "cursor.chat.autoApply": False,
+                    "cursor.agent.yoloMode": False,
+                    "cursor.mcp.requireConsent": True
                 }
             },
             "native_settings_override": {
@@ -561,6 +513,12 @@ POLICIES_DATABASE = [
                 "cursor.terminal.sandbox": True,
                 "cursor.terminal.legacyTerminalTool": False,
                 "cursor.terminal.timeout": 60,
+                "cursor.agent.yoloMode": False,
+                "cursor.composer.autoApply": False,
+                "cursor.composer.requireUserApproval": True,
+                "cursor.chat.autoApply": False,
+                "cursor.mcp.requireConsent": True,
+                "cursor.agent.autoExecuteTerminal": False,
                 "cursor.rateLimit.requestsPerMinute": 30,
                 "security.workspace.trust.enabled": True,
                 "telemetry.telemetryLevel": "off",
@@ -568,9 +526,15 @@ POLICIES_DATABASE = [
                     ".env*",
                     "*.pem",
                     "*.key",
+                    "*.pfx",
+                    "*.p12",
+                    "*_rsa",
+                    "*_ed25519",
                     "**/.aws/**",
                     "**/.ssh/**",
-                    "**/.kube/**"
+                    "**/.kube/**",
+                    "**/.gnupg/**",
+                    "**/.docker/config.json"
                 ]
             }
         }
@@ -632,12 +596,15 @@ POLICIES_DATABASE = [
                     "autoApprove.read": False,
                     "autoApproveExecution": False,
                     "deniedCommands": ["rm -rf /", "mkfs*", "dd*", "format*"],
-                    "strictPathIsolation": True
+                    "strictPathIsolation": True,
+                    "diff.autoApply": False,
+                    "mcp.autoApprove": False
                 }
             },
             "native_settings_override": {
                 "alwaysApproveResubmit": False,
                 "autoApproveExecution": False,
+                "autoApprove.mode": "never",
                 "autoApprove": {
                     "terminal": False,
                     "write": False,
@@ -649,6 +616,8 @@ POLICIES_DATABASE = [
                 "telemetryEnabled": False,
                 "restrictSecretAccess": True,
                 "mcp.requireConsent": True,
+                "mcp.autoApprove": False,
+                "diff.autoApply": False,
                 "executionTimeout": 60,
                 "commandTimeout": 30,
                 "rateLimitPerMinute": 30
@@ -705,11 +674,14 @@ POLICIES_DATABASE = [
             },
             "native_settings_override": {
                 "telemetry": False,
+                "code_telemetry": False,
                 "auto_execute": False,
                 "enforce_sandboxing": True,
+                "trusted_workspaces_only": True,
                 "allow_network": False,
                 "require_human_confirmation": True,
                 "prompt_secret_masking": True,
+                "mcp_consent_required": True,
                 "timeout_seconds": 60,
                 "rate_limit_rpm": 30
             }
@@ -766,9 +738,13 @@ POLICIES_DATABASE = [
             "native_settings_override": {
                 "analytics.enabled": False,
                 "agent.confirm_actions": True,
+                "agent.auto_apply_edits": False,
+                "permission_mode": "prompt",
+                "auto_approve_tools": [],
                 "sandbox.strict_mode": True,
                 "network.isolate_agent": True,
                 "dlp.mask_credentials": True,
+                "mcp_consent_required": True,
                 "timeout.command_seconds": 30,
                 "timeout.request_seconds": 30,
                 "rate_limit.requests_per_minute": 30
@@ -818,7 +794,7 @@ POLICIES_DATABASE = [
                 "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
                 "native_overrides": {
                     "safe_mode": True,
-                    "blocked_tools": ["system_admin", "raw_exec", "disk_partition"],
+                    "blocked_tools": ["system_admin", "raw_exec", "disk_partition", "network_raw"],
                     "auto_write_files": False,
                     "human_in_the_loop": True
                 }
@@ -829,7 +805,9 @@ POLICIES_DATABASE = [
                 "safe_mode": True,
                 "max_recursive_steps": 10,
                 "sandbox_container": True,
-                "blocked_tools": ["system_admin", "raw_exec"],
+                "blocked_tools": ["system_admin", "raw_exec", "disk_partition", "network_raw"],
+                "network_egress_restricted": True,
+                "dlp_filter_secrets": True,
                 "timeout_seconds": 60,
                 "max_requests_per_minute": 30
             }
@@ -886,7 +864,10 @@ POLICIES_DATABASE = [
             "native_settings_override": {
                 "telemetry.shareData": False,
                 "security.executionConsent": "always",
+                "security.autoApplyEdits": False,
                 "security.sandbox": True,
+                "agent.allowNonWorkspaceAccess": False,
+                "mcp.requireUserConfirmation": True,
                 "dlp.maskEnvSecrets": True,
                 "executionTimeout": 60,
                 "rateLimitRpm": 30
@@ -944,8 +925,11 @@ POLICIES_DATABASE = [
             "native_settings_override": {
                 "privacy.telemetry": False,
                 "execution.require_confirmation": True,
+                "execution.auto_accept_edits": False,
                 "sandbox.enabled": True,
                 "indexing.exclude_hidden_and_secrets": True,
+                "mcp.requireConsent": True,
+                "dlp.mask_credentials": True,
                 "timeout.command": 30,
                 "rate_limit.rpm": 30
             }
@@ -995,13 +979,17 @@ POLICIES_DATABASE = [
                 "native_overrides": {
                     "vault.block_dangerous_paths": True,
                     "proxy.block_unapproved_hosts": True,
-                    "proxy.require_consent_for_file_edits": True
+                    "proxy.require_consent_for_file_edits": True,
+                    "vault.zero_plaintext_cache": True
                 }
             },
             "native_settings_override": {
                 "vault.enforce_encryption": True,
+                "vault.zero_plaintext_cache": True,
                 "proxy.block_unapproved_hosts": True,
+                "proxy.block_ssrf_metadata": True,
                 "proxy.mask_tokens_in_logs": True,
+                "proxy.isolate_subprocesses": True,
                 "audit.full_logging": True,
                 "proxy.timeout_seconds": 30,
                 "proxy.rate_limit_rpm": 30
@@ -1060,7 +1048,10 @@ POLICIES_DATABASE = [
                 "share_code_snippets": False,
                 "telemetry": "off",
                 "auto_run_commands": False,
+                "auto_apply_diffs": False,
                 "sandbox_isolated": True,
+                "mcp_require_confirmation": True,
+                "dlp_mask_secrets": True,
                 "timeout_seconds": 30,
                 "rate_limit_rpm": 30
             }
@@ -1117,8 +1108,12 @@ POLICIES_DATABASE = [
             "native_settings_override": {
                 "telemetry.enabled": False,
                 "privacy.data_retention": False,
+                "agent.auto_write": False,
+                "security.require_write_confirmation": True,
+                "sandbox.enabled": True,
                 "prompt.mask_secrets": True,
                 "context.exclude_secret_files": True,
+                "network.block_metadata_endpoints": True,
                 "timeout.request": 30,
                 "rate_limit.max_rpm": 30
             }
@@ -1177,7 +1172,154 @@ POLICIES_DATABASE = [
                 "audit_logs": True,
                 "sandbox_strict": True,
                 "share_prompts": False,
+                "auto_edit_files": False,
                 "require_approval_all_tools": True,
+                "mcp_server_approval": True,
+                "block_cloud_metadata": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "zai",
+        "name": "zai-cli",
+        "category": "cli",
+        "description": "z.ai CLI - Autonomous AI command line coding agent and GLM model interface",
+        "paths": {
+            "windows": {
+                "config_dir": "%APPDATA%\\zai",
+                "settings_file": "%APPDATA%\\zai\\config.json",
+                "rules_dir": "%APPDATA%\\zai\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.config/zai",
+                "settings_file": "~/.config/zai/config.json",
+                "rules_dir": "~/.config/zai/rules"
+            },
+            "macos": {
+                "config_dir": "~/Library/Application Support/zai",
+                "settings_file": "~/Library/Application Support/zai/config.json",
+                "rules_dir": "~/Library/Application Support/zai/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "agent.auto_execute_commands": False,
+                    "agent.auto_apply_edits": False,
+                    "sandbox.strict_mode": True,
+                    "security.deny_critical_commands": True,
+                    "mcp.requireConsent": True
+                }
+            },
+            "native_settings_override": {
+                "telemetry": False,
+                "analytics.enabled": False,
+                "agent.auto_execute_commands": False,
+                "agent.require_confirmation": True,
+                "agent.auto_apply_edits": False,
+                "sandbox.enabled": True,
+                "sandbox.strict_mode": True,
+                "dlp.mask_secrets": True,
+                "mcp.requireConsent": True,
+                "timeout.command": 30,
+                "timeout.request": 30,
+                "rate_limit.max_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "zai",
+        "name": "zcode",
+        "category": "agentic",
+        "description": "z.ai ZCode - Agentic Development Environment (ADE) with integrated workspace, terminal and MCP tools",
+        "paths": {
+            "windows": {
+                "config_dir": "%USERPROFILE%\\.zcode",
+                "settings_file": "%USERPROFILE%\\.zcode\\v2\\config.json",
+                "rules_dir": "%USERPROFILE%\\.zcode\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.zcode",
+                "settings_file": "~/.zcode/v2/config.json",
+                "rules_dir": "~/.zcode/rules"
+            },
+            "macos": {
+                "config_dir": "~/.zcode",
+                "settings_file": "~/.zcode/v2/config.json",
+                "rules_dir": "~/.zcode/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "terminal.auto_execute": False,
+                    "composer.auto_apply": False,
+                    "security.dangerous_paths_action": "block",
+                    "mcp.allow_unsandboxed": False,
+                    "mcp.require_consent": True
+                }
+            },
+            "native_settings_override": {
+                "telemetry.enabled": False,
+                "privacy.data_retention": False,
+                "terminal.auto_execute": False,
+                "terminal.sandbox": True,
+                "composer.auto_apply": False,
+                "composer.require_approval": True,
+                "mcp.require_consent": True,
+                "mcp.allow_unsandboxed": False,
+                "dlp.block_sensitive_paths": True,
+                "security.dangerous_paths_action": "ask",
                 "timeout_seconds": 60,
                 "rate_limit_rpm": 30
             }
@@ -1204,7 +1346,7 @@ def generate():
         dest.parent.mkdir(parents=True, exist_ok=True)
         with open(dest, "w", encoding="utf-8") as f:
             yaml.dump(doc, f, sort_keys=False, allow_unicode=True)
-        print(f"[OK] Generated policy: {item['vendor']}/{item['name']}")
+        print(f"[OK] Generated policy: {item["vendor"]}/{item["name"]}")
 
 if __name__ == "__main__":
     generate()

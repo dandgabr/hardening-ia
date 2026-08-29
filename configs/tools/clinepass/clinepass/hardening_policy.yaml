@@ -212,10 +212,14 @@ policies:
       vault.block_dangerous_paths: true
       proxy.block_unapproved_hosts: true
       proxy.require_consent_for_file_edits: true
+      vault.zero_plaintext_cache: true
   native_settings_override:
     vault.enforce_encryption: true
+    vault.zero_plaintext_cache: true
     proxy.block_unapproved_hosts: true
+    proxy.block_ssrf_metadata: true
     proxy.mask_tokens_in_logs: true
+    proxy.isolate_subprocesses: true
     audit.full_logging: true
     proxy.timeout_seconds: 30
     proxy.rate_limit_rpm: 30

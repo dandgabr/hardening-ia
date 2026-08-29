@@ -5,7 +5,7 @@
 - **Tool Name:** `cursor`
 - **Category:** `AI-Native IDE`
 
-Cursor is an AI-powered code editor with agentic terminal execution and codebase indexing.
+Cursor is an AI-powered code editor with agentic terminal execution, Composer multi-file editing, and codebase indexing.
 
 ---
 
@@ -17,14 +17,18 @@ The following table lists the official configuration keys and their recommended 
 | :--- | :--- | :--- |
 | `cursor.privacyMode` | `true` | Enforces Zero Data Retention (ZDR); code is not stored or used for model training. |
 | `cursor.general.privacy` | `'no-retention'` | Guarantees prompts and file contents are erased immediately after generation. |
+| `cursor.agent.yoloMode` | `false` | Explicitly disables YOLO unprompted auto-execution mode. |
+| `cursor.composer.autoApply` | `false` | Requires manual review before applying multi-file code modifications. |
+| `cursor.composer.requireUserApproval` | `true` | Mandates user confirmation on each Composer change set. |
+| `cursor.mcp.requireConsent` | `true` | Enforces interactive consent before invoking MCP server tools. |
 | `cursor.terminal.autoExecute` | `false` | Requires explicit approval before any shell command is run by the agent. |
 | `cursor.terminal.sandbox` | `true` | Enforces process isolation for terminal executions. |
-| `cursor.indexer.ignorePatterns` | `[.env*, *.pem, *.key, ~/.ssh/**, ~/.aws/**]` | Prevents indexing sensitive secrets into the semantic database. |
+| `cursor.indexer.ignorePatterns` | `[.env*, *.pem, *.key, ~/.ssh/**, ~/.aws/**, ~/.docker/**]` | Prevents indexing sensitive secrets into the semantic database. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/anysphere/cursor/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/anysphere/cursor/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/anysphere/cursor/hardening_policy.yaml`](file:///configs/tools/anysphere/cursor/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

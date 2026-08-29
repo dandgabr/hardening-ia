@@ -221,7 +221,10 @@ policies:
     audit_logs: true
     sandbox_strict: true
     share_prompts: false
+    auto_edit_files: false
     require_approval_all_tools: true
+    mcp_server_approval: true
+    block_cloud_metadata: true
     timeout_seconds: 60
     rate_limit_rpm: 30
 custom_scripts:

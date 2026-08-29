@@ -215,11 +215,14 @@ policies:
       require_human_confirmation: true
   native_settings_override:
     telemetry: false
+    code_telemetry: false
     auto_execute: false
     enforce_sandboxing: true
+    trusted_workspaces_only: true
     allow_network: false
     require_human_confirmation: true
     prompt_secret_masking: true
+    mcp_consent_required: true
     timeout_seconds: 60
     rate_limit_rpm: 30
 custom_scripts:

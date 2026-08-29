@@ -15,15 +15,18 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `telemetry` | `false` | Disables usage data sharing. |
+| `telemetry` | `false` | Disables usage and prompt data sharing. |
+| `code_telemetry` | `false` | Prevents source code telemetry ingestion. |
 | `auto_execute` | `false` | Mandates confirmation before running shell commands. |
 | `enforce_sandboxing` | `true` | Restricts execution environment to local sandbox. |
+| `trusted_workspaces_only` | `true` | Blocks execution in untrusted external folders. |
 | `prompt_secret_masking` | `true` | Masks API keys and passwords in prompt pipelines. |
+| `mcp_consent_required` | `true` | Requires user confirmation for MCP server calls. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/openai/codex/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/openai/codex/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/openai/codex/hardening_policy.yaml`](file:///configs/tools/openai/codex/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

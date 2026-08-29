@@ -14,8 +14,13 @@ TOOL_DOCS = [
             {"key": "enableTerminalSandbox", "default_hardened": "true", "purpose": "Restricts agent-initiated terminal commands to a secure OS container."},
             {"key": "allowNonWorkspaceAccess", "default_hardened": "false", "purpose": "Blocks the agent from accessing files outside defined project directories."},
             {"key": "hooks.enforceGuardrails", "default_hardened": "true", "purpose": "Enforces deterministic security checks before/after tool calls."},
+            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates user confirmation before executing Model Context Protocol tools."},
+            {"key": "mcp.allowUnsandboxedServers", "default_hardened": "false", "purpose": "Prohibits execution of MCP servers outside the sandbox container."},
+            {"key": "subagents.requireParentApproval", "default_hardened": "true", "purpose": "Ensures child subagents cannot perform mutating tasks without verification."},
+            {"key": "subagents.allowAutonomousSpawning", "default_hardened": "false", "purpose": "Prevents runaway recursion in subagent task spawning."},
+            {"key": "dlp.maskSecrets", "default_hardened": "true", "purpose": "Masks API keys, tokens, and credentials in prompt context pipelines."},
             {"key": "telemetry.enabled", "default_hardened": "false", "purpose": "Disables usage and prompt transmission to external telemetry."},
-            {"key": "crashReporting.enabled", "default_hardened": "false", "purpose": "Prevents memory dumps from sending code fragments to Google."}
+            {"key": "crashReporting.enabled", "default_hardened": "false", "purpose": "Prevents memory dumps from sending code fragments to external servers."}
         ]
     },
     {
@@ -28,7 +33,7 @@ TOOL_DOCS = [
             {"key": "permissions.defaultMode", "default_hardened": "'manual'", "purpose": "Prompts for confirmation on all terminal and filesystem actions."},
             {"key": "permissions.disableBypassPermissionsMode", "default_hardened": "'disable'", "purpose": "Disallows '--dangerously-skip-permissions' flag and bypass mode."},
             {"key": "permissions.disableAutoMode", "default_hardened": "'disable'", "purpose": "Blocks autonomous execution without supervision."},
-            {"key": "permissions.deny", "default_hardened": "[destructive commands, DLP secrets, WebDAV \\\\*, SSRF metadata]", "purpose": "Explicit deny list rejecting risky operations without prompting."},
+            {"key": "permissions.deny", "default_hardened": "[destructive commands, DLP secrets, WebDAV \\*, SSRF metadata]", "purpose": "Explicit deny list rejecting risky operations without prompting."},
             {"key": "permissions.ask", "default_hardened": "['Bash(*)', 'PowerShell(*)', 'Edit(*)', 'Write(*)', 'WebFetch(*)']", "purpose": "Human-in-the-loop confirmation on all mutating operations."},
             {"key": "sandbox.enabled", "default_hardened": "true", "purpose": "Enforces OS process and filesystem sandboxing."},
             {"key": "sandbox.autoAllowBashIfSandboxed", "default_hardened": "true (standard) / false (strict)", "purpose": "Controls whether commands inside the sandbox auto-execute or require human confirmation."},
@@ -50,9 +55,15 @@ TOOL_DOCS = [
         "vendor": "github",
         "name": "copilot",
         "title": "GitHub Copilot Security & Hardening Guide",
-        "category": "IDE Extension",
-        "summary": "GitHub Copilot provides real-time AI code completions and chat in VS Code, JetBrains, and Visual Studio.",
+        "category": "IDE Extension & Copilot Chat/Edits",
+        "summary": "GitHub Copilot provides real-time AI code completions, chat, and agentic edits in VS Code, JetBrains, and Visual Studio.",
         "settings_map": [
+            {"key": "chat.tools.global.autoApprove", "default_hardened": "false", "purpose": "Disables automatic tool and command approval in Copilot Chat Agent mode."},
+            {"key": "chat.tools.eligibleForAutoApproval", "default_hardened": "[]", "purpose": "Ensures no tools or shell actions are eligible for automatic bypass."},
+            {"key": "chat.tools.confirm", "default_hardened": "'always'", "purpose": "Enforces interactive user confirmation before any tool execution."},
+            {"key": "github.copilot.chat.terminal.autoExecute", "default_hardened": "false", "purpose": "Prevents Copilot from auto-running commands in the integrated terminal."},
+            {"key": "github.copilot.chat.autoApplyEdits", "default_hardened": "false", "purpose": "Requires manual inspection of file diffs before changes are accepted."},
+            {"key": "chat.agent.allowTerminal", "default_hardened": "false", "purpose": "Restricts autonomous terminal invocation by agent subroutines."},
             {"key": "github.copilot.enable.plaintext", "default_hardened": "false", "purpose": "Disables completions in unformatted text files."},
             {"key": "github.copilot.enable.markdown", "default_hardened": "false", "purpose": "Disables completions in markdown documents to prevent prompt injection."},
             {"key": "github.copilot.enable.scminput", "default_hardened": "false", "purpose": "Prevents AI completions in Git commit message fields."},
@@ -65,13 +76,17 @@ TOOL_DOCS = [
         "name": "cursor",
         "title": "Cursor IDE Security & Hardening Guide",
         "category": "AI-Native IDE",
-        "summary": "Cursor is an AI-powered code editor with agentic terminal execution and codebase indexing.",
+        "summary": "Cursor is an AI-powered code editor with agentic terminal execution, Composer multi-file editing, and codebase indexing.",
         "settings_map": [
             {"key": "cursor.privacyMode", "default_hardened": "true", "purpose": "Enforces Zero Data Retention (ZDR); code is not stored or used for model training."},
             {"key": "cursor.general.privacy", "default_hardened": "'no-retention'", "purpose": "Guarantees prompts and file contents are erased immediately after generation."},
+            {"key": "cursor.agent.yoloMode", "default_hardened": "false", "purpose": "Explicitly disables YOLO unprompted auto-execution mode."},
+            {"key": "cursor.composer.autoApply", "default_hardened": "false", "purpose": "Requires manual review before applying multi-file code modifications."},
+            {"key": "cursor.composer.requireUserApproval", "default_hardened": "true", "purpose": "Mandates user confirmation on each Composer change set."},
+            {"key": "cursor.mcp.requireConsent", "default_hardened": "true", "purpose": "Enforces interactive consent before invoking MCP server tools."},
             {"key": "cursor.terminal.autoExecute", "default_hardened": "false", "purpose": "Requires explicit approval before any shell command is run by the agent."},
             {"key": "cursor.terminal.sandbox", "default_hardened": "true", "purpose": "Enforces process isolation for terminal executions."},
-            {"key": "cursor.indexer.ignorePatterns", "default_hardened": "[.env*, *.pem, *.key, ~/.ssh/**, ~/.aws/**]", "purpose": "Prevents indexing sensitive secrets into the semantic database."}
+            {"key": "cursor.indexer.ignorePatterns", "default_hardened": "[.env*, *.pem, *.key, ~/.ssh/**, ~/.aws/**, ~/.docker/**]", "purpose": "Prevents indexing sensitive secrets into the semantic database."}
         ]
     },
     {
@@ -81,11 +96,13 @@ TOOL_DOCS = [
         "category": "Agentic IDE Assistant",
         "summary": "Cline is an autonomous coding agent for VS Code capable of multi-step terminal, file, browser, and MCP tool execution.",
         "settings_map": [
+            {"key": "autoApprove.mode", "default_hardened": "'never'", "purpose": "Strictly disables global auto-approval for all tool invocations."},
             {"key": "alwaysApproveResubmit", "default_hardened": "false", "purpose": "Requires operator consent on every retry loop."},
             {"key": "autoApproveExecution", "default_hardened": "false", "purpose": "Disables automated shell command execution without review."},
             {"key": "allowNonWorkspaceAccess", "default_hardened": "false", "purpose": "Blocks reading or writing files outside the open project directory."},
             {"key": "restrictSecretAccess", "default_hardened": "true", "purpose": "Excludes `.env` and credential files from context collection."},
-            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates approval before invoking local MCP server tools."}
+            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates approval before invoking local MCP server tools."},
+            {"key": "diff.autoApply", "default_hardened": "false", "purpose": "Requires manual inspection of file diffs before saving to disk."}
         ]
     },
     {
@@ -95,10 +112,13 @@ TOOL_DOCS = [
         "category": "CLI Agent / Engine",
         "summary": "OpenAI Codex CLI provides automated code generation, refactoring, and command execution.",
         "settings_map": [
-            {"key": "telemetry", "default_hardened": "false", "purpose": "Disables usage data sharing."},
+            {"key": "telemetry", "default_hardened": "false", "purpose": "Disables usage and prompt data sharing."},
+            {"key": "code_telemetry", "default_hardened": "false", "purpose": "Prevents source code telemetry ingestion."},
             {"key": "auto_execute", "default_hardened": "false", "purpose": "Mandates confirmation before running shell commands."},
             {"key": "enforce_sandboxing", "default_hardened": "true", "purpose": "Restricts execution environment to local sandbox."},
-            {"key": "prompt_secret_masking", "default_hardened": "true", "purpose": "Masks API keys and passwords in prompt pipelines."}
+            {"key": "trusted_workspaces_only", "default_hardened": "true", "purpose": "Blocks execution in untrusted external folders."},
+            {"key": "prompt_secret_masking", "default_hardened": "true", "purpose": "Masks API keys and passwords in prompt pipelines."},
+            {"key": "mcp_consent_required", "default_hardened": "true", "purpose": "Requires user confirmation for MCP server calls."}
         ]
     },
     {
@@ -110,7 +130,10 @@ TOOL_DOCS = [
         "settings_map": [
             {"key": "analytics.enabled", "default_hardened": "false", "purpose": "Disables telemetry metrics collection."},
             {"key": "agent.confirm_actions", "default_hardened": "true", "purpose": "Prompts operator before applying diffs or executing scripts."},
-            {"key": "sandbox.strict_mode", "default_hardened": "true", "purpose": "Enforces filesystem isolation and read-only container mount."}
+            {"key": "agent.auto_apply_edits", "default_hardened": "false", "purpose": "Disables automatic write operations on source files."},
+            {"key": "permission_mode", "default_hardened": "'prompt'", "purpose": "Enforces human confirmation for each tool execution."},
+            {"key": "sandbox.strict_mode", "default_hardened": "true", "purpose": "Enforces filesystem isolation and read-only container mount."},
+            {"key": "dlp.mask_credentials", "default_hardened": "true", "purpose": "Redacts sensitive credentials from LLM context."}
         ]
     },
     {
@@ -118,11 +141,13 @@ TOOL_DOCS = [
         "name": "hermes-agent",
         "title": "Hermes Agent Security & Hardening Guide",
         "category": "Autonomous Agent",
-        "summary": "Hermes Agent provides deep reasoning and autonomous tool execution.",
+        "summary": "Hermes Agent provides deep reasoning and autonomous tool execution with local memory persistence.",
         "settings_map": [
             {"key": "safe_mode", "default_hardened": "true", "purpose": "Enforces strict safety rails during multi-step reasoning."},
-            {"key": "human_in_the_loop", "default_hardened": "true", "purpose": "Pauses execution to obtain operator confirmation."},
-            {"key": "max_recursive_steps", "default_hardened": "10", "purpose": "Prevents infinite reasoning loops."}
+            {"key": "human_in_the_loop", "default_hardened": "true", "purpose": "Pauses execution to obtain operator confirmation on mutating tools."},
+            {"key": "blocked_tools", "default_hardened": "['system_admin', 'raw_exec', 'disk_partition', 'network_raw']", "purpose": "Denies critical system tools."},
+            {"key": "max_recursive_steps", "default_hardened": "10", "purpose": "Prevents infinite reasoning and tool invocation loops."},
+            {"key": "network_egress_restricted", "default_hardened": "true", "purpose": "Restricts external network connectivity."}
         ]
     },
     {
@@ -133,7 +158,9 @@ TOOL_DOCS = [
         "summary": "Qoder is an enterprise coding companion providing semantic search and workflow automation.",
         "settings_map": [
             {"key": "telemetry.shareData", "default_hardened": "false", "purpose": "Disables enterprise codebase sharing."},
-            {"key": "security.executionConsent", "default_hardened": "'always'", "purpose": "Requires approval on every automated action."}
+            {"key": "security.executionConsent", "default_hardened": "'always'", "purpose": "Requires approval on every automated action."},
+            {"key": "security.autoApplyEdits", "default_hardened": "false", "purpose": "Requires confirmation before applying suggested diffs."},
+            {"key": "mcp.requireUserConfirmation", "default_hardened": "true", "purpose": "Enforces consent before executing MCP tools."}
         ]
     },
     {
@@ -144,7 +171,9 @@ TOOL_DOCS = [
         "summary": "Kilo Code is a command-line tool designed for fast code indexing and agentic refactoring.",
         "settings_map": [
             {"key": "privacy.telemetry", "default_hardened": "false", "purpose": "Disables usage and crash telemetry."},
-            {"key": "execution.require_confirmation", "default_hardened": "true", "purpose": "Requires confirmation on file and shell operations."}
+            {"key": "execution.require_confirmation", "default_hardened": "true", "purpose": "Requires confirmation on file and shell operations."},
+            {"key": "execution.auto_accept_edits", "default_hardened": "false", "purpose": "Prevents unprompted modification of code."},
+            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates user review of MCP actions."}
         ]
     },
     {
@@ -152,10 +181,12 @@ TOOL_DOCS = [
         "name": "clinepass",
         "title": "ClinePass Security & Hardening Guide",
         "category": "Security Wrapper & Vault",
-        "summary": "ClinePass provides managed authentication and a secure credential proxy for Cline agents.",
+        "summary": "ClinePass provides managed authentication, an encrypted credential vault, and security proxy for Cline agents.",
         "settings_map": [
             {"key": "vault.enforce_encryption", "default_hardened": "true", "purpose": "Encrypts stored LLM API keys at rest."},
-            {"key": "proxy.block_unapproved_hosts", "default_hardened": "true", "purpose": "Blocks outgoing connections to unapproved endpoints."}
+            {"key": "vault.zero_plaintext_cache", "default_hardened": "true", "purpose": "Prevents caching credentials in plaintext memory."},
+            {"key": "proxy.block_unapproved_hosts", "default_hardened": "true", "purpose": "Blocks outgoing connections to unapproved endpoints."},
+            {"key": "proxy.block_ssrf_metadata", "default_hardened": "true", "purpose": "Blocks SSRF requests to cloud metadata endpoints."}
         ]
     },
     {
@@ -163,10 +194,12 @@ TOOL_DOCS = [
         "name": "codebuddy",
         "title": "CodeBuddy Security & Hardening Guide",
         "category": "IDE Assistant",
-        "summary": "CodeBuddy provides interactive code explanations and suggestions.",
+        "summary": "CodeBuddy provides interactive code explanations and suggestions in the developer environment.",
         "settings_map": [
             {"key": "share_code_snippets", "default_hardened": "false", "purpose": "Disables snippet telemetry."},
-            {"key": "telemetry", "default_hardened": "'off'", "purpose": "Disables tracking and logging."}
+            {"key": "telemetry", "default_hardened": "'off'", "purpose": "Disables tracking and diagnostic logging."},
+            {"key": "auto_run_commands", "default_hardened": "false", "purpose": "Blocks automated shell command execution."},
+            {"key": "auto_apply_diffs", "default_hardened": "false", "purpose": "Requires manual acceptance for code diffs."}
         ]
     },
     {
@@ -174,10 +207,11 @@ TOOL_DOCS = [
         "name": "kimi",
         "title": "Kimi Security & Hardening Guide",
         "category": "CLI / Context Assistant",
-        "summary": "Kimi CLI is an agentic assistant for processing large documents and codebases.",
+        "summary": "Kimi CLI is an agentic assistant for processing large documents and codebases with Moonshot AI models.",
         "settings_map": [
             {"key": "telemetry.enabled", "default_hardened": "false", "purpose": "Disables interaction logging."},
-            {"key": "privacy.data_retention", "default_hardened": "false", "purpose": "Ensures prompt data is not retained by the API."},
+            {"key": "privacy.data_retention", "default_hardened": "false", "purpose": "Ensures prompt data is not retained for model training."},
+            {"key": "agent.auto_write", "default_hardened": "false", "purpose": "Requires user confirmation before writing files."},
             {"key": "prompt.mask_secrets", "default_hardened": "true", "purpose": "Masks detected tokens before transmission."}
         ]
     },
@@ -190,7 +224,42 @@ TOOL_DOCS = [
         "settings_map": [
             {"key": "telemetry", "default_hardened": "false", "purpose": "Disables user prompt analytics."},
             {"key": "share_prompts", "default_hardened": "false", "purpose": "Opt out of model retraining."},
+            {"key": "auto_edit_files", "default_hardened": "false", "purpose": "Requires approval before writing changes to disk."},
             {"key": "sandbox_strict", "default_hardened": "true", "purpose": "Enforces strict process sandboxing."}
+        ]
+    },
+    {
+        "vendor": "zai",
+        "name": "zai-cli",
+        "title": "z.ai CLI Security & Hardening Guide",
+        "category": "CLI Coding Agent",
+        "summary": "z.ai CLI is an autonomous command line developer agent powered by GLM models for codebase refactoring, terminal execution, and automation.",
+        "settings_map": [
+            {"key": "telemetry", "default_hardened": "false", "purpose": "Disables prompt analytics and telemetry collection."},
+            {"key": "agent.auto_execute_commands", "default_hardened": "false", "purpose": "Requires user approval before running any shell command."},
+            {"key": "agent.require_confirmation", "default_hardened": "true", "purpose": "Enforces interactive confirmation on all mutating operations."},
+            {"key": "agent.auto_apply_edits", "default_hardened": "false", "purpose": "Requires manual inspection of file diffs before saving."},
+            {"key": "sandbox.enabled", "default_hardened": "true", "purpose": "Executes shell commands in a contained process environment."},
+            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates confirmation before invoking Model Context Protocol tools."},
+            {"key": "dlp.mask_secrets", "default_hardened": "true", "purpose": "Redacts API keys and credentials from prompt contexts."}
+        ]
+    },
+    {
+        "vendor": "zai",
+        "name": "zcode",
+        "title": "z.ai ZCode Desktop & ADE Security & Hardening Guide",
+        "category": "Agentic Development Environment (ADE)",
+        "summary": "ZCode is an integrated Agentic Development Environment (ADE) with chat interface, file explorer, workspace terminal, and MCP tool orchestration for GLM models.",
+        "settings_map": [
+            {"key": "telemetry.enabled", "default_hardened": "false", "purpose": "Disables interaction tracking and telemetry transmission."},
+            {"key": "privacy.data_retention", "default_hardened": "false", "purpose": "Enforces zero data retention for source code and prompts."},
+            {"key": "terminal.auto_execute", "default_hardened": "false", "purpose": "Blocks unprompted terminal command execution by the agent."},
+            {"key": "terminal.sandbox", "default_hardened": "true", "purpose": "Isolates terminal execution inside a local sandbox container."},
+            {"key": "composer.auto_apply", "default_hardened": "false", "purpose": "Requires operator review before applying Composer diffs."},
+            {"key": "composer.require_approval", "default_hardened": "true", "purpose": "Mandates explicit user confirmation for multi-file edits."},
+            {"key": "mcp.require_consent", "default_hardened": "true", "purpose": "Requires approval before executing external MCP server tools."},
+            {"key": "mcp.allow_unsandboxed", "default_hardened": "false", "purpose": "Restricts MCP servers to sandboxed execution environments."},
+            {"key": "dlp.block_sensitive_paths", "default_hardened": "true", "purpose": "Excludes .env, credentials, and cloud keys from AI context."}
         ]
     }
 ]
@@ -223,7 +292,7 @@ The following table lists the official configuration keys and their recommended 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/{item['vendor']}/{item['name']}/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/{item['vendor']}/{item['name']}/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/{item['vendor']}/{item['name']}/hardening_policy.yaml`](file:///configs/tools/{item['vendor']}/{item['name']}/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

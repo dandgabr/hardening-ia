@@ -17,11 +17,13 @@ The following table lists the official configuration keys and their recommended 
 | :--- | :--- | :--- |
 | `privacy.telemetry` | `false` | Disables usage and crash telemetry. |
 | `execution.require_confirmation` | `true` | Requires confirmation on file and shell operations. |
+| `execution.auto_accept_edits` | `false` | Prevents unprompted modification of code. |
+| `mcp.requireConsent` | `true` | Mandates user review of MCP actions. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/kilo/kilo-code/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/kilo/kilo-code/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/kilo/kilo-code/hardening_policy.yaml`](file:///configs/tools/kilo/kilo-code/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

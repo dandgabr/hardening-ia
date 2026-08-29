@@ -18,7 +18,7 @@ The following table lists the official configuration keys and their recommended 
 | `permissions.defaultMode` | `'manual'` | Prompts for confirmation on all terminal and filesystem actions. |
 | `permissions.disableBypassPermissionsMode` | `'disable'` | Disallows '--dangerously-skip-permissions' flag and bypass mode. |
 | `permissions.disableAutoMode` | `'disable'` | Blocks autonomous execution without supervision. |
-| `permissions.deny` | `[destructive commands, DLP secrets, WebDAV \\*, SSRF metadata]` | Explicit deny list rejecting risky operations without prompting. |
+| `permissions.deny` | `[destructive commands, DLP secrets, WebDAV \*, SSRF metadata]` | Explicit deny list rejecting risky operations without prompting. |
 | `permissions.ask` | `['Bash(*)', 'PowerShell(*)', 'Edit(*)', 'Write(*)', 'WebFetch(*)']` | Human-in-the-loop confirmation on all mutating operations. |
 | `sandbox.enabled` | `true` | Enforces OS process and filesystem sandboxing. |
 | `sandbox.autoAllowBashIfSandboxed` | `true (standard) / false (strict)` | Controls whether commands inside the sandbox auto-execute or require human confirmation. |
@@ -38,7 +38,7 @@ The following table lists the official configuration keys and their recommended 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/anthropic/claude-code/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/anthropic/claude-code/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/anthropic/claude-code/hardening_policy.yaml`](file:///configs/tools/anthropic/claude-code/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

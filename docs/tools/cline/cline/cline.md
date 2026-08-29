@@ -15,16 +15,18 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
+| `autoApprove.mode` | `'never'` | Strictly disables global auto-approval for all tool invocations. |
 | `alwaysApproveResubmit` | `false` | Requires operator consent on every retry loop. |
 | `autoApproveExecution` | `false` | Disables automated shell command execution without review. |
 | `allowNonWorkspaceAccess` | `false` | Blocks reading or writing files outside the open project directory. |
 | `restrictSecretAccess` | `true` | Excludes `.env` and credential files from context collection. |
 | `mcp.requireConsent` | `true` | Mandates approval before invoking local MCP server tools. |
+| `diff.autoApply` | `false` | Requires manual inspection of file diffs before saving to disk. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/cline/cline/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/cline/cline/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/cline/cline/hardening_policy.yaml`](file:///configs/tools/cline/cline/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

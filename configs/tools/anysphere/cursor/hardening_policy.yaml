@@ -218,6 +218,8 @@ policies:
       cursor.terminal.strictExecution: true
       cursor.composer.autoApply: false
       cursor.chat.autoApply: false
+      cursor.agent.yoloMode: false
+      cursor.mcp.requireConsent: true
   native_settings_override:
     cursor.privacyMode: true
     cursor.general.privacy: no-retention
@@ -225,6 +227,12 @@ policies:
     cursor.terminal.sandbox: true
     cursor.terminal.legacyTerminalTool: false
     cursor.terminal.timeout: 60
+    cursor.agent.yoloMode: false
+    cursor.composer.autoApply: false
+    cursor.composer.requireUserApproval: true
+    cursor.chat.autoApply: false
+    cursor.mcp.requireConsent: true
+    cursor.agent.autoExecuteTerminal: false
     cursor.rateLimit.requestsPerMinute: 30
     security.workspace.trust.enabled: true
     telemetry.telemetryLevel: 'off'
@@ -232,9 +240,15 @@ policies:
     - .env*
     - '*.pem'
     - '*.key'
+    - '*.pfx'
+    - '*.p12'
+    - '*_rsa'
+    - '*_ed25519'
     - '**/.aws/**'
     - '**/.ssh/**'
     - '**/.kube/**'
+    - '**/.gnupg/**'
+    - '**/.docker/config.json'
 custom_scripts:
   windows: scripts/os/windows/apply-hardening.ps1
   linux: scripts/os/linux/apply-hardening.sh

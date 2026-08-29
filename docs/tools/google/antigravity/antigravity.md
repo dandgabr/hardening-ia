@@ -19,13 +19,18 @@ The following table lists the official configuration keys and their recommended 
 | `enableTerminalSandbox` | `true` | Restricts agent-initiated terminal commands to a secure OS container. |
 | `allowNonWorkspaceAccess` | `false` | Blocks the agent from accessing files outside defined project directories. |
 | `hooks.enforceGuardrails` | `true` | Enforces deterministic security checks before/after tool calls. |
+| `mcp.requireConsent` | `true` | Mandates user confirmation before executing Model Context Protocol tools. |
+| `mcp.allowUnsandboxedServers` | `false` | Prohibits execution of MCP servers outside the sandbox container. |
+| `subagents.requireParentApproval` | `true` | Ensures child subagents cannot perform mutating tasks without verification. |
+| `subagents.allowAutonomousSpawning` | `false` | Prevents runaway recursion in subagent task spawning. |
+| `dlp.maskSecrets` | `true` | Masks API keys, tokens, and credentials in prompt context pipelines. |
 | `telemetry.enabled` | `false` | Disables usage and prompt transmission to external telemetry. |
-| `crashReporting.enabled` | `false` | Prevents memory dumps from sending code fragments to Google. |
+| `crashReporting.enabled` | `false` | Prevents memory dumps from sending code fragments to external servers. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/google/antigravity/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/google/antigravity/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/google/antigravity/hardening_policy.yaml`](file:///configs/tools/google/antigravity/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

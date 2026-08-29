@@ -1,20 +1,23 @@
 schema_version: '1.0'
 tool:
-  name: kimi
-  vendor: moonshot
-  category: cli
-  description: Kimi - High-context conversational and coding assistant from Moonshot
-    AI
+  name: zcode
+  vendor: zai
+  category: agentic
+  description: z.ai ZCode - Agentic Development Environment (ADE) with integrated
+    workspace, terminal and MCP tools
 paths:
   windows:
-    config_dir: '%USERPROFILE%\.kimi'
-    settings_file: '%USERPROFILE%\.kimi\config.json'
+    config_dir: '%USERPROFILE%\.zcode'
+    settings_file: '%USERPROFILE%\.zcode\v2\config.json'
+    rules_dir: '%USERPROFILE%\.zcode\rules'
   linux:
-    config_dir: ~/.kimi
-    settings_file: ~/.kimi/config.json
+    config_dir: ~/.zcode
+    settings_file: ~/.zcode/v2/config.json
+    rules_dir: ~/.zcode/rules
   macos:
-    config_dir: ~/.kimi
-    settings_file: ~/.kimi/config.json
+    config_dir: ~/.zcode
+    settings_file: ~/.zcode/v2/config.json
+    rules_dir: ~/.zcode/rules
 policies:
   sandbox:
     enforce_sandbox: true
@@ -22,6 +25,7 @@ policies:
   approvals:
     require_approval_for_terminal: true
     require_approval_for_network: true
+    require_approval_for_write: true
   rate_limit:
     max_requests_per_minute: 30
     max_tokens_per_minute: 100000
@@ -151,8 +155,11 @@ policies:
     - ~/.netrc
     - ~/.docker/config.json
     disable_code_training_sharing: true
+    mask_secrets: true
   telemetry:
     enable_telemetry: false
+    enable_crash_reporting: false
+    audit_logging: true
   strict_rules:
     action: block_without_prompting
     denied_patterns:
@@ -209,21 +216,24 @@ policies:
       - dangerouslyDisableSandbox
       - 169\.254\.169\.254
     native_overrides:
-      security.deny_dangerous_paths: true
-      security.block_critical: true
-      agent.auto_write: false
-      security.require_write_confirmation: true
+      terminal.auto_execute: false
+      composer.auto_apply: false
+      security.dangerous_paths_action: block
+      mcp.allow_unsandboxed: false
+      mcp.require_consent: true
   native_settings_override:
     telemetry.enabled: false
     privacy.data_retention: false
-    agent.auto_write: false
-    security.require_write_confirmation: true
-    sandbox.enabled: true
-    prompt.mask_secrets: true
-    context.exclude_secret_files: true
-    network.block_metadata_endpoints: true
-    timeout.request: 30
-    rate_limit.max_rpm: 30
+    terminal.auto_execute: false
+    terminal.sandbox: true
+    composer.auto_apply: false
+    composer.require_approval: true
+    mcp.require_consent: true
+    mcp.allow_unsandboxed: false
+    dlp.block_sensitive_paths: true
+    security.dangerous_paths_action: ask
+    timeout_seconds: 60
+    rate_limit_rpm: 30
 custom_scripts:
   windows: scripts/os/windows/apply-hardening.ps1
   linux: scripts/os/linux/apply-hardening.sh

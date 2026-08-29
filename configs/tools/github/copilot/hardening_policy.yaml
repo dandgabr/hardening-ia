@@ -205,6 +205,8 @@ policies:
       github.copilot.editor.enableAutoCompletions: true
       github.copilot.chat.localeOverride: en
       github.copilot.chat.autoApplyEdits: false
+      chat.tools.global.autoApprove: false
+      chat.agent.allowTerminal: false
   native_settings_override:
     github.copilot.advanced:
       authProvider: github
@@ -219,6 +221,14 @@ policies:
       .env: false
     github.copilot.editor.enableAutoCompletions: true
     github.copilot.chat.localeOverride: en
+    github.copilot.chat.terminal.autoExecute: false
+    github.copilot.chat.autoApplyEdits: false
+    chat.tools.global.autoApprove: false
+    chat.tools.eligibleForAutoApproval: []
+    chat.tools.confirm: always
+    chat.agent.allowTerminal: false
+    chat.editing.confirmEditRequestRemoval: true
+    chat.commandCenter.enabled: true
     telemetry.telemetryLevel: 'off'
 custom_scripts:
   windows: scripts/os/windows/apply-hardening.ps1

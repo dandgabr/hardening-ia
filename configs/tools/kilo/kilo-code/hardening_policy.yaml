@@ -219,8 +219,11 @@ policies:
   native_settings_override:
     privacy.telemetry: false
     execution.require_confirmation: true
+    execution.auto_accept_edits: false
     sandbox.enabled: true
     indexing.exclude_hidden_and_secrets: true
+    mcp.requireConsent: true
+    dlp.mask_credentials: true
     timeout.command: 30
     rate_limit.rpm: 30
 custom_scripts:

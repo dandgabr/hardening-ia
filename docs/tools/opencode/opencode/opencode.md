@@ -17,12 +17,15 @@ The following table lists the official configuration keys and their recommended 
 | :--- | :--- | :--- |
 | `analytics.enabled` | `false` | Disables telemetry metrics collection. |
 | `agent.confirm_actions` | `true` | Prompts operator before applying diffs or executing scripts. |
+| `agent.auto_apply_edits` | `false` | Disables automatic write operations on source files. |
+| `permission_mode` | `'prompt'` | Enforces human confirmation for each tool execution. |
 | `sandbox.strict_mode` | `true` | Enforces filesystem isolation and read-only container mount. |
+| `dlp.mask_credentials` | `true` | Redacts sensitive credentials from LLM context. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/opencode/opencode/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/opencode/opencode/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/opencode/opencode/hardening_policy.yaml`](file:///configs/tools/opencode/opencode/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

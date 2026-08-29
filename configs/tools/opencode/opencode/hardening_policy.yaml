@@ -219,9 +219,13 @@ policies:
   native_settings_override:
     analytics.enabled: false
     agent.confirm_actions: true
+    agent.auto_apply_edits: false
+    permission_mode: prompt
+    auto_approve_tools: []
     sandbox.strict_mode: true
     network.isolate_agent: true
     dlp.mask_credentials: true
+    mcp_consent_required: true
     timeout.command_seconds: 30
     timeout.request_seconds: 30
     rate_limit.requests_per_minute: 30

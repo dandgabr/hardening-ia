@@ -5,7 +5,7 @@
 - **Tool Name:** `codebuddy`
 - **Category:** `IDE Assistant`
 
-CodeBuddy provides interactive code explanations and suggestions.
+CodeBuddy provides interactive code explanations and suggestions in the developer environment.
 
 ---
 
@@ -16,12 +16,14 @@ The following table lists the official configuration keys and their recommended 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
 | `share_code_snippets` | `false` | Disables snippet telemetry. |
-| `telemetry` | `'off'` | Disables tracking and logging. |
+| `telemetry` | `'off'` | Disables tracking and diagnostic logging. |
+| `auto_run_commands` | `false` | Blocks automated shell command execution. |
+| `auto_apply_diffs` | `false` | Requires manual acceptance for code diffs. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/codebuddy/codebuddy/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/codebuddy/codebuddy/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/codebuddy/codebuddy/hardening_policy.yaml`](file:///configs/tools/codebuddy/codebuddy/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

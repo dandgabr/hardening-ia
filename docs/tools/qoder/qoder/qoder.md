@@ -17,11 +17,13 @@ The following table lists the official configuration keys and their recommended 
 | :--- | :--- | :--- |
 | `telemetry.shareData` | `false` | Disables enterprise codebase sharing. |
 | `security.executionConsent` | `'always'` | Requires approval on every automated action. |
+| `security.autoApplyEdits` | `false` | Requires confirmation before applying suggested diffs. |
+| `mcp.requireUserConfirmation` | `true` | Enforces consent before executing MCP tools. |
 
 ---
 
 ## 3. Configuration Policy
-Declarative policy file: [`configs/tools/qoder/qoder/hardening_policy.yaml`](file:///B:/Code/hardening-ia/configs/tools/qoder/qoder/hardening_policy.yaml)
+Declarative policy file: [`configs/tools/qoder/qoder/hardening_policy.yaml`](file:///configs/tools/qoder/qoder/hardening_policy.yaml)
 
 ### 🚀 Enforcement Commands
 ```bash

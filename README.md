@@ -59,6 +59,8 @@ AI developer assistants introduce new threat surfaces: unintended command execut
 | **CodeBuddy** | CodeBuddy | IDE Assistant | [hardening_policy.yaml](configs/tools/codebuddy/codebuddy/hardening_policy.yaml) | [codebuddy.md](docs/tools/codebuddy/codebuddy/codebuddy.md) |
 | **Moonshot** | Kimi | CLI Agent | [hardening_policy.yaml](configs/tools/moonshot/kimi/hardening_policy.yaml) | [kimi.md](docs/tools/moonshot/kimi/kimi.md) |
 | **xAI** | Grok | CLI Agent | [hardening_policy.yaml](configs/tools/xai/grok/hardening_policy.yaml) | [grok.md](docs/tools/xai/grok/grok.md) |
+| **zAI** | zAI CLI | CLI Agent | [hardening_policy.yaml](configs/tools/zai/zai-cli/hardening_policy.yaml) | [zai-cli.md](docs/tools/zai/zai-cli/zai-cli.md) |
+| **zAI** | ZCode | Agentic ADE / Desktop | [hardening_policy.yaml](configs/tools/zai/zcode/hardening_policy.yaml) | [zcode.md](docs/tools/zai/zcode/zcode.md) |
 
 ---
 
@@ -73,7 +75,7 @@ hardening-ia/
 │   ├── LINUX_COMMAND_POLICY.md         # Linux command execution risk matrix (390+ cmds)
 │   ├── WINDOWS_COMMAND_POLICY.md       # Windows command risk policy (PowerShell/CMD)
 │   ├── MACOS_COMMAND_POLICY.md         # macOS command risk policy (Darwin/BSD)
-│   └── tools/                          # Dedicated security guides for all 14 tools
+│   └── tools/                          # Dedicated security guides for all 16 tools
 ├── configs/                            # Declarative YAML policies
 │   ├── rules/                          # Deployed agent security rule files
 │   └── tools/<vendor>/<tool>/          # Per-tool hardening policy definitions

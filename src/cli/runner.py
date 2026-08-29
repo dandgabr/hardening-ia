@@ -26,11 +26,11 @@ logger = get_logger("cli")
 HELP_EPILOG = """
 [bold cyan]Practical Usage Examples:[/]
   [green]python main.py[/]                              Launch interactive Textual Control Interface (TUI)
-  [green]python main.py --list[/]                       List all 14 supported AI tools and host detection status
+  [green]python main.py --list[/]                       List all 16 supported AI tools and host detection status
   [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
   [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
   [green]python main.py --apply --strict[/]             Apply STRICT mode (explicit critical denials & zero prompting on dangerous paths)
-  [green]python main.py --apply[/]                      Provision & apply hardening across all 14 supported tools
+  [green]python main.py --apply[/]                      Provision & apply hardening across all 16 supported tools
   [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
   [green]python main.py --remove --installed-only[/]    Revert/remove hardening from detected tools
   [green]python main.py --tool cursor --remove[/]       Revert hardening from a specific tool

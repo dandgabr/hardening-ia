@@ -228,9 +228,12 @@ policies:
       - dd*
       - format*
       strictPathIsolation: true
+      diff.autoApply: false
+      mcp.autoApprove: false
   native_settings_override:
     alwaysApproveResubmit: false
     autoApproveExecution: false
+    autoApprove.mode: never
     autoApprove:
       terminal: false
       write: false
@@ -241,6 +244,8 @@ policies:
     telemetryEnabled: false
     restrictSecretAccess: true
     mcp.requireConsent: true
+    mcp.autoApprove: false
+    diff.autoApply: false
     executionTimeout: 60
     commandTimeout: 30
     rateLimitPerMinute: 30

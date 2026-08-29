@@ -4,8 +4,29 @@
 # ==============================================================================
 set -euo pipefail
 
-POLICY_FILE="${1:-}"
-DRY_RUN="${2:-false}"
+POLICY_FILE=""
+DRY_RUN="false"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --policy|-p)
+            POLICY_FILE="$2"
+            shift 2
+            ;;
+        --dry-run|-d)
+            DRY_RUN="true"
+            shift
+            ;;
+        *)
+            if [ -z "$POLICY_FILE" ]; then
+                POLICY_FILE="$1"
+            elif [ "$1" = "true" ] || [ "$1" = "false" ]; then
+                DRY_RUN="$1"
+            fi
+            shift
+            ;;
+    esac
+done
 
 echo "[INFO] ==========================================================="
 echo "[INFO]  Hardening IA - Linux Policy Execution Script"

@@ -1,20 +1,22 @@
 schema_version: '1.0'
 tool:
-  name: kimi
-  vendor: moonshot
+  name: zai-cli
+  vendor: zai
   category: cli
-  description: Kimi - High-context conversational and coding assistant from Moonshot
-    AI
+  description: z.ai CLI - Autonomous AI command line coding agent and GLM model interface
 paths:
   windows:
-    config_dir: '%USERPROFILE%\.kimi'
-    settings_file: '%USERPROFILE%\.kimi\config.json'
+    config_dir: '%APPDATA%\zai'
+    settings_file: '%APPDATA%\zai\config.json'
+    rules_dir: '%APPDATA%\zai\rules'
   linux:
-    config_dir: ~/.kimi
-    settings_file: ~/.kimi/config.json
+    config_dir: ~/.config/zai
+    settings_file: ~/.config/zai/config.json
+    rules_dir: ~/.config/zai/rules
   macos:
-    config_dir: ~/.kimi
-    settings_file: ~/.kimi/config.json
+    config_dir: ~/Library/Application Support/zai
+    settings_file: ~/Library/Application Support/zai/config.json
+    rules_dir: ~/Library/Application Support/zai/rules
 policies:
   sandbox:
     enforce_sandbox: true
@@ -22,6 +24,7 @@ policies:
   approvals:
     require_approval_for_terminal: true
     require_approval_for_network: true
+    require_approval_for_write: true
   rate_limit:
     max_requests_per_minute: 30
     max_tokens_per_minute: 100000
@@ -151,8 +154,11 @@ policies:
     - ~/.netrc
     - ~/.docker/config.json
     disable_code_training_sharing: true
+    mask_secrets: true
   telemetry:
     enable_telemetry: false
+    enable_crash_reporting: false
+    audit_logging: true
   strict_rules:
     action: block_without_prompting
     denied_patterns:
@@ -209,19 +215,22 @@ policies:
       - dangerouslyDisableSandbox
       - 169\.254\.169\.254
     native_overrides:
-      security.deny_dangerous_paths: true
-      security.block_critical: true
-      agent.auto_write: false
-      security.require_write_confirmation: true
+      agent.auto_execute_commands: false
+      agent.auto_apply_edits: false
+      sandbox.strict_mode: true
+      security.deny_critical_commands: true
+      mcp.requireConsent: true
   native_settings_override:
-    telemetry.enabled: false
-    privacy.data_retention: false
-    agent.auto_write: false
-    security.require_write_confirmation: true
+    telemetry: false
+    analytics.enabled: false
+    agent.auto_execute_commands: false
+    agent.require_confirmation: true
+    agent.auto_apply_edits: false
     sandbox.enabled: true
-    prompt.mask_secrets: true
-    context.exclude_secret_files: true
-    network.block_metadata_endpoints: true
+    sandbox.strict_mode: true
+    dlp.mask_secrets: true
+    mcp.requireConsent: true
+    timeout.command: 30
     timeout.request: 30
     rate_limit.max_rpm: 30
 custom_scripts:

@@ -213,6 +213,7 @@ policies:
       - system_admin
       - raw_exec
       - disk_partition
+      - network_raw
       auto_write_files: false
       human_in_the_loop: true
   native_settings_override:
@@ -224,6 +225,10 @@ policies:
     blocked_tools:
     - system_admin
     - raw_exec
+    - disk_partition
+    - network_raw
+    network_egress_restricted: true
+    dlp_filter_secrets: true
     timeout_seconds: 60
     max_requests_per_minute: 30
 custom_scripts:

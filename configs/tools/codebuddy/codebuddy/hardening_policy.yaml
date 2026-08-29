@@ -216,7 +216,10 @@ policies:
     share_code_snippets: false
     telemetry: 'off'
     auto_run_commands: false
+    auto_apply_diffs: false
     sandbox_isolated: true
+    mcp_require_confirmation: true
+    dlp_mask_secrets: true
     timeout_seconds: 30
     rate_limit_rpm: 30
 custom_scripts:

@@ -231,6 +231,8 @@ policies:
       toolPermissions: deny-critical
       autoApplyEdits: false
       approvals.require_approval_for_write: true
+      mcp.allowUnsandboxedServers: false
+      subagents.allowAutonomousSpawning: false
   native_settings_override:
     telemetry.enabled: false
     crashReporting.enabled: false
@@ -238,6 +240,12 @@ policies:
     enableTerminalSandbox: true
     allowNonWorkspaceAccess: false
     hooks.enforceGuardrails: true
+    mcp.requireConsent: true
+    mcp.allowUnsandboxedServers: false
+    subagents.requireParentApproval: true
+    subagents.allowAutonomousSpawning: false
+    dlp.maskSecrets: true
+    slashCommands.enforceApproval: true
     security.sandbox.default_enforced: true
     security.approvals.bypass_allowed: false
     timeout.command_timeout_seconds: 30

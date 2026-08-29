@@ -254,17 +254,10 @@ policies:
     - ~/.netrc
     - ~/.docker/config.json
     disable_code_training_sharing: true
+    mask_secrets: true
   telemetry:
     enable_telemetry: false
-    CLAUDE_CODE_ENABLE_TELEMETRY: 0
-    CLAUDE_TELEMETRY_DISABLED: true
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: 1
-    CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: 1
-    DISABLE_TELEMETRY: 1
-    DISABLE_AUTOUPDATER: 1
-    feedbackSurveyRate: 0
-    autoMemoryEnabled: false
-    disableArtifact: true
+    enable_crash_reporting: false
     audit_logging: true
   strict_rules:
     action: block_without_prompting
@@ -323,42 +316,166 @@ policies:
       - 169\.254\.169\.254
     native_overrides:
       permissions:
-        defaultMode: manual
+        defaultMode: plan
         disableBypassPermissionsMode: disable
         disableAutoMode: disable
         allow: []
+        deny:
+        - Bash(rm -rf /*)
+        - Bash(rm -rf /etc*)
+        - Bash(rm -rf /boot*)
+        - Bash(rm -rf /root*)
+        - Bash(dd if=/dev/zero*)
+        - Bash(dd if=/dev/urandom*)
+        - Bash(mkfs*)
+        - Bash(wipefs*)
+        - Bash(fdisk*)
+        - Bash(gdisk*)
+        - Bash(parted*)
+        - Bash(lvreduce*)
+        - Bash(format-volume*)
+        - Bash(format *:*)
+        - Bash(clear-disk*)
+        - Bash(diskpart*)
+        - Bash(cipher /w*)
+        - Bash(diskutil eraseDisk*)
+        - Bash(diskutil partitionDisk*)
+        - Bash(set-mppreference -disablerealtimemonitoring*)
+        - Bash(chmod -R 777 /*)
+        - Bash(chown -R nobody /*)
+        - Bash(wget *|sh)
+        - Bash(curl *|sh)
+        - Bash(wget *|bash)
+        - Bash(curl *|bash)
+        - Bash(:(){ :|:& };:)
+        - Bash(dangerouslyDisableSandbox:true)
+        - Read(//*)
+        - Read(\\*)
+        - WebFetch(domain:169.254.169.254)
+        - WebFetch(domain:metadata.google.internal)
+        - WebFetch(domain:100.100.100.200)
+        - WebFetch(domain:localhost)
+        - WebFetch(domain:127.0.0.1)
+        - WebFetch(domain:0.0.0.0)
+        - WebFetch(domain:[::1])
+        - WebFetch(domain:*.local)
+        - WebFetch(domain:*.internal)
+        - Read(~/.ssh/**)
+        - Read(~/.aws/**)
+        - Read(~/.azure/**)
+        - Read(~/.kube/**)
+        - Read(~/.gnupg/**)
+        - Read(~/.git-credentials)
+        - Read(~/.netrc)
+        - Read(~/.docker/config.json)
+        - Read(**/.env*)
+        - Read(**/*.pem)
+        - Read(**/*.key)
+        - Read(**/*.pfx)
+        - Read(**/*.p12)
+        - Read(**/*_rsa)
+        - Read(**/*_ed25519)
+        - Read(~/.credentials.json)
+        - Read(~/.claude.json)
+        - Edit(~/.ssh/**)
+        - Edit(~/.aws/**)
+        - Edit(~/.kube/**)
+        - Edit(/etc/**)
+        - Edit(/boot/**)
+        - Edit(C:\Windows\**)
+        - Write(~/.ssh/**)
+        - Write(~/.aws/**)
+        - Write(~/.kube/**)
+        - Write(/etc/**)
+        - Write(/boot/**)
+        - Write(C:\Windows\**)
+        ask:
+        - Bash(*)
+        - PowerShell(*)
+        - Edit(*)
+        - Write(*)
+        - WebFetch(*)
       sandbox:
         enabled: true
         autoAllowBashIfSandboxed: false
         allowUnsandboxedCommands: false
         failIfUnavailable: true
-        filesystem:
-          allowManagedReadPathsOnly: true
         network:
           strictAllowlist: true
-          allowManagedDomainsOnly: true
-      disableSideloadFlags: true
-      allowManagedHooksOnly: true
-      allowManagedPermissionRulesOnly: true
-      allowManagedMcpServersOnly: true
-      acceptEdits: false
-      permissionMode: manual
-      autoApprove: []
+          allowedDomains:
+          - github.com
+          - '*.github.com'
+          - '*.githubusercontent.com'
+          - registry.npmjs.org
+          - '*.npmjs.org'
+          - pypi.org
+          - files.pythonhosted.org
+          deniedDomains:
+          - 169.254.169.254
+          - metadata.google.internal
+          - 100.100.100.200
+          - localhost
+          - 127.0.0.1
+          - 0.0.0.0
+          - '[::1]'
+          - '*.local'
+          - '*.internal'
   native_settings_override:
-    $schema: https://json.schemastore.org/claude-code-settings.json
     permissions:
       defaultMode: manual
       disableBypassPermissionsMode: disable
       disableAutoMode: disable
+      allow:
+      - Read(cwd:*)
+      - Bash(git status:*)
+      - Bash(git diff:*)
+      - Bash(git log:*)
+      - Bash(ls:*)
+      - Bash(dir:*)
+      - Bash(pwd:*)
+      - Bash(find:*)
+      - Bash(grep:*)
+      - Bash(rg:*)
       deny:
-      - Read(//**/.env*)
-      - Read(//**/*.env*)
-      - Read(//**/*.pem)
-      - Read(//**/*.key)
-      - Read(//**/*.pfx)
-      - Read(//**/*.p12)
-      - Read(//**/*_rsa)
-      - Read(//**/*_ed25519)
+      - Bash(rm -rf /*)
+      - Bash(rm -rf /etc*)
+      - Bash(rm -rf /boot*)
+      - Bash(rm -rf /root*)
+      - Bash(dd if=/dev/zero*)
+      - Bash(dd if=/dev/urandom*)
+      - Bash(mkfs*)
+      - Bash(wipefs*)
+      - Bash(fdisk*)
+      - Bash(gdisk*)
+      - Bash(parted*)
+      - Bash(lvreduce*)
+      - Bash(format-volume*)
+      - Bash(format *:*)
+      - Bash(clear-disk*)
+      - Bash(diskpart*)
+      - Bash(cipher /w*)
+      - Bash(diskutil eraseDisk*)
+      - Bash(diskutil partitionDisk*)
+      - Bash(set-mppreference -disablerealtimemonitoring*)
+      - Bash(chmod -R 777 /*)
+      - Bash(chown -R nobody /*)
+      - Bash(wget *|sh)
+      - Bash(curl *|sh)
+      - Bash(wget *|bash)
+      - Bash(curl *|bash)
+      - Bash(:(){ :|:& };:)
+      - Bash(dangerouslyDisableSandbox:true)
+      - Read(//*)
+      - Read(\\*)
+      - WebFetch(domain:169.254.169.254)
+      - WebFetch(domain:metadata.google.internal)
+      - WebFetch(domain:100.100.100.200)
+      - WebFetch(domain:localhost)
+      - WebFetch(domain:127.0.0.1)
+      - WebFetch(domain:0.0.0.0)
+      - WebFetch(domain:[::1])
+      - WebFetch(domain:*.local)
+      - WebFetch(domain:*.internal)
       - Read(~/.ssh/**)
       - Read(~/.aws/**)
       - Read(~/.azure/**)
@@ -367,72 +484,15 @@ policies:
       - Read(~/.git-credentials)
       - Read(~/.netrc)
       - Read(~/.docker/config.json)
+      - Read(**/.env*)
+      - Read(**/*.pem)
+      - Read(**/*.key)
+      - Read(**/*.pfx)
+      - Read(**/*.p12)
+      - Read(**/*_rsa)
+      - Read(**/*_ed25519)
       - Read(~/.credentials.json)
       - Read(~/.claude.json)
-      - Read(//c/**/.env*)
-      - Read(//c/Windows/**)
-      - Read(//c/Program Files/**)
-      - Read(//c/ProgramData/**)
-      - Read(\\*)
-      - Edit(\\*)
-      - Write(\\*)
-      - Read(//etc/**)
-      - Read(//boot/**)
-      - Read(//root/**)
-      - Read(//sys/**)
-      - Read(//proc/**)
-      - Read(//System/**)
-      - Read(//Library/**)
-      - Read(//private/**)
-      - Edit(//**/.git/hooks/**)
-      - Edit(//**/.git/config)
-      - Write(//**/.git/hooks/**)
-      - Write(//**/.git/config)
-      - WebFetch(domain:169.254.169.254)
-      - WebFetch(domain:metadata.google.internal)
-      - WebFetch(domain:100.100.100.200)
-      - WebFetch(domain:localhost)
-      - WebFetch(domain:127.0.0.1)
-      - WebFetch(domain:0.0.0.0)
-      - WebFetch(domain:[::1])
-      - Bash(dangerouslyDisableSandbox:true)
-      - Bash(rm -rf /*)
-      - Bash(rm -rf /)
-      - Bash(rm -rf /etc*)
-      - Bash(rm -rf /boot*)
-      - Bash(rm -rf /root*)
-      - Bash(rm -rf /System*)
-      - Bash(mkfs*)
-      - Bash(dd if=/dev/zero*)
-      - Bash(dd if=/dev/urandom*)
-      - Bash(wipefs*)
-      - Bash(fdisk*)
-      - Bash(gdisk*)
-      - Bash(parted*)
-      - Bash(lvreduce*)
-      - Bash(diskutil eraseDisk*)
-      - Bash(diskutil partitionDisk*)
-      - Bash(chmod -R 777 /*)
-      - Bash(chown -R nobody /*)
-      - Bash(mv /* /dev/null*)
-      - Bash(curl *|*sh*)
-      - Bash(wget *|*sh*)
-      - Bash(curl *|*bash*)
-      - Bash(wget *|*bash*)
-      - PowerShell(format*)
-      - PowerShell(Format-Volume*)
-      - PowerShell(Clear-Disk*)
-      - PowerShell(Initialize-Disk*)
-      - PowerShell(Remove-Partition*)
-      - PowerShell(Resize-Partition*)
-      - PowerShell(diskpart*)
-      - PowerShell(cipher /w*)
-      - PowerShell(chkdsk /f*)
-      - PowerShell(Remove-Item *-Recurse *C:\Windows*)
-      - PowerShell(del */f */s */q *C:\Windows*)
-      - PowerShell(rd */s */q *C:\*)
-      - PowerShell(Set-MpPreference *-DisableRealtimeMonitoring*)
-      allow: []
       ask:
       - Bash(*)
       - PowerShell(*)
