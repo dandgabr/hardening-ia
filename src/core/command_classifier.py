@@ -429,9 +429,10 @@ class CommandRiskClassifier:
 
         return risk, requires_approval, reasoning
 
-    def classify(self, raw_command: str, os_type: str = None, strict_mode: bool = False) -> CommandRiskEvaluation:
+    @classmethod
+    def classify(cls, raw_command: str, os_type: str = None, strict_mode: bool = False) -> CommandRiskEvaluation:
         """Evaluates command line and returns structured CommandRiskEvaluation object."""
-        risk, req_approval, reason = self.classify_command(raw_command, os_type=os_type, strict_mode=strict_mode)
+        risk, req_approval, reason = cls.classify_command(raw_command, os_type=os_type, strict_mode=strict_mode)
         if "[STRICT BLOCKED]" in reason:
             action = "blocked immediately (zero-trust)"
         elif req_approval:

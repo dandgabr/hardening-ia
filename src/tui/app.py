@@ -362,9 +362,9 @@ class HardeningTUIApp(App):
 
     def _update_header_status(self) -> None:
         os_name = OSDetector.get_os_type().upper()
-        strict_badge = "[bold red]STRICT: ON[/bold red]" if self.strict_mode else "[dim]STRICT: OFF[/dim]"
-        dry_badge = "[bold yellow]DRY-RUN: ON[/bold yellow]" if self.dry_run else "[dim]DRY-RUN: OFF[/dim]"
-        self.sub_title = f"Host: {os_name} | {strict_badge} (S) | {dry_badge} (Y) | [H] Help"
+        strict_status = "🛡️ STRICT: ON" if self.strict_mode else "STRICT: OFF"
+        dry_status = "⚠️ DRY-RUN: ON" if self.dry_run else "DRY-RUN: OFF"
+        self.sub_title = f"Host: {os_name} | {strict_status} (S) | {dry_status} (Y) | Help (H)"
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if isinstance(event.item, ToolItem):
