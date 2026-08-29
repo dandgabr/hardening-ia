@@ -230,36 +230,24 @@ TOOL_DOCS = [
     },
     {
         "vendor": "zai",
-        "name": "zai-cli",
-        "title": "z.ai CLI Security & Hardening Guide",
-        "category": "CLI Coding Agent",
-        "summary": "z.ai CLI is an autonomous command line developer agent powered by GLM models for codebase refactoring, terminal execution, and automation.",
+        "name": "zai",
+        "title": "z.ai Developer Platform (CLI, ADE & Desktop) Security & Hardening Guide",
+        "category": "Unified Agentic Platform (CLI, ADE & Desktop)",
+        "summary": "z.ai Developer Platform is a unified ecosystem providing an Autonomous CLI Coding Agent (zai-cli), an Agentic Development Environment (zcode ADE / Desktop), and IDE extensions powered by GLM models.",
         "settings_map": [
-            {"key": "telemetry", "default_hardened": "false", "purpose": "Disables prompt analytics and telemetry collection."},
+            {"key": "telemetry", "default_hardened": "false", "purpose": "Disables prompt analytics and interaction tracking across CLI and ADE."},
+            {"key": "privacy.data_retention", "default_hardened": "false", "purpose": "Enforces zero data retention for source code and prompts."},
             {"key": "agent.auto_execute_commands", "default_hardened": "false", "purpose": "Requires user approval before running any shell command."},
             {"key": "agent.require_confirmation", "default_hardened": "true", "purpose": "Enforces interactive confirmation on all mutating operations."},
             {"key": "agent.auto_apply_edits", "default_hardened": "false", "purpose": "Requires manual inspection of file diffs before saving."},
-            {"key": "sandbox.enabled", "default_hardened": "true", "purpose": "Executes shell commands in a contained process environment."},
-            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates confirmation before invoking Model Context Protocol tools."},
-            {"key": "dlp.mask_secrets", "default_hardened": "true", "purpose": "Redacts API keys and credentials from prompt contexts."}
-        ]
-    },
-    {
-        "vendor": "zai",
-        "name": "zcode",
-        "title": "z.ai ZCode Desktop & ADE Security & Hardening Guide",
-        "category": "Agentic Development Environment (ADE)",
-        "summary": "ZCode is an integrated Agentic Development Environment (ADE) with chat interface, file explorer, workspace terminal, and MCP tool orchestration for GLM models.",
-        "settings_map": [
-            {"key": "telemetry.enabled", "default_hardened": "false", "purpose": "Disables interaction tracking and telemetry transmission."},
-            {"key": "privacy.data_retention", "default_hardened": "false", "purpose": "Enforces zero data retention for source code and prompts."},
-            {"key": "terminal.auto_execute", "default_hardened": "false", "purpose": "Blocks unprompted terminal command execution by the agent."},
+            {"key": "terminal.auto_execute", "default_hardened": "false", "purpose": "Blocks unprompted terminal command execution in the ADE."},
             {"key": "terminal.sandbox", "default_hardened": "true", "purpose": "Isolates terminal execution inside a local sandbox container."},
             {"key": "composer.auto_apply", "default_hardened": "false", "purpose": "Requires operator review before applying Composer diffs."},
             {"key": "composer.require_approval", "default_hardened": "true", "purpose": "Mandates explicit user confirmation for multi-file edits."},
-            {"key": "mcp.require_consent", "default_hardened": "true", "purpose": "Requires approval before executing external MCP server tools."},
+            {"key": "mcp.requireConsent", "default_hardened": "true", "purpose": "Mandates confirmation before invoking Model Context Protocol tools."},
             {"key": "mcp.allow_unsandboxed", "default_hardened": "false", "purpose": "Restricts MCP servers to sandboxed execution environments."},
-            {"key": "dlp.block_sensitive_paths", "default_hardened": "true", "purpose": "Excludes .env, credentials, and cloud keys from AI context."}
+            {"key": "dlp.mask_secrets", "default_hardened": "true", "purpose": "Redacts API keys, credentials, and tokens from prompt contexts."},
+            {"key": "dlp.block_sensitive_paths", "default_hardened": "true", "purpose": "Excludes .env, cloud keys, and SSH credentials from AI context."}
         ]
     }
 ]

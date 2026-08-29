@@ -26,11 +26,11 @@ logger = get_logger("cli")
 HELP_EPILOG = """
 [bold cyan]Practical Usage Examples:[/]
   [green]python main.py[/]                              Launch interactive Textual Control Interface (TUI)
-  [green]python main.py --list[/]                       List all 16 supported AI tools and host detection status
+  [green]python main.py --list[/]                       List all 15 supported AI tools and host detection status
   [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
   [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
   [green]python main.py --apply --strict[/]             Apply STRICT mode (explicit critical denials & zero prompting on dangerous paths)
-  [green]python main.py --apply[/]                      Provision & apply hardening across all 16 supported tools
+  [green]python main.py --apply[/]                      Provision & apply hardening across all 15 supported tools
   [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
   [green]python main.py --remove --installed-only[/]    Revert/remove hardening from detected tools
   [green]python main.py --tool cursor --remove[/]       Revert hardening from a specific tool
@@ -49,6 +49,25 @@ HELP_EPILOG = """
   [green]python main.py --remove-extra all[/]           Remove extra security tools and integration wrappers
   [green]python main.py --status-extra[/]               Inspect installation status and diagnostics for extra components
 """
+
+
+def _matches_tool_query(p: HardeningPolicy, query: str) -> bool:
+    query = query.lower()
+    full_name = f"{p.tool.vendor}/{p.tool.name}".lower()
+    if query in full_name or query == p.tool.name.lower():
+        return True
+    alias_map = {
+        "zai-cli": ("zai", "zai"),
+        "zcode": ("zai", "zai"),
+        "z-ai": ("zai", "zai"),
+        "claude": ("anthropic", "claude-code"),
+        "kilo": ("kilo", "kilo-code"),
+        "hermes": ("nousresearch", "hermes-agent")
+    }
+    if query in alias_map:
+        v, n = alias_map[query]
+        return p.tool.vendor.lower() == v and p.tool.name.lower() == n
+    return False
 
 
 def run_cli(args: List[str]):
@@ -204,11 +223,7 @@ def run_cli(args: List[str]):
             target_policies = [p for p in target_policies if p.is_installed]
 
         if parsed.tool:
-            query = parsed.tool.lower()
-            target_policies = [
-                p for p in target_policies
-                if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
-            ]
+            target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
 
         # System-Wide Admin Verification
         if parsed.admin:
@@ -355,11 +370,7 @@ def run_cli(args: List[str]):
             target_policies = [p for p in target_policies if p.is_installed]
 
         if parsed.tool:
-            query = parsed.tool.lower()
-            target_policies = [
-                p for p in target_policies
-                if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
-            ]
+            target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
 
         if not target_policies:
             console.print("[bold red][!] No matching tools found to remove hardening.[/bold red]")
@@ -391,11 +402,7 @@ def run_cli(args: List[str]):
             target_policies = [p for p in target_policies if p.is_installed]
 
         if parsed.tool:
-            query = parsed.tool.lower()
-            target_policies = [
-                p for p in target_policies
-                if query in f"{p.tool.vendor}/{p.tool.name}".lower() or query == p.tool.name.lower()
-            ]
+            target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
 
         if not target_policies:
             console.print("[bold red][!] No matching tools found to apply hardening.[/bold red]")

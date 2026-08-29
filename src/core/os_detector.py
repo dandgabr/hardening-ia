@@ -202,7 +202,7 @@ class OSDetector:
         path_info = policy.paths.get(os_type)
         tool_name = policy.tool.name.lower()
 
-        # Vector 1: Primary configuration directory & settings file
+        # Vector 1: Primary and secondary configuration directories & settings files
         if path_info and path_info.config_dir:
             config_path = cls.expand_path(path_info.config_dir)
             try:
@@ -212,9 +212,15 @@ class OSDetector:
             except Exception:
                 pass
 
+        all_settings_files = []
         if path_info and path_info.settings_file:
-            settings_path = cls.expand_path(path_info.settings_file)
+            all_settings_files.append(path_info.settings_file)
+        if path_info and hasattr(path_info, "secondary_settings_files"):
+            all_settings_files.extend(path_info.secondary_settings_files)
+
+        for s_file in all_settings_files:
             try:
+                settings_path = cls.expand_path(s_file)
                 if settings_path.exists():
                     logger.debug(f"[Vector 1] Detected {tool_name} via settings_file: {settings_path}")
                     return True
@@ -237,6 +243,7 @@ class OSDetector:
             "codebuddy": ["codebuddy", "codebuddy.exe"],
             "kimi": ["kimi", "kimi.exe"],
             "grok": ["grok", "xai", "grok.exe"],
+            "zai": ["zai", "zai-cli", "zai.exe", "zai-cli.exe", "z-ai", "zcode", "zcode.exe", "z-code", "z-code.exe"],
             "zai-cli": ["zai", "zai-cli", "zai.exe", "zai-cli.exe", "z-ai"],
             "zcode": ["zcode", "zcode.exe", "z-code", "z-code.exe"]
         }
@@ -273,6 +280,7 @@ class OSDetector:
             "opencode": ["opencode", "@opencode/cli"],
             "kilo-code": ["kilo-code", "@kilo/code"],
             "antigravity": ["@google/antigravity", "antigravity-cli"],
+            "zai": ["zai", "zai-cli", "@zai/cli", "z-ai-cli", "zcode", "@zai/zcode"],
             "zai-cli": ["zai-cli", "@zai/cli", "z-ai-cli", "zcode-cli"],
             "zcode": ["zcode", "@zai/zcode"]
         }
@@ -290,6 +298,7 @@ class OSDetector:
             "kimi": ["kimi-cli", "moonshot-kimi"],
             "grok": ["xai-grok", "grok-cli"],
             "qoder": ["qoder-agent", "qoder"],
+            "zai": ["zai", "zai-cli", "z-ai", "zai-agent", "zcode", "zcode-agent"],
             "zai-cli": ["zai-cli", "z-ai", "zai-agent"],
             "zcode": ["zcode-agent", "zcode"]
         }
@@ -308,6 +317,7 @@ class OSDetector:
             "claude-code": ["claude.exe", "claude"],
             "qoder": ["qoder.exe", "qoder"],
             "codebuddy": ["codebuddy.exe", "codebuddy"],
+            "zai": ["zai.exe", "zai", "zai-cli.exe", "zai-cli", "zcode.exe", "zcode", "z-code.exe", "z-code"],
             "zai-cli": ["zai.exe", "zai", "zai-cli.exe", "zai-cli"],
             "zcode": ["zcode.exe", "zcode", "z-code.exe", "z-code"]
         }
@@ -327,6 +337,7 @@ class OSDetector:
             "antigravity": ["google.antigravity", "antigravity"],
             "qoder": ["qoder", "qoder-ai"],
             "cursor": ["cursor"],
+            "zai": ["zai", "zai-cli", "z-ai", "zcode", "z-code", "zai.zcode"],
             "zai-cli": ["zai", "zai-cli", "z-ai"],
             "zcode": ["zcode", "z-code", "zai.zcode"]
         }

@@ -95,9 +95,13 @@ class HardeningVerifier:
         settings_path = Path(OSDetector.expand_path(path_info.settings_file))
         rules_path = Path(OSDetector.expand_path(path_info.rules_dir)) if path_info.rules_dir else None
 
-        report.settings_file_exists = settings_path.exists()
+        all_settings_files = [settings_path] + [Path(OSDetector.expand_path(s)) for s in getattr(path_info, "secondary_settings_files", []) if s]
+        existing_settings_files = [f for f in all_settings_files if f.exists()]
+
+        report.settings_file_exists = len(existing_settings_files) > 0
         if rules_path:
-            report.rules_dir_exists = rules_path.exists()
+            all_rules_dirs = [rules_path] + [Path(OSDetector.expand_path(r)) for r in getattr(path_info, "secondary_rules_dirs", []) if r]
+            report.rules_dir_exists = any(r.exists() for r in all_rules_dirs)
 
         # If tool is not installed and settings file doesn't exist
         if not report.settings_file_exists and not policy.is_installed:
@@ -105,12 +109,13 @@ class HardeningVerifier:
             return report
 
         current_settings: Dict[str, Any] = {}
-        if report.settings_file_exists:
+        for s_file in existing_settings_files:
             try:
-                content = settings_path.read_text(encoding="utf-8")
-                current_settings = json.loads(content)
+                content = s_file.read_text(encoding="utf-8")
+                loaded = json.loads(content)
+                self._deep_update(current_settings, loaded)
             except Exception as e:
-                logger.warning(f"Could not parse settings file {settings_path}: {e}")
+                logger.warning(f"Could not parse settings file {s_file}: {e}")
 
         # Auto-detect strict mode if not explicitly provided
         is_strict = strict_mode

@@ -66,7 +66,9 @@ class ConfigLoader:
                     paths[os_key] = OSPaths(
                         config_dir=os_val.get("config_dir", ""),
                         settings_file=os_val.get("settings_file", ""),
-                        rules_dir=os_val.get("rules_dir", "")
+                        rules_dir=os_val.get("rules_dir", ""),
+                        secondary_settings_files=os_val.get("secondary_settings_files", []),
+                        secondary_rules_dirs=os_val.get("secondary_rules_dirs", [])
                     )
 
             policy = HardeningPolicy(
@@ -82,7 +84,20 @@ class ConfigLoader:
             return None
 
     def get_policy(self, vendor: str, name: str) -> Optional[HardeningPolicy]:
-        """Retrieves a specific policy by vendor and tool name."""
+        """Retrieves a specific policy by vendor and tool name, supporting tool aliases."""
+        alias_map = {
+            "zai-cli": ("zai", "zai"),
+            "zcode": ("zai", "zai"),
+            "z-ai": ("zai", "zai"),
+            "claude": ("anthropic", "claude-code"),
+            "kilo": ("kilo", "kilo-code"),
+            "hermes": ("nousresearch", "hermes-agent")
+        }
+        if name.lower() in alias_map:
+            vendor, name = alias_map[name.lower()]
+        elif vendor.lower() in alias_map:
+            vendor, name = alias_map[vendor.lower()]
+
         target_path = self.configs_root / vendor.lower() / name.lower() / "hardening_policy.yaml"
         if target_path.exists():
             return self.load_policy(target_path)

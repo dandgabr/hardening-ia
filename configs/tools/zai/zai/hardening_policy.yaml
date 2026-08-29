@@ -1,22 +1,38 @@
 schema_version: '1.0'
 tool:
-  name: zai-cli
+  name: zai
   vendor: zai
-  category: cli
-  description: z.ai CLI - Autonomous AI command line coding agent and GLM model interface
+  category: agentic
+  description: z.ai Developer Platform - Unified suite for Autonomous CLI Agent (zai-cli),
+    Agentic Development Environment (zcode ADE/Desktop), and IDE tools
 paths:
   windows:
     config_dir: '%APPDATA%\zai'
     settings_file: '%APPDATA%\zai\config.json'
     rules_dir: '%APPDATA%\zai\rules'
+    secondary_settings_files:
+    - '%USERPROFILE%\.zcode\v2\config.json'
+    - '%USERPROFILE%\.zcode\config.json'
+    secondary_rules_dirs:
+    - '%USERPROFILE%\.zcode\rules'
   linux:
     config_dir: ~/.config/zai
     settings_file: ~/.config/zai/config.json
     rules_dir: ~/.config/zai/rules
+    secondary_settings_files:
+    - ~/.zcode/v2/config.json
+    - ~/.zcode/config.json
+    secondary_rules_dirs:
+    - ~/.zcode/rules
   macos:
     config_dir: ~/Library/Application Support/zai
     settings_file: ~/Library/Application Support/zai/config.json
     rules_dir: ~/Library/Application Support/zai/rules
+    secondary_settings_files:
+    - ~/.zcode/v2/config.json
+    - ~/.zcode/config.json
+    secondary_rules_dirs:
+    - ~/.zcode/rules
 policies:
   sandbox:
     enforce_sandbox: true
@@ -217,22 +233,39 @@ policies:
     native_overrides:
       agent.auto_execute_commands: false
       agent.auto_apply_edits: false
+      terminal.auto_execute: false
+      composer.auto_apply: false
       sandbox.strict_mode: true
       security.deny_critical_commands: true
+      security.dangerous_paths_action: block
       mcp.requireConsent: true
+      mcp.require_consent: true
+      mcp.allow_unsandboxed: false
   native_settings_override:
     telemetry: false
+    telemetry.enabled: false
     analytics.enabled: false
+    privacy.data_retention: false
     agent.auto_execute_commands: false
     agent.require_confirmation: true
     agent.auto_apply_edits: false
+    terminal.auto_execute: false
+    terminal.sandbox: true
+    composer.auto_apply: false
+    composer.require_approval: true
     sandbox.enabled: true
     sandbox.strict_mode: true
     dlp.mask_secrets: true
+    dlp.block_sensitive_paths: true
     mcp.requireConsent: true
+    mcp.require_consent: true
+    mcp.allow_unsandboxed: false
+    security.dangerous_paths_action: ask
     timeout.command: 30
     timeout.request: 30
+    timeout_seconds: 60
     rate_limit.max_rpm: 30
+    rate_limit_rpm: 30
 custom_scripts:
   windows: scripts/os/windows/apply-hardening.ps1
   linux: scripts/os/linux/apply-hardening.sh

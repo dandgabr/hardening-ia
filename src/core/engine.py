@@ -53,31 +53,34 @@ class HardeningEngine:
             # 1. Resolve configuration file paths for active OS
             os_paths = policy.paths.get(self.os_type)
             if os_paths:
-                if os_paths.settings_file:
-                    import copy
-                    settings_path = OSDetector.expand_path(os_paths.settings_file)
-                    native_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
+                import copy
+                native_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
 
-                    # Incorporate strict rules and explicit denied patterns if requested
-                    if strict_mode:
-                        strict_rules = policy.policies.get("strict_rules", {})
-                        if strict_rules and "native_overrides" in strict_rules:
-                            self._deep_update(native_overrides, strict_rules["native_overrides"])
-                        native_overrides["security.strict_mode"] = True
-                        native_overrides["security.dangerousPaths.action"] = "block"
-                        native_overrides["security.approvals.bypass_allowed"] = False
-                        native_overrides["security.approvals.auto_apply_edits"] = False
-                        native_overrides["security.approvals.require_write_approval"] = True
+                # Incorporate strict rules and explicit denied patterns if requested
+                if strict_mode:
+                    strict_rules = policy.policies.get("strict_rules", {})
+                    if strict_rules and "native_overrides" in strict_rules:
+                        self._deep_update(native_overrides, strict_rules["native_overrides"])
+                    native_overrides["security.strict_mode"] = True
+                    native_overrides["security.dangerousPaths.action"] = "block"
+                    native_overrides["security.approvals.bypass_allowed"] = False
+                    native_overrides["security.approvals.auto_apply_edits"] = False
+                    native_overrides["security.approvals.require_write_approval"] = True
 
+                # Target all primary and secondary settings files
+                all_settings_files = [f for f in [os_paths.settings_file] + getattr(os_paths, "secondary_settings_files", []) if f]
+                for s_file in all_settings_files:
+                    settings_path = OSDetector.expand_path(s_file)
                     if native_overrides:
                         tool_diffs = self._apply_json_settings(settings_path, native_overrides, dry_run, vendor, tool_name)
                         diffs.extend(tool_diffs)
                         modified_paths.append(str(settings_path))
                         logger.info(f"Applied {len(tool_diffs)} configuration overrides to {settings_path}")
 
-                # 2. Deploy OS-specific Security Policy into agent rules directory if configured
-                if os_paths.rules_dir:
-                    rules_path = OSDetector.expand_path(os_paths.rules_dir)
+                # 2. Deploy OS-specific Security Policy into agent rules directories
+                all_rules_dirs = [r for r in [os_paths.rules_dir] + getattr(os_paths, "secondary_rules_dirs", []) if r]
+                for r_dir in all_rules_dirs:
+                    rules_path = OSDetector.expand_path(r_dir)
                     target_rule_file = rules_path / f"{self.os_type}_security_policy.md"
                     rule_content = SecurityPolicyManager.generate_security_policy_rule(self.os_type, strict_mode=strict_mode)
                     if not dry_run:
@@ -162,29 +165,31 @@ class HardeningEngine:
         try:
             os_paths = policy.paths.get(self.os_type)
             if os_paths:
-                # 1. Surgically revert overrides in settings file
-                if os_paths.settings_file:
-                    import copy
-                    settings_path = OSDetector.expand_path(os_paths.settings_file)
-                    native_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
-                    strict_overrides = policy.policies.get("strict_rules", {}).get("native_overrides", {})
-                    if strict_overrides:
-                        self._deep_update(native_overrides, strict_overrides)
-                    native_overrides["security.strict_mode"] = True
-                    native_overrides["security.dangerousPaths.action"] = "block"
-                    native_overrides["security.approvals.bypass_allowed"] = False
-                    native_overrides["security.approvals.auto_apply_edits"] = False
-                    native_overrides["security.approvals.require_write_approval"] = True
+                import copy
+                native_overrides = copy.deepcopy(dict(policy.policies.get("native_settings_override", {})))
+                strict_overrides = policy.policies.get("strict_rules", {}).get("native_overrides", {})
+                if strict_overrides:
+                    self._deep_update(native_overrides, strict_overrides)
+                native_overrides["security.strict_mode"] = True
+                native_overrides["security.dangerousPaths.action"] = "block"
+                native_overrides["security.approvals.bypass_allowed"] = False
+                native_overrides["security.approvals.auto_apply_edits"] = False
+                native_overrides["security.approvals.require_write_approval"] = True
 
+                # 1. Surgically revert overrides in all settings files
+                all_settings_files = [f for f in [os_paths.settings_file] + getattr(os_paths, "secondary_settings_files", []) if f]
+                for s_file in all_settings_files:
+                    settings_path = OSDetector.expand_path(s_file)
                     if settings_path.exists() and native_overrides:
                         tool_diffs = self._remove_json_settings(settings_path, native_overrides, dry_run, vendor, tool_name)
                         diffs.extend(tool_diffs)
                         modified_paths.append(str(settings_path))
                         logger.info(f"Surgically restored {len(tool_diffs)} settings in {settings_path}")
 
-                # 2. Clean up deployed rule files
-                if os_paths.rules_dir:
-                    rules_path = OSDetector.expand_path(os_paths.rules_dir)
+                # 2. Clean up deployed rule files in all rules dirs
+                all_rules_dirs = [r for r in [os_paths.rules_dir] + getattr(os_paths, "secondary_rules_dirs", []) if r]
+                for r_dir in all_rules_dirs:
+                    rules_path = OSDetector.expand_path(r_dir)
                     for rule_filename in [f"{self.os_type}_security_policy.md", "linux_command_risk_policy.md", "windows_security_policy.md", "macos_security_policy.md"]:
                         target_rule_file = rules_path / rule_filename
                         if target_rule_file.exists():

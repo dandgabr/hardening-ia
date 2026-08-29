@@ -1,4 +1,4 @@
-"""Generates industry-standard, fully hardened declarative YAML policies for all 16 AI tools."""
+"""Generates industry-standard, fully hardened declarative YAML policies for all 15 AI tools."""
 
 import yaml
 from pathlib import Path
@@ -1183,24 +1183,45 @@ POLICIES_DATABASE = [
     },
     {
         "vendor": "zai",
-        "name": "zai-cli",
-        "category": "cli",
-        "description": "z.ai CLI - Autonomous AI command line coding agent and GLM model interface",
+        "name": "zai",
+        "category": "agentic",
+        "description": "z.ai Developer Platform - Unified suite for Autonomous CLI Agent (zai-cli), Agentic Development Environment (zcode ADE/Desktop), and IDE tools",
         "paths": {
             "windows": {
                 "config_dir": "%APPDATA%\\zai",
                 "settings_file": "%APPDATA%\\zai\\config.json",
-                "rules_dir": "%APPDATA%\\zai\\rules"
+                "rules_dir": "%APPDATA%\\zai\\rules",
+                "secondary_settings_files": [
+                    "%USERPROFILE%\\.zcode\\v2\\config.json",
+                    "%USERPROFILE%\\.zcode\\config.json"
+                ],
+                "secondary_rules_dirs": [
+                    "%USERPROFILE%\\.zcode\\rules"
+                ]
             },
             "linux": {
                 "config_dir": "~/.config/zai",
                 "settings_file": "~/.config/zai/config.json",
-                "rules_dir": "~/.config/zai/rules"
+                "rules_dir": "~/.config/zai/rules",
+                "secondary_settings_files": [
+                    "~/.zcode/v2/config.json",
+                    "~/.zcode/config.json"
+                ],
+                "secondary_rules_dirs": [
+                    "~/.zcode/rules"
+                ]
             },
             "macos": {
                 "config_dir": "~/Library/Application Support/zai",
                 "settings_file": "~/Library/Application Support/zai/config.json",
-                "rules_dir": "~/Library/Application Support/zai/rules"
+                "rules_dir": "~/Library/Application Support/zai/rules",
+                "secondary_settings_files": [
+                    "~/.zcode/v2/config.json",
+                    "~/.zcode/config.json"
+                ],
+                "secondary_rules_dirs": [
+                    "~/.zcode/rules"
+                ]
             }
         },
         "policies": {
@@ -1232,95 +1253,40 @@ POLICIES_DATABASE = [
                 "native_overrides": {
                     "agent.auto_execute_commands": False,
                     "agent.auto_apply_edits": False,
+                    "terminal.auto_execute": False,
+                    "composer.auto_apply": False,
                     "sandbox.strict_mode": True,
                     "security.deny_critical_commands": True,
-                    "mcp.requireConsent": True
+                    "security.dangerous_paths_action": "block",
+                    "mcp.requireConsent": True,
+                    "mcp.require_consent": True,
+                    "mcp.allow_unsandboxed": False
                 }
             },
             "native_settings_override": {
                 "telemetry": False,
+                "telemetry.enabled": False,
                 "analytics.enabled": False,
+                "privacy.data_retention": False,
                 "agent.auto_execute_commands": False,
                 "agent.require_confirmation": True,
                 "agent.auto_apply_edits": False,
-                "sandbox.enabled": True,
-                "sandbox.strict_mode": True,
-                "dlp.mask_secrets": True,
-                "mcp.requireConsent": True,
-                "timeout.command": 30,
-                "timeout.request": 30,
-                "rate_limit.max_rpm": 30
-            }
-        }
-    },
-    {
-        "vendor": "zai",
-        "name": "zcode",
-        "category": "agentic",
-        "description": "z.ai ZCode - Agentic Development Environment (ADE) with integrated workspace, terminal and MCP tools",
-        "paths": {
-            "windows": {
-                "config_dir": "%USERPROFILE%\\.zcode",
-                "settings_file": "%USERPROFILE%\\.zcode\\v2\\config.json",
-                "rules_dir": "%USERPROFILE%\\.zcode\\rules"
-            },
-            "linux": {
-                "config_dir": "~/.zcode",
-                "settings_file": "~/.zcode/v2/config.json",
-                "rules_dir": "~/.zcode/rules"
-            },
-            "macos": {
-                "config_dir": "~/.zcode",
-                "settings_file": "~/.zcode/v2/config.json",
-                "rules_dir": "~/.zcode/rules"
-            }
-        },
-        "policies": {
-            "sandbox": {
-                "enforce_sandbox": True,
-                "default_bypass": False
-            },
-            "approvals": {
-                "require_approval_for_terminal": True,
-                "require_approval_for_network": True,
-                "require_approval_for_write": True
-            },
-            "rate_limit": DEFAULT_RATE_LIMIT,
-            "timeout": DEFAULT_TIMEOUT,
-            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
-            "dlp": {
-                "block_sensitive_paths": COMMON_DLP_PATHS,
-                "disable_code_training_sharing": True,
-                "mask_secrets": True
-            },
-            "telemetry": {
-                "enable_telemetry": False,
-                "enable_crash_reporting": False,
-                "audit_logging": True
-            },
-            "strict_rules": {
-                "action": "block_without_prompting",
-                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
-                "native_overrides": {
-                    "terminal.auto_execute": False,
-                    "composer.auto_apply": False,
-                    "security.dangerous_paths_action": "block",
-                    "mcp.allow_unsandboxed": False,
-                    "mcp.require_consent": True
-                }
-            },
-            "native_settings_override": {
-                "telemetry.enabled": False,
-                "privacy.data_retention": False,
                 "terminal.auto_execute": False,
                 "terminal.sandbox": True,
                 "composer.auto_apply": False,
                 "composer.require_approval": True,
+                "sandbox.enabled": True,
+                "sandbox.strict_mode": True,
+                "dlp.mask_secrets": True,
+                "dlp.block_sensitive_paths": True,
+                "mcp.requireConsent": True,
                 "mcp.require_consent": True,
                 "mcp.allow_unsandboxed": False,
-                "dlp.block_sensitive_paths": True,
                 "security.dangerous_paths_action": "ask",
+                "timeout.command": 30,
+                "timeout.request": 30,
                 "timeout_seconds": 60,
+                "rate_limit.max_rpm": 30,
                 "rate_limit_rpm": 30
             }
         }

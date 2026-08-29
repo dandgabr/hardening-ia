@@ -71,32 +71,37 @@ class TestHardeningVerifier(unittest.TestCase):
         report_strict = self.verifier.verify_policy(claude_policy, strict_mode=True)
         self.assertGreaterEqual(report_strict.compliance_score, 90.0)
 
-    def test_zai_tools_verification_standard_and_strict(self):
-        """Verifier should audit standard and strict zAI CLI and ZCode configurations."""
+    def test_unified_zai_verification_standard_and_strict(self):
+        """Verifier should audit standard and strict unified zAI configurations across multi-location settings."""
         from src.core.config_loader import ConfigLoader
         from src.core.engine import HardeningEngine
         loader = ConfigLoader()
         engine = HardeningEngine()
 
-        # 1. zAI CLI
-        zai_cli_policy = loader.get_policy("zai", "zai-cli")
-        self.assertIsNotNone(zai_cli_policy)
+        zai_policy = loader.get_policy("zai", "zai")
+        self.assertIsNotNone(zai_policy)
+
         cli_settings = self.test_dir / "zai_cli_settings.json"
-        zai_cli_policy.paths[self.verifier.os_type] = OSPaths(settings_file=str(cli_settings))
-
-        engine.apply_policy(zai_cli_policy, dry_run=False, strict_mode=False)
-        report_cli = self.verifier.verify_policy(zai_cli_policy, strict_mode=False)
-        self.assertGreaterEqual(report_cli.compliance_score, 90.0)
-
-        # 2. ZCode Desktop
-        zcode_policy = loader.get_policy("zai", "zcode")
-        self.assertIsNotNone(zcode_policy)
         zcode_settings = self.test_dir / "zcode_settings.json"
-        zcode_policy.paths[self.verifier.os_type] = OSPaths(settings_file=str(zcode_settings))
+        zai_policy.paths[self.verifier.os_type] = OSPaths(
+            settings_file=str(cli_settings),
+            secondary_settings_files=[str(zcode_settings)]
+        )
 
-        engine.apply_policy(zcode_policy, dry_run=False, strict_mode=True)
-        report_zcode = self.verifier.verify_policy(zcode_policy, strict_mode=True)
-        self.assertGreaterEqual(report_zcode.compliance_score, 90.0)
+        # 1. Apply standard mode and verify across both locations
+        res_std = engine.apply_policy(zai_policy, dry_run=False, strict_mode=False)
+        self.assertTrue(res_std.success)
+        self.assertTrue(cli_settings.exists())
+        self.assertTrue(zcode_settings.exists())
+
+        report_std = self.verifier.verify_policy(zai_policy, strict_mode=False)
+        self.assertGreaterEqual(report_std.compliance_score, 90.0)
+
+        # 2. Apply strict mode and verify
+        res_strict = engine.apply_policy(zai_policy, dry_run=False, strict_mode=True)
+        self.assertTrue(res_strict.success)
+        report_strict = self.verifier.verify_policy(zai_policy, strict_mode=True)
+        self.assertGreaterEqual(report_strict.compliance_score, 90.0)
 
 
 if __name__ == "__main__":

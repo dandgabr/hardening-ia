@@ -1,4 +1,4 @@
-"""Unit test suite for validating all 16 YAML hardening policies."""
+"""Unit test suite for validating all 15 YAML hardening policies."""
 
 import unittest
 from src.core.config_loader import ConfigLoader
@@ -10,8 +10,8 @@ class TestHardeningPolicies(unittest.TestCase):
         self.policies = self.loader.discover_policies()
 
     def test_total_policies_count(self):
-        """Ensure all 16 AI tools have discovered policy configurations."""
-        self.assertEqual(len(self.policies), 16, "Expected exactly 16 AI tool policies.")
+        """Ensure all 15 AI tools have discovered policy configurations."""
+        self.assertEqual(len(self.policies), 15, "Expected exactly 15 AI tool policies.")
 
     def test_required_fields_presence(self):
         """Ensure every policy defines schema, tool metadata, paths, and policies."""
@@ -122,32 +122,41 @@ class TestHardeningPolicies(unittest.TestCase):
         self.assertFalse(native.get("mcp.autoApprove"))
         self.assertFalse(native.get("diff.autoApply"))
 
-    def test_zai_tools_security_controls(self):
-        """Ensure zAI CLI and ZCode policies contain full hardening and MCP/sandbox controls."""
-        zai_cli = next((p for p in self.policies if p.tool.name == "zai-cli"), None)
-        zcode = next((p for p in self.policies if p.tool.name == "zcode"), None)
-        
-        self.assertIsNotNone(zai_cli, "zai-cli policy must be present.")
-        self.assertIsNotNone(zcode, "zcode policy must be present.")
+    def test_unified_zai_security_controls(self):
+        """Ensure unified zAI Developer Platform policy contains CLI, ADE Desktop, MCP, and DLP controls across primary and secondary paths."""
+        zai_policy = next((p for p in self.policies if p.tool.name == "zai"), None)
+        self.assertIsNotNone(zai_policy, "Unified zAI policy must be present in discovered policies.")
+        self.assertEqual(zai_policy.tool.vendor, "zai")
 
-        # zai-cli verification
-        cli_native = zai_cli.policies.get("native_settings_override", {})
-        self.assertFalse(cli_native.get("telemetry"))
-        self.assertFalse(cli_native.get("agent.auto_execute_commands"))
-        self.assertTrue(cli_native.get("agent.require_confirmation"))
-        self.assertTrue(cli_native.get("sandbox.enabled"))
-        self.assertTrue(cli_native.get("mcp.requireConsent"))
-        self.assertTrue(cli_native.get("dlp.mask_secrets"))
+        # Verify multi-path mapping (CLI + ADE Desktop)
+        linux_paths = zai_policy.paths.get("linux")
+        self.assertIsNotNone(linux_paths)
+        self.assertIn("~/.config/zai/config.json", linux_paths.settings_file)
+        self.assertTrue(any("~/.zcode" in s for s in linux_paths.secondary_settings_files))
+        self.assertTrue(any("~/.zcode/rules" in r for r in linux_paths.secondary_rules_dirs))
 
-        # zcode verification
-        zcode_native = zcode.policies.get("native_settings_override", {})
-        self.assertFalse(zcode_native.get("telemetry.enabled"))
-        self.assertFalse(zcode_native.get("privacy.data_retention"))
-        self.assertFalse(zcode_native.get("terminal.auto_execute"))
-        self.assertTrue(zcode_native.get("terminal.sandbox"))
-        self.assertFalse(zcode_native.get("composer.auto_apply"))
-        self.assertTrue(zcode_native.get("mcp.require_consent"))
-        self.assertFalse(zcode_native.get("mcp.allow_unsandboxed"))
+        # Native overrides
+        native = zai_policy.policies.get("native_settings_override", {})
+        self.assertFalse(native.get("telemetry"))
+        self.assertFalse(native.get("telemetry.enabled"))
+        self.assertFalse(native.get("privacy.data_retention"))
+        self.assertFalse(native.get("agent.auto_execute_commands"))
+        self.assertTrue(native.get("agent.require_confirmation"))
+        self.assertFalse(native.get("agent.auto_apply_edits"))
+        self.assertFalse(native.get("terminal.auto_execute"))
+        self.assertTrue(native.get("terminal.sandbox"))
+        self.assertFalse(native.get("composer.auto_apply"))
+        self.assertTrue(native.get("composer.require_approval"))
+        self.assertTrue(native.get("sandbox.enabled"))
+        self.assertTrue(native.get("sandbox.strict_mode"))
+        self.assertTrue(native.get("mcp.requireConsent"))
+        self.assertFalse(native.get("mcp.allow_unsandboxed"))
+        self.assertTrue(native.get("dlp.mask_secrets"))
+        self.assertTrue(native.get("dlp.block_sensitive_paths"))
+
+        # Alias lookup test
+        self.assertIsNotNone(self.loader.get_policy("zai", "zai-cli"))
+        self.assertIsNotNone(self.loader.get_policy("zai", "zcode"))
 
 
 if __name__ == "__main__":

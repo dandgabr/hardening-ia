@@ -18,6 +18,8 @@ class OSPaths:
     config_dir: str = ""
     settings_file: str = ""
     rules_dir: str = ""
+    secondary_settings_files: List[str] = field(default_factory=list)
+    secondary_rules_dirs: List[str] = field(default_factory=list)
 
 
 @dataclass
