@@ -34,9 +34,9 @@ def format_display_val(val: Any) -> str:
         elif len(val) <= 2:
             s = ", ".join(str(x) for x in val)
         else:
-            s = f"[{len(val)} itens: {str(val[0])}, {str(val[1])}...]"
+            s = f"[{len(val)} items: {str(val[0])}, {str(val[1])}...]"
     elif isinstance(val, dict):
-        s = f"{{{len(val)} chaves}}"
+        s = f"{{{len(val)} keys}}"
     else:
         s = str(val)
     return escape(s)
@@ -414,35 +414,35 @@ class HardeningTUIApp(App):
         # Live verification audit of actual on-disk configuration
         report = self.verifier.verify_policy(p, strict_mode=self.strict_mode)
         if report.compliance_score == 100.0:
-            score_badge = f"[bold green]{report.compliance_score:.0f}% (CONFORME - 100%)[/bold green]"
+            score_badge = f"[bold green]{report.compliance_score:.0f}% (COMPLIANT - 100%)[/bold green]"
         elif report.compliance_score > 0.0:
-            score_badge = f"[bold yellow]{report.compliance_score:.1f}% (PARCIALMENTE CONFORME)[/bold yellow]"
+            score_badge = f"[bold yellow]{report.compliance_score:.1f}% (PARTIALLY COMPLIANT)[/bold yellow]"
         else:
-            score_badge = "[bold red]0% (NÃO CONFORME / NÃO APLICADO)[/bold red]"
+            score_badge = "[bold red]0% (NON-COMPLIANT / NOT APPLIED)[/bold red]"
 
         strict_badge = "[bold red]ENABLED (Zero-Trust)[/bold red]" if self.strict_mode else "[dim]STANDARD (Normal)[/dim]"
         dry_badge = "[bold yellow]ACTIVE (Simulation)[/bold yellow]" if self.dry_run else "[dim]DISABLED (Live)[/dim]"
 
         info_text = f"""[bold cyan]Tool:[/] [bold white]{p.tool.vendor}/{p.tool.name}[/bold white]  |  [bold cyan]Status:[/] {inst_badge}  |  [bold cyan]Category:[/] [yellow]{p.tool.category.upper()}[/yellow]
-[bold cyan]Live Status:[/] {score_badge} ({report.passed_checks}/{report.total_checks} propriedades conformes)
-[bold cyan]Settings Path:[/] [white]{settings_file}[/white]
-[bold cyan]Mode:[/] Strict: {strict_badge} | Dry-Run: {dry_badge}
+[bold cyan]Live Compliance:[/] {score_badge} ({report.passed_checks}/{report.total_checks} compliant properties)
+[bold cyan]Settings File:[/] [white]{settings_file}[/white]
+[bold cyan]Active Mode:[/] Strict: {strict_badge} | Dry-Run: {dry_badge}
 
-[bold yellow]Propriedades & Active Hardening Overrides (Status Real em Disco):[/]
+[bold yellow]Properties & Active Hardening Overrides (Live On-Disk Status):[/]
 """
         for c in report.checks:
             key_str = escape(str(c.key))
             exp_str = format_display_val(c.expected)
             if c.passed:
-                info_text += f"  [bold green]✔[/bold green] [bold green]{key_str}:[/bold green] [white]{exp_str}[/white] [dim green](Conforme)[/dim green]\n"
+                info_text += f"  [bold green]✔[/bold green] [bold green]{key_str}:[/bold green] [white]{exp_str}[/white] [dim green](Compliant)[/dim green]\n"
             else:
                 actual_val = str(c.actual)
                 if actual_val in ("[MISSING]", "[NOT INSTALLED / MISSING]"):
-                    actual_desc = "Não Aplicado / Ausente"
+                    actual_desc = "Not Applied / Missing"
                 else:
-                    actual_desc = f"Atual: {format_display_val(c.actual)}"
+                    actual_desc = f"Current: {format_display_val(c.actual)}"
                 actual_str = actual_desc
-                info_text += f"  [bold red]✘[/bold red] [bold red]{key_str}:[/bold red] [white]{exp_str}[/white] [bold red](Não Conforme: {actual_str})[/bold red]\n"
+                info_text += f"  [bold red]✘[/bold red] [bold red]{key_str}:[/bold red] [white]{exp_str}[/white] [bold red](Non-Compliant: {actual_str})[/bold red]\n"
 
         self.query_one("#policy-info", Static).update(info_text)
 

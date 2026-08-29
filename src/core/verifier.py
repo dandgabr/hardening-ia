@@ -175,7 +175,6 @@ class HardeningVerifier:
             ))
 
         # 3. Verify Environment Telemetry Protection
-        telemetry_policy_disabled = not policy.policies.get("telemetry", {}).get("enable_telemetry", True)
         native_telemetry_disabled = False
         for tk in ("telemetry.enabled", "disableTelemetry", "telemetry", "analytics.enabled", "privacy.telemetry", "telemetryEnabled"):
             if tk in expected_overrides:
@@ -185,7 +184,7 @@ class HardeningVerifier:
                     break
 
         env_dnt = os.environ.get("DO_NOT_TRACK") == "1" or os.environ.get("CLAUDE_TELEMETRY_DISABLED") == "1"
-        telemetry_protected = env_dnt or telemetry_policy_disabled or native_telemetry_disabled
+        telemetry_protected = env_dnt or native_telemetry_disabled
         report.checks.append(CheckResult(
             key="env_do_not_track",
             expected=True,
