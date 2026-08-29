@@ -349,7 +349,21 @@ class HardeningEngine:
                 except Exception as e:
                     logger.debug(f"Could not read restore manifest: {e}")
 
-        for key in overrides.keys():
+        # Flatten overrides to handle both top-level and nested dictionary keys
+        def _get_all_keys(d: dict, prefix: str = "") -> List[str]:
+            keys = []
+            for k, v in d.items():
+                full_k = f"{prefix}.{k}" if prefix else k
+                keys.append(full_k)
+                if isinstance(v, dict):
+                    keys.extend(_get_all_keys(v, full_k))
+            return keys
+
+        all_keys_to_remove = list(overrides.keys()) + _get_all_keys(overrides)
+        seen = set()
+        unique_keys = [k for k in all_keys_to_remove if not (k in seen or seen.add(k))]
+
+        for key in unique_keys:
             orig_info = manifest_data.get(key)
             if orig_info and orig_info.get("existed"):
                 # Restore exact original value
@@ -363,7 +377,7 @@ class HardeningEngine:
                 if key in data:
                     old_val = data.pop(key)
                     diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
-                else:
+                elif "." in key:
                     parts = key.split(".")
                     curr = data
                     found = True
@@ -377,7 +391,21 @@ class HardeningEngine:
                         old_val = curr.pop(parts[-1])
                         diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
 
-        if not dry_run and diffs:
+        # Clean empty parent dicts if created
+        def _clean_empty_dicts(d: dict):
+            keys_to_del = []
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    _clean_empty_dicts(v)
+                    if not v:
+                        keys_to_del.append(k)
+            for k in keys_to_del:
+                d.pop(k)
+
+        if isinstance(data, dict):
+            _clean_empty_dicts(data)
+
+        if not dry_run:
             if not data and not manifest_existed_before:
                 try:
                     path.unlink(missing_ok=True)

@@ -402,11 +402,18 @@ class HardeningTUIApp(App):
 [bold yellow]Propriedades & Active Hardening Overrides (Status Real em Disco):[/]
 """
         for c in report.checks:
+            key_str = escape(str(c.key))
+            exp_str = escape(str(c.expected))
             if c.passed:
-                info_text += f"  [bold green]✔[/bold green] [bold green]{c.key}:[/bold green] [white]{c.expected}[/white] [dim green](Conforme)[/dim green]\n"
+                info_text += f"  [bold green]✔[/bold green] [bold green]{key_str}:[/bold green] [white]{exp_str}[/white] [dim green](Conforme)[/dim green]\n"
             else:
-                actual_desc = "Não Aplicado / Ausente" if c.actual in ("[MISSING]", "[NOT INSTALLED / MISSING]") else f"Atual: {c.actual}"
-                info_text += f"  [bold red]✘[/bold red] [bold red]{c.key}:[/bold red] [white]{c.expected}[/white] [bold red](Não Conforme: {actual_desc})[/bold red]\n"
+                actual_val = str(c.actual)
+                if actual_val in ("[MISSING]", "[NOT INSTALLED / MISSING]"):
+                    actual_desc = "Não Aplicado / Ausente"
+                else:
+                    actual_desc = f"Atual: {actual_val}"
+                actual_str = escape(actual_desc)
+                info_text += f"  [bold red]✘[/bold red] [bold red]{key_str}:[/bold red] [white]{exp_str}[/white] [bold red](Não Conforme: {actual_str})[/bold red]\n"
 
         self.query_one("#policy-info", Static).update(info_text)
 
