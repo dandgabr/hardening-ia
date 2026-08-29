@@ -135,7 +135,8 @@ class ComplianceReporter:
         for r in self.reports:
             for c in r.checks:
                 if not c.passed:
-                    rule_id = f"HIA-{c.key.replace(".", "_").upper()}"
+                    sanitized_key = c.key.replace(".", "_").upper()
+                    rule_id = f"HIA-{sanitized_key}"
                     if rule_id not in rule_map:
                         mapping = self._get_framework_mapping_for_key(c.key)
                         rule_map[rule_id] = {
