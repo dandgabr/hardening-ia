@@ -61,7 +61,6 @@ class HelpModal(ModalScreen):
   • [bold white]F[/]: Fix and auto-remediate compliance discrepancies across installed tools.
   • [bold white]D[/]: View Data Loss Prevention (DLP) configuration.
   • [bold white]R[/]: Launch Command Risk Classifier Playground.
-  • [bold white]I[/]: Inspect configuration diffs.
   • [bold white]S[/]: Toggle Strict Mode.
 
 [bold yellow]Verification & Compliance Remediation:[/]
@@ -112,16 +111,14 @@ class DlpModal(ModalScreen):
         patterns_formatted = []
         for p in patterns:
             patterns_formatted.append(f"  [cyan]•[/] [bold yellow]{escape(str(p))}[/bold yellow]")
-        patterns_str = "
-".join(patterns_formatted) if patterns_formatted else "  [dim]No specific patterns defined[/dim]"
+        patterns_str = "\n".join(patterns_formatted) if patterns_formatted else "  [dim]No specific patterns defined[/dim]"
 
         danger_formatted = []
         for dp in dangerous_paths[:10]:
             danger_formatted.append(f"  [red]•[/] [bold white]{escape(str(dp))}[/bold white]")
         if len(dangerous_paths) > 10:
             danger_formatted.append(f"  [dim]... and {len(dangerous_paths) - 10} more OS paths[/dim]")
-        danger_str = "
-".join(danger_formatted)
+        danger_str = "\n".join(danger_formatted)
 
         dlp_text = f"""
 [bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]
@@ -167,10 +164,8 @@ class CommandRiskPlaygroundModal(ModalScreen):
     def compose(self) -> ComposeResult:
         with VerticalScroll(id="risk-container"):
             yield Static(
-                "[bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]
-"
-                "[bold cyan]║           ⚡ Interactive Command Risk Classifier & STRIDE Matrix           ║[/]
-"
+                "[bold cyan]╔═══════════════════════════════════════════════════════════════════════════╗[/]\n"
+                "[bold cyan]║           ⚡ Interactive Command Risk Classifier & STRIDE Matrix           ║[/]\n"
                 "[bold cyan]╚═══════════════════════════════════════════════════════════════════════════╝[/]",
                 id="risk-header"
             )
@@ -396,11 +391,9 @@ class HardeningTUIApp(App):
 """
         overrides = p.policies.get("native_settings_override", {})
         for k, v in list(overrides.items())[:8]:
-            info_text += f"  • [cyan]{k}:[/] [white]{v}[/white]
-"
+            info_text += f"  • [cyan]{k}:[/] [white]{v}[/white]\n"
         if len(overrides) > 8:
-            info_text += f"  [dim]... and {len(overrides) - 8} more controls[/dim]
-"
+            info_text += f"  [dim]... and {len(overrides) - 8} more controls[/dim]\n"
 
         self.query_one("#policy-info", Static).update(info_text)
 
@@ -433,15 +426,13 @@ class HardeningTUIApp(App):
             return
         report = self.verifier.verify_policy(self.selected_policy, strict_mode=self.strict_mode)
         score_color = "green" if report.compliance_score == 100.0 else ("yellow" if report.compliance_score >= 80.0 else "red")
-        log_view.write(f"
-[*] Compliance Audit for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]:")
+        log_view.write(f"\n[*] Compliance Audit for [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]:")
         log_view.write(f"  Score: [{score_color}]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks})[/{score_color}] - {report.message}")
 
     def _run_fix_all_installed(self) -> None:
         log_view = self.query_one("#log-view", RichLog)
         installed = [p for p in self.policies if p.is_installed]
-        log_view.write(f"
-[*] Auto-remediating compliance for {len(installed)} installed tool(s)...")
+        log_view.write(f"\n[*] Auto-remediating compliance for {len(installed)} installed tool(s)...")
         for p in installed:
             res = self.verifier.remediate_policy(p, strict_mode=self.strict_mode)
             if res.success:
@@ -464,8 +455,7 @@ class HardeningTUIApp(App):
             self._run_verification_on_selected()
         elif btn_id == "btn-apply-selected" and self.selected_policy:
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
-            log_view.write(f"
-[*] {mode_badge}Applying hardening to [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+            log_view.write(f"\n[*] {mode_badge}Applying hardening to [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.engine.apply_policy(self.selected_policy, dry_run=dry_run, strict_mode=self.strict_mode)
             if res.success:
                 log_view.write(f"  [bold green][OK] Applied successfully.[/bold green]")
@@ -476,15 +466,23 @@ class HardeningTUIApp(App):
         elif btn_id == "btn-apply-installed":
             installed = [p for p in self.policies if p.is_installed]
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
-            log_view.write(f"
-[*] {mode_badge}Applying hardening to {len(installed)} installed tool(s)...")
+            log_view.write(f"\n[*] {mode_badge}Applying hardening to {len(installed)} installed tool(s)...")
             for p in installed:
                 res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=self.strict_mode)
                 status = "[bold green]OK[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
         elif btn_id == "btn-remove-selected" and self.selected_policy:
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
-            log_view.write(f"
-[*] {mode_badge}Reverting hardening from [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
+            log_view.write(f"\n[*] {mode_badge}Reverting hardening from [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.engine.remove_policy(self.selected_policy, dry_run=dry_run)
             log_view.write(f"  [bold green][OK] Removed.[/bold green]" if res.success else f"  [bold red][ERROR] {res.message}[/bold red]")
+
+
+def run_tui():
+    """Entry point for launching the Textual TUI Application."""
+    app = HardeningTUIApp()
+    app.run()
+
+
+if __name__ == "__main__":
+    run_tui()
