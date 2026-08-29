@@ -35,6 +35,7 @@ HELP_EPILOG = """
   [green]python main.py --apply --dry-run[/]                Simulate policy enforcement with explicit warning banner
   [green]python main.py --tool cursor --apply[/]            Harden a specific tool (e.g. cursor, windsurf, antigravity)
   [green]python main.py --remove --installed-only[/]        Revert/remove hardening from detected tools
+  [green]python main.py --remove-all[/]                     Revert/remove hardening from all 21 supported tools
   [green]python main.py --verify[/]                         Audit and verify that hardening settings are functional on host
   [green]python main.py --verify --fix[/]                   Audit and auto-remediate all tools to 100%% compliance
   [green]python main.py --report --format html[/]           Export interactive HTML compliance dashboard
@@ -92,6 +93,7 @@ def run_cli(args: List[str]):
     parser.add_argument("--strict", "--restrictive", action="store_true", help="Apply strict restrictive rules: explicit denied patterns for critical items & immediate blocking of dangerous paths without asking")
     parser.add_argument("--admin", "--system-wide", action="store_true", help="[ADMIN ONLY] Verify administrator/root elevation and enforce read-only system-wide hardening across all user accounts")
     parser.add_argument("--remove", "--revert", action="store_true", help="Revert/remove hardening policies and clean configuration overrides")
+    parser.add_argument("--remove-all", "--rollback-all", action="store_true", help="Revert/remove hardening policies across ALL 21 supported tools")
     parser.add_argument("--verify", action="store_true", help="Audit host configuration files to verify that hardening is active and functional")
     parser.add_argument("--fix", "--remediate", action="store_true", help="Automatically remediate and bring any non-compliant tools to 100%% compliance")
     parser.add_argument("--no-verify", action="store_true", help="Skip automatic post-application verification audit when applying policies")
@@ -452,12 +454,12 @@ def run_cli(args: List[str]):
         return
 
     # Remove / Rollback Hardening Policies
-    if parsed.remove:
+    if parsed.remove or parsed.remove_all:
         target_policies = policies
-        if parsed.installed_only:
+        if parsed.installed_only and not parsed.remove_all:
             target_policies = [p for p in target_policies if p.is_installed]
 
-        if parsed.tool:
+        if parsed.tool and not parsed.remove_all:
             target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
 
         if not target_policies:

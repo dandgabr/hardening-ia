@@ -76,7 +76,8 @@ sudo python main.py --apply --admin --strict
 | `--tool <NAME>` | — | String | Filters execution to a specific tool (e.g. `cursor`, `google/antigravity`). |
 | `--apply` | — | Flag | Applies declarative security hardening policies to target tools. |
 | `--strict` | `--restrictive` | Flag | Enables Strict Mode (explicit critical denials, dangerous paths blocked, auto-write disabled). |
-| `--remove` | `--revert` | Flag | Surgically removes hardening overrides and restores configuration backups. |
+| `--remove` | `--revert` | Flag | Surgically removes hardening overrides from matching or installed tools. |
+| `--remove-all` | `--rollback-all` | Flag | Surgically removes hardening overrides and cleans configurations across ALL 21 supported tools. |
 | `--verify` | — | Flag | Audits host configuration files and generates a compliance verification report. |
 | `--fix` | `--remediate` | Flag | Automatically remediates non-compliant baseline settings to 100% compliance. |
 | `--admin` | `--system-wide` | Flag | **[CLI Only]** Verifies Admin/Root elevation and enforces Read-Only file locks across all users. |
@@ -86,7 +87,7 @@ sudo python main.py --apply --admin --strict
 | `--remove-extra <T>` | — | String | Removes/uninstalls isolation components and local bridge wrappers (`ai-jail`, `opengrep`, `all`). |
 | `--status-extra` | — | Flag | Displays host installation and diagnostic test suite status for extra security tools. |
 | `--dry-run` | — | Flag | Simulates operations in memory without modifying any files on disk. |
-| `--test` | — | Flag | Runs the complete automated unit and integration test suite (33 tests). |
+| `--test` | — | Flag | Runs the complete automated unit and integration test suite (64 tests). |
 | `--verbose`, `-v` | — | Flag | Enables verbose debug logging output. |
 | `-h`, `--help` | — | Flag | Displays formatted help message with parameter explanations and examples. |
 
@@ -336,23 +337,31 @@ sudo python main.py --apply --admin --strict
 
 ---
 
-## 5. Terminal User Interface (TUI) Keybindings
+## 5. Terminal User Interface (TUI) Keybindings & Action Controls
 
-When launching `python main.py` (or `main.sh` / `main.ps1` without arguments), the interactive interface supports the following keyboard shortcuts:
+When launching `python main.py` (or `./main.sh` / `.\main.ps1` without arguments), the interactive interface supports the following keyboard shortcuts and action buttons:
 
+### Keyboard Shortcuts:
 | Key | Action |
 | :---: | :--- |
-| `h` / `F1` / `?` | **Help:** Opens interactive help and controls guide. |
+| `Up` / `Down` | **Navigate:** Scroll through the catalog of 21 supported AI tools. |
+| `h` / `?` | **Help:** Opens the interactive help and usage guide modal. |
+| `v` | **Verify Config:** Audits the selected tool against on-disk configuration files. |
+| `d` | **DLP Inspector:** Displays Data Loss Prevention patterns and OS dangerous paths. |
+| `s` | **Toggle Strict Mode:** Enables/disables zero-trust restrictive security guardrails. |
+| `y` | **Toggle Dry Run:** Enables/disables simulation mode (no disk modifications). |
+| `f` | **Fix Compliance:** Auto-remediates all installed tools to 100% compliance. |
+| `r` | **Command Risk Tester:** Interactive STRIDE command risk classifier playground. |
 | `q` | **Quit:** Safely closes the application. |
-| `a` | **Apply Hardening:** Applies the policy to the currently selected tool. |
-| `s` | **Toggle Strict Mode:** Toggles the *Strict Mode* checkbox. |
-| `r` | **Revert Policy:** Removes hardening and restores original configuration for selected tool. |
-| `v` | **Verify Config:** Audits the selected tool and prints compliance findings. |
-| `f` | **Fix Compliance:** Auto-remediates discrepancies, raising score to 100%. |
-| `t` | **Run Tests:** Executes the automated test suite. |
-| `d` | **Toggle Dry-Run:** Toggles simulation mode (no disk writes). |
-| `c` | **Clear Logs:** Clears the live streaming log panel. |
-| `1` - `4` | **Switch Views:** Navigates between *Tools*, *Audit Trail*, *Command Risk*, and *SAST Scanner*. |
+
+### Action Buttons:
+- **`Apply`**: Applies security hardening to the currently selected tool.
+- **`Apply Installed`**: Automatically detects all installed AI tools on the host and hardens them.
+- **`Remove Selected`**: Surgically removes hardening overrides from the selected tool, restoring defaults.
+- **`Remove Installed`**: Surgically removes hardening overrides from all installed tools on the host.
+
+> [!TIP]
+> To revert hardening across all 21 supported tools via command line, use `python main.py --remove-all`.
 
 ---
 

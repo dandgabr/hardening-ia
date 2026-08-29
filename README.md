@@ -140,6 +140,9 @@ python main.py --apply --installed-only --strict
 # Simulate changes without modifying disk files (shows prominent Yellow Dry Run Banner)
 python main.py --apply --installed-only --dry-run
 
+# Revert / remove hardening policies across all 21 supported tools
+python main.py --remove-all
+
 # Audit and verify compliance on the host
 python main.py --verify --installed-only
 
@@ -167,13 +170,20 @@ python main.py -gui
 
 **TUI Features & Hotkeys:**
 - `Up` / `Down`: Navigate the 21-tool catalog.
-- `V`: Verify selected tool's compliance score.
+- `V`: Verify selected tool's compliance score against on-disk configuration files.
 - `F`: 1-Click Auto-Remediate all installed tools to 100% compliance.
 - `D`: Open Data Loss Prevention (DLP) inspector dialog.
 - `R`: Open the interactive Command Risk Classifier playground.
 - `S`: Toggle Strict Restrictive Mode.
+- `Y`: Toggle Dry Run Simulation Mode.
 - `H` / `?`: Toggle help dialog.
 - `Q`: Quit application.
+
+**Action Buttons Bar:**
+- **`Apply`**: Hardens the currently selected tool.
+- **`Apply Installed`**: Automatically detects and hardens all tools installed on the host.
+- **`Remove Selected`**: Surgically removes hardening overrides from the selected tool, restoring defaults.
+- **`Remove Installed`**: Surgically removes hardening overrides from all installed tools on the host.
 
 ---
 
