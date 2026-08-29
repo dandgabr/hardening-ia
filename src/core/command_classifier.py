@@ -316,6 +316,17 @@ GLOBAL_DANGEROUS_PATTERNS = [
 ]
 
 
+from dataclasses import dataclass, field
+
+
+@dataclass
+class CommandRiskEvaluation:
+    level: RiskLevel
+    requires_approval: bool
+    recommended_action: str
+    reasons: List[str] = field(default_factory=list)
+
+
 class CommandRiskClassifier:
     """Classifies terminal commands into risk tiers across Linux, Windows, and macOS."""
 
@@ -417,3 +428,21 @@ class CommandRiskClassifier:
             reasoning = f"[{os_type.upper()}] Command '{cmd}' is classified as LOW risk. Permitted for automatic execution."
 
         return risk, requires_approval, reasoning
+
+    def classify(self, raw_command: str, os_type: str = None, strict_mode: bool = False) -> CommandRiskEvaluation:
+        """Evaluates command line and returns structured CommandRiskEvaluation object."""
+        risk, req_approval, reason = self.classify_command(raw_command, os_type=os_type, strict_mode=strict_mode)
+        if "[STRICT BLOCKED]" in reason:
+            action = "blocked immediately (zero-trust)"
+        elif req_approval:
+            action = "prompt user for approval"
+        else:
+            action = "auto-execute permitted"
+
+        return CommandRiskEvaluation(
+            level=risk,
+            requires_approval=req_approval,
+            recommended_action=action,
+            reasons=[reason] if reason else []
+        )
+
