@@ -85,7 +85,6 @@ def run_cli(args: List[str]):
     parser = argparse.ArgumentParser(
         prog="hardening-ia",
         description="Enterprise AI Hardening Framework: Multi-OS Command Risk Matrix, SAST/SCA Code Analyzer, Compliance Reporting & Watchdog.",
-        epilog=HELP_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument("--tool", type=str, metavar="NAME", help="Filter by tool or vendor name (e.g. google/antigravity, cursor, claude-code)")
@@ -117,14 +116,15 @@ def run_cli(args: List[str]):
     parser.add_argument("--cli", action="store_true", help="Explicitly force CLI mode")
     parser.add_argument("-gui", "--gui", action="store_true", help="Launch interactive Terminal User Interface (TUI)")
 
-    # Print custom formatted help if -h or --help is requested
+    # Print custom formatted help with rich colors if -h or --help is requested
     if "-h" in args or "--help" in args:
         console = Console()
         console.print(Panel.fit(
             "[bold cyan]Hardening IA[/bold cyan] - Enterprise AI Security Hardening Framework",
             subtitle="CLI Automation, Compliance Auditing & Verification"
         ))
-        parser.print_help()
+        console.print(parser.format_help(), markup=False)
+        console.print(HELP_EPILOG)
         return
 
     parsed = parser.parse_args(args)
