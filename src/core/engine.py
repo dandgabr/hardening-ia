@@ -214,6 +214,10 @@ class HardeningEngine:
                         except Exception:
                             pass
 
+                # 4. Clean tool backup directory so future applies capture fresh state
+                if not dry_run:
+                    shutil.rmtree(self._get_tool_backup_dir(vendor, tool_name), ignore_errors=True)
+
             message = f"Hardening configurations successfully reverted for {vendor}/{tool_name}"
             log_audit_event(
                 event_type="POLICY_REMOVED",
@@ -397,18 +401,17 @@ class HardeningEngine:
         seen = set()
         unique_keys = [k for k in all_keys_to_remove if not (k in seen or seen.add(k))]
 
-        has_manifest = bool(manifest_data)
         for key in unique_keys:
             orig_info = manifest_data.get(key)
-            if has_manifest and orig_info and orig_info.get("existed"):
-                # Restore exact original user value from manifest
+            if orig_info and orig_info.get("existed"):
+                # Restore exact original user value from pre-hardening backup
                 orig_val = orig_info.get("value")
                 current_val = current_data.get(key)
                 if current_val != orig_val:
                     current_data[key] = orig_val
                     diffs.append(SettingDiff(key=key, old_value=current_val, new_value=orig_val))
-            elif has_manifest and (not orig_info or not orig_info.get("existed")):
-                # Key was injected: surgically delete only this key
+            else:
+                # Surgically remove the key added by hardening
                 if key in current_data:
                     old_val = current_data.pop(key)
                     diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
@@ -425,48 +428,31 @@ class HardeningEngine:
                     if found and isinstance(curr, dict) and parts[-1] in curr:
                         old_val = curr.pop(parts[-1])
                         diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
-            else:
-                # No backup manifest exists: reset to standard unhardened permissive defaults
-                hardened_val = overrides.get(key)
-                unhardened_val = self._get_default_unhardened_value(key, hardened_val)
-                if key in current_data:
-                    old_val = current_data[key]
-                    if old_val != unhardened_val:
-                        current_data[key] = unhardened_val
-                        diffs.append(SettingDiff(key=key, old_value=old_val, new_value=unhardened_val))
-                elif "." in key:
-                    parts = key.split(".")
-                    curr = current_data
-                    for p in parts[:-1]:
-                        if not isinstance(curr.get(p), dict):
-                            curr[p] = {}
-                        curr = curr[p]
-                    old_val = curr.get(parts[-1])
-                    if old_val != unhardened_val:
-                        curr[parts[-1]] = unhardened_val
-                        diffs.append(SettingDiff(key=key, old_value=old_val, new_value=unhardened_val))
-                else:
-                    current_data[key] = unhardened_val
-                    diffs.append(SettingDiff(key=key, old_value=None, new_value=unhardened_val))
 
-        # Clean empty parent dicts if created
+        # Clean empty parent dicts if left empty
         def _clean_empty_dicts(d: dict):
             keys_to_del = []
-            for k, v in d.items():
+            for k, v in list(d.items()):
                 if isinstance(v, dict):
                     _clean_empty_dicts(v)
                     if not v:
                         keys_to_del.append(k)
             for k in keys_to_del:
-                d.pop(k)
+                d.pop(k, None)
 
         if isinstance(current_data, dict):
             _clean_empty_dicts(current_data)
 
         if not dry_run:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(current_data, f, indent=2)
+            if not current_data:
+                try:
+                    path.unlink(missing_ok=True)
+                except Exception:
+                    pass
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(current_data, f, indent=2)
 
         return diffs
 
