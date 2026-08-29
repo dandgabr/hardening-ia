@@ -338,6 +338,7 @@ class HardeningEngine:
             return diffs
 
         manifest_existed_before = True
+        manifest_data: Dict[str, Any] = {}
         if vendor and tool_name:
             manifest_file = self._get_tool_backup_dir(vendor, tool_name) / "restore_manifest.json"
             if manifest_file.exists():

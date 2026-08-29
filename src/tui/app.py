@@ -382,43 +382,28 @@ class HardeningTUIApp(App):
         # Live verification audit of actual on-disk configuration
         report = self.verifier.verify_policy(p, strict_mode=self.strict_mode)
         if report.compliance_score == 100.0:
-            score_badge = f"[bold green]{report.compliance_score:.0f}% (FULLY COMPLIANT)[/bold green]"
-        elif report.compliance_score >= 80.0:
-            score_badge = f"[bold yellow]{report.compliance_score:.1f}% (PARTIALLY COMPLIANT)[/bold yellow]"
+            score_badge = f"[bold green]{report.compliance_score:.0f}% (CONFORME - 100%)[/bold green]"
         elif report.compliance_score > 0.0:
-            score_badge = f"[bold orange3]{report.compliance_score:.1f}% (NEEDS ATTENTION)[/bold orange3]"
+            score_badge = f"[bold yellow]{report.compliance_score:.1f}% (PARCIALMENTE CONFORME)[/bold yellow]"
         else:
-            score_badge = "[bold red]0% (NOT HARDENED / MISSING)[/bold red]"
+            score_badge = "[bold red]0% (NÃO CONFORME / NÃO APLICADO)[/bold red]"
 
-        strict_badge = "[bold red]ENABLED (Zero-Trust)[/bold red]" if self.strict_mode else "[dim]STANDARD (Interactive)[/dim]"
+        strict_badge = "[bold red]ENABLED (Zero-Trust)[/bold red]" if self.strict_mode else "[dim]STANDARD (Normal)[/dim]"
         dry_badge = "[bold yellow]ACTIVE (Simulation)[/bold yellow]" if self.dry_run else "[dim]DISABLED (Live)[/dim]"
 
-        info_text = f"""
-[bold cyan]Tool:[/] [bold white]{p.tool.vendor}/{p.tool.name}[/bold white]  |  [bold cyan]Status:[/] {inst_badge}  |  [bold cyan]Category:[/] [yellow]{p.tool.category.upper()}[/yellow]
-[bold cyan]Live Compliance Score:[/] {score_badge} ({report.passed_checks}/{report.total_checks} checks active on disk)
-[bold cyan]Primary Settings Path:[/] [white]{settings_file}[/white]
-[bold cyan]Strict Mode:[/] {strict_badge}  |  [bold cyan]Dry Run:[/] {dry_badge}
+        info_text = f"""[bold cyan]Tool:[/] [bold white]{p.tool.vendor}/{p.tool.name}[/bold white]  |  [bold cyan]Status:[/] {inst_badge}  |  [bold cyan]Category:[/] [yellow]{p.tool.category.upper()}[/yellow]
+[bold cyan]Live Status:[/] {score_badge} ({report.passed_checks}/{report.total_checks} propriedades conformes)
+[bold cyan]Settings Path:[/] [white]{settings_file}[/white]
+[bold cyan]Mode:[/] Strict: {strict_badge} | Dry-Run: {dry_badge}
 
-[bold yellow]Active Hardening Overrides (Live On-Disk Status):[/]
+[bold yellow]Propriedades & Active Hardening Overrides (Status Real em Disco):[/]
 """
-        if report.checks:
-            for c in report.checks[:12]:
-                if c.passed:
-                    info_text += f"  [bold green]✔[/bold green] [cyan]{c.key}:[/] [white]{c.expected}[/white] [dim green](Active on disk)[/dim green]\n"
-                elif c.actual == "[MISSING]":
-                    info_text += f"  [dim yellow]○[/dim yellow] [cyan]{c.key}:[/] [white]{c.expected}[/white] [dim yellow](Not applied / Missing)[/dim yellow]\n"
-                else:
-                    info_text += f"  [bold red]✘[/bold red] [cyan]{c.key}:[/] [white]{c.expected}[/white] [bold red](Current: {c.actual})[/bold red]\n"
-            if len(report.checks) > 12:
-                info_text += f"  [dim]... and {len(report.checks) - 12} more live controls[/dim]\n"
-        else:
-            overrides = dict(p.policies.get("native_settings_override", {}))
-            if self.strict_mode:
-                overrides.update(p.policies.get("strict_rules", {}).get("native_overrides", {}))
-            for k, v in list(overrides.items())[:8]:
-                info_text += f"  • [cyan]{k}:[/] [white]{v}[/white]\n"
-            if len(overrides) > 8:
-                info_text += f"  [dim]... and {len(overrides) - 8} more controls[/dim]\n"
+        for c in report.checks:
+            if c.passed:
+                info_text += f"  [bold green]✔[/bold green] [bold green]{c.key}:[/bold green] [white]{c.expected}[/white] [dim green](Conforme)[/dim green]\n"
+            else:
+                actual_desc = "Não Aplicado / Ausente" if c.actual in ("[MISSING]", "[NOT INSTALLED / MISSING]") else f"Atual: {c.actual}"
+                info_text += f"  [bold red]✘[/bold red] [bold red]{c.key}:[/bold red] [white]{c.expected}[/white] [bold red](Não Conforme: {actual_desc})[/bold red]\n"
 
         self.query_one("#policy-info", Static).update(info_text)
 

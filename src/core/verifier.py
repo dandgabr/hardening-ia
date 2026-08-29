@@ -103,10 +103,11 @@ class HardeningVerifier:
             all_rules_dirs = [rules_path] + [Path(OSDetector.expand_path(r)) for r in getattr(path_info, "secondary_rules_dirs", []) if r]
             report.rules_dir_exists = any(r.exists() for r in all_rules_dirs)
 
-        # If tool is not installed and settings file doesn't exist
+        # Set initial status message
         if not report.settings_file_exists and not policy.is_installed:
-            report.message = "Tool is not installed on this host (skipping live verification)."
-            return report
+            report.message = "Tool is not installed on this host."
+        elif not report.settings_file_exists:
+            report.message = "Configuration settings file does not exist on disk."
 
         current_settings: Dict[str, Any] = {}
         for s_file in existing_settings_files:
