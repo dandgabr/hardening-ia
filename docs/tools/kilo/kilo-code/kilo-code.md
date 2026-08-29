@@ -1,11 +1,11 @@
-# Kilo Code Security & Hardening Guide
+# Kilo Code CLI Security & Hardening Guide
 
 ## 1. Overview
 - **Vendor:** `kilo`
 - **Tool Name:** `kilo-code`
-- **Category:** `CLI Developer Suite`
+- **Category:** `High-Performance CLI Developer Suite`
 
-Kilo Code is a command-line tool designed for fast code indexing and agentic refactoring.
+Kilo Code is a fast, terminal-based AI assistant designed for rapid software engineering and code generation.
 
 ---
 
@@ -15,10 +15,11 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `privacy.telemetry` | `false` | Disables usage and crash telemetry. |
-| `execution.require_confirmation` | `true` | Requires confirmation on file and shell operations. |
-| `execution.auto_accept_edits` | `false` | Prevents unprompted modification of code. |
-| `mcp.requireConsent` | `true` | Mandates user review of MCP actions. |
+| `privacy.telemetry` | `false` | Disables usage tracking and metrics transmission. |
+| `execution.require_confirmation` | `true` | Requires approval before running shell commands. |
+| `execution.auto_accept_edits` | `false` | Requires manual diff inspection before accepting file changes. |
+| `sandbox.enabled` | `true` | Restricts execution to a sandbox environment. |
+| `indexing.exclude_hidden_and_secrets` | `true` | Excludes secret files from codebase indexing. |
 
 ---
 

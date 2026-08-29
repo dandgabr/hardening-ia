@@ -91,7 +91,20 @@ class ConfigLoader:
             "z-ai": ("zai", "zai"),
             "claude": ("anthropic", "claude-code"),
             "kilo": ("kilo", "kilo-code"),
-            "hermes": ("nousresearch", "hermes-agent")
+            "hermes": ("nousresearch", "hermes-agent"),
+            "windsurf": ("codeium", "windsurf"),
+            "codeium": ("codeium", "windsurf"),
+            "cascade": ("codeium", "windsurf"),
+            "continue": ("continuedev", "continue"),
+            "continue-cli": ("continuedev", "continue"),
+            "aider": ("aider", "aider"),
+            "aider-chat": ("aider", "aider"),
+            "amazon-q": ("amazon", "amazon-q"),
+            "amazonq": ("amazon", "amazon-q"),
+            "q": ("amazon", "amazon-q"),
+            "tabnine": ("tabnine", "tabnine"),
+            "augment": ("augment", "augment"),
+            "augment-code": ("augment", "augment")
         }
         if name.lower() in alias_map:
             vendor, name = alias_map[name.lower()]

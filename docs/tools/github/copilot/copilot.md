@@ -25,7 +25,7 @@ The following table lists the official configuration keys and their recommended 
 | `github.copilot.enable.markdown` | `false` | Disables completions in markdown documents to prevent prompt injection. |
 | `github.copilot.enable.scminput` | `false` | Prevents AI completions in Git commit message fields. |
 | `github.copilot.enable..env` | `false` | Prevents code suggestions or context reading in environment secret files. |
-| `telemetry.telemetryLevel` | `'off'` | Disables editor and extension diagnostic telemetry. |
+| `telemetry.telemetryLevel` | `'off'` | Disables diagnostic data transmission to external servers. |
 
 ---
 

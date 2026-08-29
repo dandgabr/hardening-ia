@@ -1,11 +1,11 @@
-# OpenCode Security & Hardening Guide
+# OpenCode CLI Security & Hardening Guide
 
 ## 1. Overview
 - **Vendor:** `opencode`
 - **Tool Name:** `opencode`
-- **Category:** `Open-Source CLI Agent`
+- **Category:** `Open-Source AI Coding Agent`
 
-OpenCode is an open-source terminal coding assistant executing local models and remote LLM APIs.
+OpenCode is an open-source terminal coding agent offering interactive development and multi-model support.
 
 ---
 
@@ -15,12 +15,12 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `analytics.enabled` | `false` | Disables telemetry metrics collection. |
-| `agent.confirm_actions` | `true` | Prompts operator before applying diffs or executing scripts. |
-| `agent.auto_apply_edits` | `false` | Disables automatic write operations on source files. |
-| `permission_mode` | `'prompt'` | Enforces human confirmation for each tool execution. |
-| `sandbox.strict_mode` | `true` | Enforces filesystem isolation and read-only container mount. |
-| `dlp.mask_credentials` | `true` | Redacts sensitive credentials from LLM context. |
+| `analytics.enabled` | `false` | Disables analytics and telemetry tracking. |
+| `agent.confirm_actions` | `true` | Requires operator confirmation for all tool actions. |
+| `agent.auto_apply_edits` | `false` | Requires manual confirmation before writing file changes. |
+| `permission_mode` | `'prompt'` | Enforces interactive permission prompts for all operations. |
+| `sandbox.strict_mode` | `true` | Isolates subprocesses and prevents dangerous command execution. |
+| `dlp.mask_credentials` | `true` | Redacts passwords, tokens, and API keys. |
 
 ---
 

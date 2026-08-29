@@ -26,12 +26,12 @@ logger = get_logger("cli")
 HELP_EPILOG = """
 [bold cyan]Practical Usage Examples:[/]
   [green]python main.py[/]                              Launch interactive Textual Control Interface (TUI)
-  [green]python main.py --list[/]                       List all 15 supported AI tools and host detection status
+  [green]python main.py --list[/]                       List all 21 supported AI tools and host detection status
   [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
   [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
   [green]python main.py --apply --strict[/]             Apply STRICT mode (explicit critical denials & zero prompting on dangerous paths)
-  [green]python main.py --apply[/]                      Provision & apply hardening across all 15 supported tools
-  [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, antigravity)
+  [green]python main.py --apply[/]                      Provision & apply hardening across all 21 supported tools
+  [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, windsurf, antigravity)
   [green]python main.py --remove --installed-only[/]    Revert/remove hardening from detected tools
   [green]python main.py --tool cursor --remove[/]       Revert hardening from a specific tool
   [green]python main.py --apply --dry-run[/]            Simulate policy enforcement without writing files
@@ -62,7 +62,20 @@ def _matches_tool_query(p: HardeningPolicy, query: str) -> bool:
         "z-ai": ("zai", "zai"),
         "claude": ("anthropic", "claude-code"),
         "kilo": ("kilo", "kilo-code"),
-        "hermes": ("nousresearch", "hermes-agent")
+        "hermes": ("nousresearch", "hermes-agent"),
+        "windsurf": ("codeium", "windsurf"),
+        "codeium": ("codeium", "windsurf"),
+        "cascade": ("codeium", "windsurf"),
+        "continue": ("continuedev", "continue"),
+        "continue-cli": ("continuedev", "continue"),
+        "aider": ("aider", "aider"),
+        "aider-chat": ("aider", "aider"),
+        "amazon-q": ("amazon", "amazon-q"),
+        "amazonq": ("amazon", "amazon-q"),
+        "q": ("amazon", "amazon-q"),
+        "tabnine": ("tabnine", "tabnine"),
+        "augment": ("augment", "augment"),
+        "augment-code": ("augment", "augment")
     }
     if query in alias_map:
         v, n = alias_map[query]
@@ -92,6 +105,7 @@ def run_cli(args: List[str]):
     parser.add_argument("--install-extra", type=str, metavar="TOOL", help="Install extra security component: 'ai-jail', 'opengrep', or 'all'")
     parser.add_argument("--remove-extra", type=str, metavar="TOOL", help="Remove/uninstall extra security component: 'ai-jail', 'opengrep', or 'all'")
     parser.add_argument("--status-extra", action="store_true", help="Display installation, diagnostic status, and environment integration for extra security tools")
+    parser.add_argument("--sandbox-diagnostics", action="store_true", help="Inspect host process isolation, Seccomp, Landlock, and Bubblewrap sandboxing features")
     parser.add_argument("--scan-code", type=str, nargs="?", const=".", metavar="PATH", help="Scan workspace or directory for AI-generated code vulnerabilities")
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose debug logging")
     parser.add_argument("--cli", action="store_true", help="Explicitly force CLI mode")
@@ -130,6 +144,25 @@ def run_cli(args: List[str]):
             console.print(f"\n[bold green][OK] All {result.testsRun} unit and integration tests PASSED successfully.[/bold green]\n")
         else:
             console.print(f"\n[bold red][FAILED] {len(result.failures)} failure(s), {len(result.errors)} error(s) encountered.[/bold red]\n")
+        return
+
+    # Runtime Sandbox Diagnostics
+    if parsed.sandbox_diagnostics:
+        from src.core.runtime_sandbox import RuntimeSandboxManager
+        sm = RuntimeSandboxManager()
+        diag = sm.get_sandbox_diagnostics()
+        table = Table(title="Host Runtime Sandboxing & Process Isolation Diagnostics", header_style="bold cyan")
+        table.add_column("Security Isolation Feature", style="bold white", width=35)
+        table.add_column("Host Status", width=25)
+        table.add_column("Details / Kernel Subsystem", style="yellow")
+
+        table.add_row("Bubblewrap (bwrap)", "[bold green]AVAILABLE[/bold green]" if diag["bubblewrap_available"] else "[dim]Not Installed[/dim]", "User namespace & rootfs isolation")
+        table.add_row("ai-jail Runtime Sandbox", "[bold green]INSTALLED[/bold green]" if diag["ai_jail_available"] else "[dim]Not Installed[/dim]", "Encapsulated CLI agent containerization")
+        table.add_row("Seccomp-BPF Syscall Filtering", "[bold green]SUPPORTED[/bold green]" if diag["seccomp_supported"] else "[yellow]UNSUPPORTED / RESTRICTED[/yellow]", "Kernel dangerous syscall blocking")
+        table.add_row("Linux Landlock LSM", "[bold green]SUPPORTED[/bold green]" if diag["landlock_supported"] else "[dim]UNSUPPORTED[/dim]", "Unprivileged filesystem access control")
+        table.add_row("SSRF & Metadata IP Guard", "[bold green]ACTIVE (Rules Defined)[/bold green]", "Blocks 169.254.169.254 & cloud metadata")
+
+        console.print(table)
         return
 
     # Admin Elevation Gate Check

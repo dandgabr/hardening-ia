@@ -1,11 +1,11 @@
-# Grok / xAI Developer CLI Security & Hardening Guide
+# Grok / xAI CLI Security & Hardening Guide
 
 ## 1. Overview
 - **Vendor:** `xai`
 - **Tool Name:** `grok`
-- **Category:** `CLI Assistant`
+- **Category:** `Developer CLI & Reasoning Interface`
 
-Grok CLI connects developers with xAI models for reasoning and software generation.
+Grok Developer CLI provides direct terminal access to xAI reasoning models with tool execution capabilities.
 
 ---
 
@@ -15,10 +15,11 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `telemetry` | `false` | Disables user prompt analytics. |
-| `share_prompts` | `false` | Opt out of model retraining. |
-| `auto_edit_files` | `false` | Requires approval before writing changes to disk. |
+| `telemetry` | `false` | Disables telemetry and prompt logging. |
+| `audit_logs` | `true` | Enables local audit logging of all actions. |
 | `sandbox_strict` | `true` | Enforces strict process sandboxing. |
+| `share_prompts` | `false` | Disables prompt sharing and telemetry. |
+| `auto_edit_files` | `false` | Requires human confirmation before applying file edits. |
 
 ---
 

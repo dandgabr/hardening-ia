@@ -3,9 +3,9 @@
 ## 1. Overview
 - **Vendor:** `nousresearch`
 - **Tool Name:** `hermes-agent`
-- **Category:** `Autonomous Agent`
+- **Category:** `Autonomous Reasoning Agent`
 
-Hermes Agent provides deep reasoning and autonomous tool execution with local memory persistence.
+Hermes Agent is an open-weights reasoning and autonomous execution agent capable of complex multi-step coding tasks.
 
 ---
 
@@ -15,11 +15,12 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `safe_mode` | `true` | Enforces strict safety rails during multi-step reasoning. |
-| `human_in_the_loop` | `true` | Pauses execution to obtain operator confirmation on mutating tools. |
-| `blocked_tools` | `['system_admin', 'raw_exec', 'disk_partition', 'network_raw']` | Denies critical system tools. |
-| `max_recursive_steps` | `10` | Prevents infinite reasoning and tool invocation loops. |
-| `network_egress_restricted` | `true` | Restricts external network connectivity. |
+| `enable_telemetry` | `false` | Disables telemetry data collection. |
+| `human_in_the_loop` | `true` | Mandates human confirmation at critical execution branches. |
+| `safe_mode` | `true` | Enforces safe execution guardrails and blocks high-risk tools. |
+| `max_recursive_steps` | `10` | Limits maximum subagent recursion to prevent runaway loops. |
+| `sandbox_container` | `true` | Runs agent subprocesses in an isolated environment. |
+| `blocked_tools` | `['system_admin', 'raw_exec', 'disk_partition']` | Disables dangerous system tools. |
 
 ---
 

@@ -103,6 +103,30 @@ class TestHardeningVerifier(unittest.TestCase):
         report_strict = self.verifier.verify_policy(zai_policy, strict_mode=True)
         self.assertGreaterEqual(report_strict.compliance_score, 90.0)
 
+    def test_windsurf_verification(self):
+        """Verifier should audit Windsurf / Codeium configurations."""
+        from src.core.config_loader import ConfigLoader
+        from src.core.engine import HardeningEngine
+        loader = ConfigLoader()
+        engine = HardeningEngine()
+
+        p = loader.get_policy("codeium", "windsurf")
+        self.assertIsNotNone(p)
+
+        settings = self.test_dir / "windsurf_settings.json"
+        codeium_cfg = self.test_dir / "codeium_config.json"
+        p.paths[self.verifier.os_type] = OSPaths(
+            settings_file=str(settings),
+            secondary_settings_files=[str(codeium_cfg)]
+        )
+
+        res = engine.apply_policy(p, dry_run=False, strict_mode=False)
+        self.assertTrue(res.success)
+        self.assertTrue(settings.exists())
+
+        report = self.verifier.verify_policy(p, strict_mode=False)
+        self.assertGreaterEqual(report.compliance_score, 90.0)
+
 
 if __name__ == "__main__":
     unittest.main()

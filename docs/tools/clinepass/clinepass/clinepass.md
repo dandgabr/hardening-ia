@@ -3,9 +3,9 @@
 ## 1. Overview
 - **Vendor:** `clinepass`
 - **Tool Name:** `clinepass`
-- **Category:** `Security Wrapper & Vault`
+- **Category:** `Security Wrapper & Credential Vault`
 
-ClinePass provides managed authentication, an encrypted credential vault, and security proxy for Cline agents.
+ClinePass provides a secure proxy, credential vault, and guardrails wrapper for autonomous coding agents.
 
 ---
 
@@ -15,10 +15,11 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `vault.enforce_encryption` | `true` | Encrypts stored LLM API keys at rest. |
-| `vault.zero_plaintext_cache` | `true` | Prevents caching credentials in plaintext memory. |
-| `proxy.block_unapproved_hosts` | `true` | Blocks outgoing connections to unapproved endpoints. |
-| `proxy.block_ssrf_metadata` | `true` | Blocks SSRF requests to cloud metadata endpoints. |
+| `vault.enforce_encryption` | `true` | Enforces AES-256 encryption on all stored API keys. |
+| `vault.zero_plaintext_cache` | `true` | Prevents credentials from ever being written to disk unencrypted. |
+| `proxy.block_unapproved_hosts` | `true` | Blocks outbound connections to untrusted endpoints. |
+| `proxy.block_ssrf_metadata` | `true` | Blocks access to cloud metadata IP 169.254.169.254. |
+| `proxy.mask_tokens_in_logs` | `true` | Masks secrets in audit logs. |
 
 ---
 

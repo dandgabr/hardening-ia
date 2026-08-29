@@ -1,11 +1,11 @@
-# z.ai Developer Platform (CLI, ADE & Desktop) Security & Hardening Guide
+# z.ai Developer Platform Security & Hardening Guide
 
 ## 1. Overview
 - **Vendor:** `zai`
 - **Tool Name:** `zai`
-- **Category:** `Unified Agentic Platform (CLI, ADE & Desktop)`
+- **Category:** `Unified Agentic Platform (CLI, ADE Desktop & IDE)`
 
-z.ai Developer Platform is a unified ecosystem providing an Autonomous CLI Coding Agent (zai-cli), an Agentic Development Environment (zcode ADE / Desktop), and IDE extensions powered by GLM models.
+z.ai Developer Platform is a unified AI engineering suite encompassing CLI Agent (zai-cli), ADE Desktop (zcode), and IDE plugins.
 
 ---
 
@@ -15,8 +15,8 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `telemetry` | `false` | Disables prompt analytics and interaction tracking across CLI and ADE. |
-| `privacy.data_retention` | `false` | Enforces zero data retention for source code and prompts. |
+| `telemetry` | `false` | Disables all telemetry and tracking across CLI and ADE Desktop. |
+| `privacy.data_retention` | `false` | Opt-out from cloud training and prompt retention. |
 | `agent.auto_execute_commands` | `false` | Requires user approval before running any shell command. |
 | `agent.require_confirmation` | `true` | Enforces interactive confirmation on all mutating operations. |
 | `agent.auto_apply_edits` | `false` | Requires manual inspection of file diffs before saving. |

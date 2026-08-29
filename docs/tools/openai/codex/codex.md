@@ -3,9 +3,9 @@
 ## 1. Overview
 - **Vendor:** `openai`
 - **Tool Name:** `codex`
-- **Category:** `CLI Agent / Engine`
+- **Category:** `CLI Agent & Code Engine`
 
-OpenAI Codex CLI provides automated code generation, refactoring, and command execution.
+OpenAI Codex CLI agent handles automated code synthesis, command line execution, and workflow automation.
 
 ---
 
@@ -15,13 +15,12 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `telemetry` | `false` | Disables usage and prompt data sharing. |
-| `code_telemetry` | `false` | Prevents source code telemetry ingestion. |
-| `auto_execute` | `false` | Mandates confirmation before running shell commands. |
-| `enforce_sandboxing` | `true` | Restricts execution environment to local sandbox. |
-| `trusted_workspaces_only` | `true` | Blocks execution in untrusted external folders. |
-| `prompt_secret_masking` | `true` | Masks API keys and passwords in prompt pipelines. |
-| `mcp_consent_required` | `true` | Requires user confirmation for MCP server calls. |
+| `telemetry` | `false` | Disables diagnostic telemetry and prompt tracking. |
+| `auto_execute` | `false` | Requires operator consent before executing terminal commands. |
+| `enforce_sandboxing` | `true` | Executes shell commands in a restricted container. |
+| `trusted_workspaces_only` | `true` | Restricts execution to verified workspaces. |
+| `allow_network` | `false` | Restricts unapproved external network connections. |
+| `prompt_secret_masking` | `true` | Masks detected secrets from outbound API prompts. |
 
 ---
 

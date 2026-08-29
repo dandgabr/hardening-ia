@@ -3,9 +3,9 @@
 ## 1. Overview
 - **Vendor:** `codebuddy`
 - **Tool Name:** `codebuddy`
-- **Category:** `IDE Assistant`
+- **Category:** `IDE Programming Companion`
 
-CodeBuddy provides interactive code explanations and suggestions in the developer environment.
+CodeBuddy is an interactive AI programming companion for refactoring, test generation, and bug fixing.
 
 ---
 
@@ -15,10 +15,11 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `share_code_snippets` | `false` | Disables snippet telemetry. |
-| `telemetry` | `'off'` | Disables tracking and diagnostic logging. |
-| `auto_run_commands` | `false` | Blocks automated shell command execution. |
-| `auto_apply_diffs` | `false` | Requires manual acceptance for code diffs. |
+| `share_code_snippets` | `false` | Prevents sending code snippets to external telemetry. |
+| `telemetry` | `'off'` | Disables diagnostic data collection. |
+| `auto_run_commands` | `false` | Requires user approval before running terminal commands. |
+| `auto_apply_diffs` | `false` | Requires manual inspection of diffs before applying changes. |
+| `sandbox_isolated` | `true` | Restricts execution to an isolated sandbox environment. |
 
 ---
 

@@ -3,9 +3,9 @@
 ## 1. Overview
 - **Vendor:** `qoder`
 - **Tool Name:** `qoder`
-- **Category:** `Enterprise Agent`
+- **Category:** `Enterprise Agent & IDE Companion`
 
-Qoder is an enterprise coding companion providing semantic search and workflow automation.
+Qoder is an enterprise AI coding assistant with repository-level code understanding and autonomous refactoring.
 
 ---
 
@@ -15,10 +15,11 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `telemetry.shareData` | `false` | Disables enterprise codebase sharing. |
-| `security.executionConsent` | `'always'` | Requires approval on every automated action. |
-| `security.autoApplyEdits` | `false` | Requires confirmation before applying suggested diffs. |
-| `mcp.requireUserConfirmation` | `true` | Enforces consent before executing MCP tools. |
+| `telemetry.shareData` | `false` | Disables telemetry and code sharing. |
+| `security.executionConsent` | `'always'` | Requires user consent before executing commands or modifying files. |
+| `security.autoApplyEdits` | `false` | Requires manual inspection of file diffs before saving. |
+| `security.sandbox` | `true` | Isolates execution inside a process sandbox. |
+| `mcp.requireUserConfirmation` | `true` | Requires explicit approval for MCP tool calls. |
 
 ---
 

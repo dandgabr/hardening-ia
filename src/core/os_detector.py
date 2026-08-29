@@ -244,8 +244,12 @@ class OSDetector:
             "kimi": ["kimi", "kimi.exe"],
             "grok": ["grok", "xai", "grok.exe"],
             "zai": ["zai", "zai-cli", "zai.exe", "zai-cli.exe", "z-ai", "zcode", "zcode.exe", "z-code", "z-code.exe"],
-            "zai-cli": ["zai", "zai-cli", "zai.exe", "zai-cli.exe", "z-ai"],
-            "zcode": ["zcode", "zcode.exe", "z-code", "z-code.exe"]
+            "windsurf": ["windsurf", "windsurf.exe", "codeium", "codeium.exe", "cascade", "cascade.exe"],
+            "continue": ["continue", "continue.exe", "continue-cli"],
+            "aider": ["aider", "aider.exe"],
+            "amazon-q": ["q", "q.exe", "amazon-q", "amazon-q.exe"],
+            "tabnine": ["tabnine", "tabnine.exe", "TabNine", "TabNine.exe"],
+            "augment": ["augment", "augment.exe"]
         }
 
         candidates = binary_aliases.get(tool_name, [tool_name, f"{tool_name}.exe"])
@@ -281,8 +285,9 @@ class OSDetector:
             "kilo-code": ["kilo-code", "@kilo/code"],
             "antigravity": ["@google/antigravity", "antigravity-cli"],
             "zai": ["zai", "zai-cli", "@zai/cli", "z-ai-cli", "zcode", "@zai/zcode"],
-            "zai-cli": ["zai-cli", "@zai/cli", "z-ai-cli", "zcode-cli"],
-            "zcode": ["zcode", "@zai/zcode"]
+            "windsurf": ["@codeium/windsurf", "codeium", "windsurf"],
+            "continue": ["@continuedev/continue", "continue", "continue-cli"],
+            "tabnine": ["tabnine", "@tabnine/cli"]
         }
         if tool_name in npm_mapping:
             for pkg in npm_mapping[tool_name]:
@@ -299,8 +304,9 @@ class OSDetector:
             "grok": ["xai-grok", "grok-cli"],
             "qoder": ["qoder-agent", "qoder"],
             "zai": ["zai", "zai-cli", "z-ai", "zai-agent", "zcode", "zcode-agent"],
-            "zai-cli": ["zai-cli", "z-ai", "zai-agent"],
-            "zcode": ["zcode-agent", "zcode"]
+            "aider": ["aider-chat", "aider"],
+            "windsurf": ["codeium", "windsurf"],
+            "amazon-q": ["amazon-q", "q-cli", "aws-q"]
         }
         if tool_name in pip_mapping:
             for pkg in pip_mapping[tool_name]:
@@ -318,8 +324,12 @@ class OSDetector:
             "qoder": ["qoder.exe", "qoder"],
             "codebuddy": ["codebuddy.exe", "codebuddy"],
             "zai": ["zai.exe", "zai", "zai-cli.exe", "zai-cli", "zcode.exe", "zcode", "z-code.exe", "z-code"],
-            "zai-cli": ["zai.exe", "zai", "zai-cli.exe", "zai-cli"],
-            "zcode": ["zcode.exe", "zcode", "z-code.exe", "z-code"]
+            "windsurf": ["windsurf.exe", "windsurf", "codeium.exe", "codeium", "cascade"],
+            "continue": ["continue.exe", "continue"],
+            "aider": ["aider.exe", "aider"],
+            "amazon-q": ["amazon-q.exe", "amazon-q", "q.exe", "q"],
+            "tabnine": ["tabnine.exe", "tabnine", "tabnine-deep-cloud", "tabnine-deep-local"],
+            "augment": ["augment.exe", "augment"]
         }
         if tool_name in proc_mapping:
             for proc in proc_mapping[tool_name]:
@@ -338,8 +348,11 @@ class OSDetector:
             "qoder": ["qoder", "qoder-ai"],
             "cursor": ["cursor"],
             "zai": ["zai", "zai-cli", "z-ai", "zcode", "z-code", "zai.zcode"],
-            "zai-cli": ["zai", "zai-cli", "z-ai"],
-            "zcode": ["zcode", "z-code", "zai.zcode"]
+            "windsurf": ["codeium.windsurf", "codeium.codeium", "windsurf"],
+            "continue": ["continue.continue", "continue"],
+            "amazon-q": ["amazonwebservices.amazon-q-vscode", "amazonwebservices.aws-toolkit-vscode", "amazon-q"],
+            "tabnine": ["tabnine.tabnine-vscode", "tabnine"],
+            "augment": ["augment.augment-vscode", "augment"]
         }
         if tool_name in ext_mapping:
             for ext in ext_mapping[tool_name]:

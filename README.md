@@ -60,6 +60,12 @@ AI developer assistants introduce new threat surfaces: unintended command execut
 | **Moonshot** | Kimi | CLI Agent | [hardening_policy.yaml](configs/tools/moonshot/kimi/hardening_policy.yaml) | [kimi.md](docs/tools/moonshot/kimi/kimi.md) |
 | **xAI** | Grok | CLI Agent | [hardening_policy.yaml](configs/tools/xai/grok/hardening_policy.yaml) | [grok.md](docs/tools/xai/grok/grok.md) |
 | **zAI** | zAI Platform | Agentic (CLI, ADE & Desktop) | [hardening_policy.yaml](configs/tools/zai/zai/hardening_policy.yaml) | [zai.md](docs/tools/zai/zai/zai.md) |
+| **Codeium** | Windsurf | Cascade ADE Desktop & CLI | [hardening_policy.yaml](configs/tools/codeium/windsurf/hardening_policy.yaml) | [windsurf.md](docs/tools/codeium/windsurf/windsurf.md) |
+| **Continue** | Continue.dev | Headless Agent & IDE | [hardening_policy.yaml](configs/tools/continuedev/continue/hardening_policy.yaml) | [continue.md](docs/tools/continuedev/continue/continue.md) |
+| **Aider** | Aider | Git AI Pair Programming CLI | [hardening_policy.yaml](configs/tools/aider/aider/hardening_policy.yaml) | [aider.md](docs/tools/aider/aider/aider.md) |
+| **Amazon** | Amazon Q | AWS CLI & IDE Assistant | [hardening_policy.yaml](configs/tools/amazon/amazon-q/hardening_policy.yaml) | [amazon-q.md](docs/tools/amazon/amazon-q/amazon-q.md) |
+| **Tabnine** | Tabnine | Privacy AI (CLI & IDE) | [hardening_policy.yaml](configs/tools/tabnine/tabnine/hardening_policy.yaml) | [tabnine.md](docs/tools/tabnine/tabnine/tabnine.md) |
+| **Augment** | Augment Code | Workspace Agent & IDE | [hardening_policy.yaml](configs/tools/augment/augment/hardening_policy.yaml) | [augment.md](docs/tools/augment/augment/augment.md) |
 
 ---
 

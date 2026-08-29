@@ -1,4 +1,4 @@
-"""Generates industry-standard, fully hardened declarative YAML policies for all 15 AI tools."""
+"""Generates industry-standard, fully hardened declarative YAML policies for all 21 AI tools."""
 
 import yaml
 from pathlib import Path
@@ -1287,6 +1287,428 @@ POLICIES_DATABASE = [
                 "timeout.request": 30,
                 "timeout_seconds": 60,
                 "rate_limit.max_rpm": 30,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "codeium",
+        "name": "windsurf",
+        "category": "agentic",
+        "description": "Windsurf (Codeium) - Cascade ADE, AI-native IDE & CLI developer environment",
+        "paths": {
+            "windows": {
+                "config_dir": "%APPDATA%\\Windsurf\\User",
+                "settings_file": "%APPDATA%\\Windsurf\\User\\settings.json",
+                "rules_dir": "%USERPROFILE%\\.windsurf\\rules",
+                "secondary_settings_files": [
+                    "%USERPROFILE%\\.codeium\\config.json",
+                    "%USERPROFILE%\\.windsurf\\config.json"
+                ],
+                "secondary_rules_dirs": [
+                    "%USERPROFILE%\\.codeium\\rules"
+                ]
+            },
+            "linux": {
+                "config_dir": "~/.config/Windsurf/User",
+                "settings_file": "~/.config/Windsurf/User/settings.json",
+                "rules_dir": "~/.windsurf/rules",
+                "secondary_settings_files": [
+                    "~/.codeium/config.json",
+                    "~/.windsurf/config.json"
+                ],
+                "secondary_rules_dirs": [
+                    "~/.codeium/rules"
+                ]
+            },
+            "macos": {
+                "config_dir": "~/Library/Application Support/Windsurf/User",
+                "settings_file": "~/Library/Application Support/Windsurf/User/settings.json",
+                "rules_dir": "~/.windsurf/rules",
+                "secondary_settings_files": [
+                    "~/.codeium/config.json",
+                    "~/.windsurf/config.json"
+                ],
+                "secondary_rules_dirs": [
+                    "~/.codeium/rules"
+                ]
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "windsurf.cascade.autoExecute": False,
+                    "windsurf.cascade.yoloMode": False,
+                    "windsurf.cascade.requireApproval": True,
+                    "mcp.requireConsent": True,
+                    "security.dangerousPaths.action": "block"
+                }
+            },
+            "native_settings_override": {
+                "windsurf.privacyMode": True,
+                "codeium.enableTelemetry": False,
+                "codeium.enterprise.zeroDataRetention": True,
+                "windsurf.cascade.autoExecute": False,
+                "windsurf.cascade.yoloMode": False,
+                "windsurf.cascade.requireApproval": True,
+                "mcp.requireConsent": True,
+                "telemetry.telemetryLevel": "off",
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "continuedev",
+        "name": "continue",
+        "category": "agentic",
+        "description": "Continue.dev - Open-source AI code assistant for VS Code, JetBrains, and headless agents",
+        "paths": {
+            "windows": {
+                "config_dir": "%USERPROFILE%\\.continue",
+                "settings_file": "%USERPROFILE%\\.continue\\config.json",
+                "rules_dir": "%USERPROFILE%\\.continue\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.continue",
+                "settings_file": "~/.continue/config.json",
+                "rules_dir": "~/.continue/rules"
+            },
+            "macos": {
+                "config_dir": "~/.continue",
+                "settings_file": "~/.continue/config.json",
+                "rules_dir": "~/.continue/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "allowAnonymousTelemetry": False,
+                    "maskSecretsInPrompts": True,
+                    "mcp.requireConsent": True,
+                    "blockLocalSSRF": True
+                }
+            },
+            "native_settings_override": {
+                "allowAnonymousTelemetry": False,
+                "disableIndexing": False,
+                "maskSecretsInPrompts": True,
+                "mcp.requireConsent": True,
+                "blockLocalSSRF": True,
+                "tabAutocompleteOptions.useDebounce": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "aider",
+        "name": "aider",
+        "category": "cli",
+        "description": "Aider - AI pair programming in terminal with Git integration and codebase mapping",
+        "paths": {
+            "windows": {
+                "config_dir": "%USERPROFILE%\\.aider",
+                "settings_file": "%USERPROFILE%\\.aider.conf.yml",
+                "rules_dir": "%USERPROFILE%\\.aider\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.aider",
+                "settings_file": "~/.aider.conf.yml",
+                "rules_dir": "~/.aider/rules"
+            },
+            "macos": {
+                "config_dir": "~/.aider",
+                "settings_file": "~/.aider.conf.yml",
+                "rules_dir": "~/.aider/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "analytics": False,
+                    "verify-ssl": True,
+                    "require-confirmation-on-push": True,
+                    "mask-api-keys": True
+                }
+            },
+            "native_settings_override": {
+                "analytics": False,
+                "verify-ssl": True,
+                "auto-commits": True,
+                "attribute-author": False,
+                "attribute-committer": False,
+                "require-confirmation-on-push": True,
+                "mask-api-keys": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "amazon",
+        "name": "amazon-q",
+        "category": "agentic",
+        "description": "Amazon Q Developer - AWS AI assistant for CLI, IDEs, security analysis, and transformation",
+        "paths": {
+            "windows": {
+                "config_dir": "%USERPROFILE%\\.aws\\amazon-q",
+                "settings_file": "%USERPROFILE%\\.aws\\amazon-q\\config.json",
+                "rules_dir": "%USERPROFILE%\\.aws\\amazon-q\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.aws/amazon-q",
+                "settings_file": "~/.aws/amazon-q/config.json",
+                "rules_dir": "~/.aws/amazon-q/rules"
+            },
+            "macos": {
+                "config_dir": "~/.aws/amazon-q",
+                "settings_file": "~/.aws/amazon-q/config.json",
+                "rules_dir": "~/.aws/amazon-q/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "amazonQ.autoExecuteCommands": False,
+                    "amazonQ.shareCodeForTraining": False,
+                    "telemetry.enabled": False,
+                    "amazonQ.requireUserApproval": True
+                }
+            },
+            "native_settings_override": {
+                "telemetry.enabled": False,
+                "amazonQ.shareCodeForTraining": False,
+                "amazonQ.autoExecuteCommands": False,
+                "amazonQ.requireUserApproval": True,
+                "amazonQ.workspace.trust": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "tabnine",
+        "name": "tabnine",
+        "category": "ide",
+        "description": "Tabnine - Privacy-first AI code completion and chat assistant for teams",
+        "paths": {
+            "windows": {
+                "config_dir": "%APPDATA%\\TabNine",
+                "settings_file": "%APPDATA%\\TabNine\\tabnine.json",
+                "rules_dir": "%APPDATA%\\TabNine\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.tabnine",
+                "settings_file": "~/.tabnine/tabnine.json",
+                "rules_dir": "~/.tabnine/rules"
+            },
+            "macos": {
+                "config_dir": "~/Library/Application Support/TabNine",
+                "settings_file": "~/Library/Application Support/TabNine/tabnine.json",
+                "rules_dir": "~/.tabnine/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "cloud_sharing_enabled": False,
+                    "anonymous_telemetry": False,
+                    "mask_secrets": True
+                }
+            },
+            "native_settings_override": {
+                "cloud_sharing_enabled": False,
+                "anonymous_telemetry": False,
+                "enterprise_mode": True,
+                "local_model_only": True,
+                "mask_secrets": True,
+                "timeout_seconds": 60,
+                "rate_limit_rpm": 30
+            }
+        }
+    },
+    {
+        "vendor": "augment",
+        "name": "augment",
+        "category": "ide",
+        "description": "Augment Code - Context-aware AI coding engine and developer companion",
+        "paths": {
+            "windows": {
+                "config_dir": "%USERPROFILE%\\.augment",
+                "settings_file": "%USERPROFILE%\\.augment\\config.json",
+                "rules_dir": "%USERPROFILE%\\.augment\\rules"
+            },
+            "linux": {
+                "config_dir": "~/.augment",
+                "settings_file": "~/.augment/config.json",
+                "rules_dir": "~/.augment/rules"
+            },
+            "macos": {
+                "config_dir": "~/.augment",
+                "settings_file": "~/.augment/config.json",
+                "rules_dir": "~/.augment/rules"
+            }
+        },
+        "policies": {
+            "sandbox": {
+                "enforce_sandbox": True,
+                "default_bypass": False
+            },
+            "approvals": {
+                "require_approval_for_terminal": True,
+                "require_approval_for_network": True,
+                "require_approval_for_write": True
+            },
+            "rate_limit": DEFAULT_RATE_LIMIT,
+            "timeout": DEFAULT_TIMEOUT,
+            "dangerous_paths": DANGEROUS_PATHS_BY_OS,
+            "dlp": {
+                "block_sensitive_paths": COMMON_DLP_PATHS,
+                "disable_code_training_sharing": True,
+                "mask_secrets": True
+            },
+            "telemetry": {
+                "enable_telemetry": False,
+                "enable_crash_reporting": False,
+                "audit_logging": True
+            },
+            "strict_rules": {
+                "action": "block_without_prompting",
+                "denied_patterns": CRITICAL_DENIED_PATTERNS_BY_OS,
+                "native_overrides": {
+                    "telemetry.enabled": False,
+                    "code_training_opt_out": True,
+                    "require_write_confirmation": True
+                }
+            },
+            "native_settings_override": {
+                "telemetry.enabled": False,
+                "code_training_opt_out": True,
+                "require_write_confirmation": True,
+                "mask_detected_secrets": True,
+                "sandbox_isolation": True,
+                "timeout_seconds": 60,
                 "rate_limit_rpm": 30
             }
         }

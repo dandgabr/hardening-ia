@@ -5,7 +5,7 @@
 - **Tool Name:** `cline`
 - **Category:** `Agentic IDE Assistant`
 
-Cline is an autonomous coding agent for VS Code capable of multi-step terminal, file, browser, and MCP tool execution.
+Cline is an autonomous coding assistant for VS Code with terminal execution, file editing, and MCP capabilities.
 
 ---
 
@@ -15,13 +15,13 @@ The following table lists the official configuration keys and their recommended 
 
 | Setting Key | Hardened Value (Default) | Security Purpose |
 | :--- | :--- | :--- |
-| `autoApprove.mode` | `'never'` | Strictly disables global auto-approval for all tool invocations. |
-| `alwaysApproveResubmit` | `false` | Requires operator consent on every retry loop. |
-| `autoApproveExecution` | `false` | Disables automated shell command execution without review. |
-| `allowNonWorkspaceAccess` | `false` | Blocks reading or writing files outside the open project directory. |
-| `restrictSecretAccess` | `true` | Excludes `.env` and credential files from context collection. |
-| `mcp.requireConsent` | `true` | Mandates approval before invoking local MCP server tools. |
-| `diff.autoApply` | `false` | Requires manual inspection of file diffs before saving to disk. |
+| `autoApprove.mode` | `'never'` | Prevents autonomous bypass of human confirmation. |
+| `autoApproveExecution` | `false` | Requires approval before running shell commands. |
+| `allowNonWorkspaceAccess` | `false` | Restricts Cline to files within the active workspace root. |
+| `mcp.requireConsent` | `true` | Mandates confirmation before invoking Model Context Protocol tools. |
+| `mcp.autoApprove` | `false` | Disallows automatic tool execution for MCP servers. |
+| `diff.autoApply` | `false` | Requires manual review of file changes before applying diffs. |
+| `restrictSecretAccess` | `true` | Prevents the agent from reading secret keys and credentials. |
 
 ---
 
