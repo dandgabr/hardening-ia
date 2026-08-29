@@ -380,14 +380,16 @@ class HardeningTUIApp(App):
         """Reloads policy catalog and refreshes list view with live installation status."""
         self.policies = self.config_loader.discover_policies()
         tools_list = self.query_one("#tools-list", ListView)
+        current_idx = tools_list.index
         tools_list.clear()
-        for p in self.policies:
+        selected_idx = 0
+        for i, p in enumerate(self.policies):
             tools_list.append(ToolItem(p))
-        if self.selected_policy:
-            for p in self.policies:
-                if p.tool.vendor == self.selected_policy.tool.vendor and p.tool.name == self.selected_policy.tool.name:
-                    self.selected_policy = p
-                    break
+            if self.selected_policy and p.tool.vendor == self.selected_policy.tool.vendor and p.tool.name == self.selected_policy.tool.name:
+                self.selected_policy = p
+                selected_idx = i
+        if self.policies:
+            tools_list.index = selected_idx
         self._update_details()
 
     def _update_header_status(self) -> None:

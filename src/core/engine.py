@@ -337,23 +337,42 @@ class HardeningEngine:
 
         return diffs
 
+    @staticmethod
+    def _get_default_unhardened_value(key: str, val: Any) -> Any:
+        """Returns standard unhardened / permissive baseline default for an AI tool setting."""
+        k_lower = key.lower()
+        if isinstance(val, bool):
+            if any(term in k_lower for term in ("telemetry", "analytics", "crash", "tracking", "share", "training", "autoupdater", "allow", "bypass", "auto")):
+                return True
+            return False
+        if isinstance(val, str):
+            if val in ("request-review", "deny-critical", "manual", "block", "deny", "disable"):
+                return "allow" if any(term in k_lower for term in ("permission", "action", "tool", "mode")) else "enable"
+            if val == "plan":
+                return "auto"
+            return "default"
+        if isinstance(val, list):
+            return []
+        if isinstance(val, (int, float)):
+            return 0
+        return None
+
     def _remove_json_settings(self, path: Path, overrides: dict, dry_run: bool, vendor: str = "", tool_name: str = "") -> List[SettingDiff]:
         """
-        Surgically restores original settings from restore manifest or removes newly added keys.
-        All other settings (e.g. OpenAI keys, Anthropic keys, custom themes) remain strictly untouched.
+        Surgically restores original settings from restore manifest or reverts to unhardened permissive defaults.
+        All other user settings (e.g. OpenAI keys, Anthropic keys, custom themes) remain strictly untouched.
         """
         diffs: List[SettingDiff] = []
-        if not path.exists():
-            return diffs
+        current_data: Dict[str, Any] = {}
 
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception as e:
-            logger.warning(f"Could not parse settings for removal at {path}: {e}")
-            return diffs
+        if path.exists():
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    current_data = json.load(f)
+            except Exception as e:
+                logger.warning(f"Could not parse settings for removal at {path}: {e}")
+                current_data = {}
 
-        manifest_existed_before = True
         manifest_data: Dict[str, Any] = {}
         if vendor and tool_name:
             manifest_file = self._get_tool_backup_dir(vendor, tool_name) / "restore_manifest.json"
@@ -361,7 +380,6 @@ class HardeningEngine:
                 try:
                     m_json = json.loads(manifest_file.read_text(encoding="utf-8"))
                     manifest_data = m_json.get("original_keys", {})
-                    manifest_existed_before = m_json.get("file_existed_before", True)
                 except Exception as e:
                     logger.debug(f"Could not read restore manifest: {e}")
 
@@ -379,23 +397,24 @@ class HardeningEngine:
         seen = set()
         unique_keys = [k for k in all_keys_to_remove if not (k in seen or seen.add(k))]
 
+        has_manifest = bool(manifest_data)
         for key in unique_keys:
             orig_info = manifest_data.get(key)
-            if orig_info and orig_info.get("existed"):
-                # Restore exact original value
+            if has_manifest and orig_info and orig_info.get("existed"):
+                # Restore exact original user value from manifest
                 orig_val = orig_info.get("value")
-                current_val = data.get(key)
+                current_val = current_data.get(key)
                 if current_val != orig_val:
-                    data[key] = orig_val
+                    current_data[key] = orig_val
                     diffs.append(SettingDiff(key=key, old_value=current_val, new_value=orig_val))
-            else:
-                # Key was injected by hardening: delete only this key
-                if key in data:
-                    old_val = data.pop(key)
+            elif has_manifest and (not orig_info or not orig_info.get("existed")):
+                # Key was injected: surgically delete only this key
+                if key in current_data:
+                    old_val = current_data.pop(key)
                     diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
                 elif "." in key:
                     parts = key.split(".")
-                    curr = data
+                    curr = current_data
                     found = True
                     for p in parts[:-1]:
                         if isinstance(curr, dict) and p in curr:
@@ -406,6 +425,29 @@ class HardeningEngine:
                     if found and isinstance(curr, dict) and parts[-1] in curr:
                         old_val = curr.pop(parts[-1])
                         diffs.append(SettingDiff(key=key, old_value=old_val, new_value="[REMOVED]"))
+            else:
+                # No backup manifest exists: reset to standard unhardened permissive defaults
+                hardened_val = overrides.get(key)
+                unhardened_val = self._get_default_unhardened_value(key, hardened_val)
+                if key in current_data:
+                    old_val = current_data[key]
+                    if old_val != unhardened_val:
+                        current_data[key] = unhardened_val
+                        diffs.append(SettingDiff(key=key, old_value=old_val, new_value=unhardened_val))
+                elif "." in key:
+                    parts = key.split(".")
+                    curr = current_data
+                    for p in parts[:-1]:
+                        if not isinstance(curr.get(p), dict):
+                            curr[p] = {}
+                        curr = curr[p]
+                    old_val = curr.get(parts[-1])
+                    if old_val != unhardened_val:
+                        curr[parts[-1]] = unhardened_val
+                        diffs.append(SettingDiff(key=key, old_value=old_val, new_value=unhardened_val))
+                else:
+                    current_data[key] = unhardened_val
+                    diffs.append(SettingDiff(key=key, old_value=None, new_value=unhardened_val))
 
         # Clean empty parent dicts if created
         def _clean_empty_dicts(d: dict):
@@ -418,20 +460,13 @@ class HardeningEngine:
             for k in keys_to_del:
                 d.pop(k)
 
-        if isinstance(data, dict):
-            _clean_empty_dicts(data)
+        if isinstance(current_data, dict):
+            _clean_empty_dicts(current_data)
 
         if not dry_run:
-            if not data and not manifest_existed_before:
-                try:
-                    path.unlink(missing_ok=True)
-                    if path.parent.exists() and not any(path.parent.iterdir()):
-                        path.parent.rmdir()
-                except Exception:
-                    pass
-            else:
-                with open(path, "w", encoding="utf-8") as f:
-                    json.dump(data, f, indent=2)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(current_data, f, indent=2)
 
         return diffs
 
