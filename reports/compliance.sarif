@@ -1,0 +1,115 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Hardening IA Framework",
+          "semanticVersion": "1.0.0",
+          "informationUri": "https://github.com/dandgabr/hardening-ia",
+          "rules": [
+            {
+              "id": "HIA-SECURITY_DANGEROUS_PATHS_ACTION",
+              "name": "security.dangerous_paths_action",
+              "shortDescription": {
+                "text": "Non-compliant setting: security.dangerous_paths_action"
+              },
+              "fullDescription": {
+                "text": "Configuration key 'security.dangerous_paths_action' matches hardened baseline. Expected: ask, Found: block"
+              },
+              "help": {
+                "text": "Remediation: Configure 'security.dangerous_paths_action' to 'ask'. Mapped to LLM06: Excessive Agency | MANAGE-1.2 Risk Mitigation"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "HIA-TOOLPERMISSIONS",
+              "name": "toolPermissions",
+              "shortDescription": {
+                "text": "Non-compliant setting: toolPermissions"
+              },
+              "fullDescription": {
+                "text": "Configuration key 'toolPermissions' matches hardened baseline. Expected: request-review, Found: deny-critical"
+              },
+              "help": {
+                "text": "Remediation: Configure 'toolPermissions' to 'request-review'. Mapped to LLM06: Excessive Agency | MANAGE-1.2 Human-in-the-Loop Oversight"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "HIA-SECURITY_DANGEROUSPATHS_ACTION",
+              "name": "security.dangerousPaths.action",
+              "shortDescription": {
+                "text": "Non-compliant setting: security.dangerousPaths.action"
+              },
+              "fullDescription": {
+                "text": "Configuration key 'security.dangerousPaths.action' matches hardened baseline. Expected: ask, Found: block"
+              },
+              "help": {
+                "text": "Remediation: Configure 'security.dangerousPaths.action' to 'ask'. Mapped to LLM06: Excessive Agency & Uncontrolled Execution | MANAGE-1.2 Risk Treatment"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "HIA-SECURITY_DANGEROUS_PATHS_ACTION",
+          "level": "error",
+          "message": {
+            "text": "Tool 'zai/zai' failed security check 'security.dangerous_paths_action': expected ask, found block."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "configs/tools/zai/zai/hardening_policy.yaml"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIA-TOOLPERMISSIONS",
+          "level": "error",
+          "message": {
+            "text": "Tool 'google/antigravity' failed security check 'toolPermissions': expected request-review, found deny-critical."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "configs/tools/google/antigravity/hardening_policy.yaml"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIA-SECURITY_DANGEROUSPATHS_ACTION",
+          "level": "error",
+          "message": {
+            "text": "Tool 'google/antigravity' failed security check 'security.dangerousPaths.action': expected ask, found block."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "configs/tools/google/antigravity/hardening_policy.yaml"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

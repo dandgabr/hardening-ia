@@ -119,3 +119,5 @@ class ConfigLoader:
                 return p
         return None
 
+
+ConfigLoader.load_all_policies = ConfigLoader.discover_policies

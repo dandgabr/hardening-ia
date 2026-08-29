@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardening IA - Enterprise Security & Governance Audit</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 30px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        h1 { margin: 0; font-size: 1.75rem; color: #fff; display: flex; align-items: center; gap: 10px; }
+        .timestamp { color: var(--text-secondary); font-size: 0.875rem; }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+        .kpi-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 5px 0;
+        }
+        .kpi-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .section-title {
+            font-size: 1.25rem;
+            margin: 30px 0 15px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background: #111827;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+        tr:hover {
+            background: #273549;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-success { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+        .badge-muted { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid #475569; }
+        .score-badge { font-weight: 700; }
+        .score-high { color: #34d399; }
+        .score-mid { color: #fbbf24; }
+        .score-low { color: #f87171; }
+        .findings-list { margin: 0; padding-left: 20px; font-size: 0.85rem; color: #fca5a5; }
+        .all-passed { color: #34d399; font-size: 0.875rem; }
+        code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #93c5fd;
+            font-size: 0.85rem;
+        }
+        footer {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-top: 50px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🛡️ Hardening IA - Enterprise Security & Governance Audit</h1>
+                <div class="timestamp">Generated: 2026-08-29T18:45:27.675250+00:00 (UTC)</div>
+            </div>
+            <div>
+                <span class="badge badge-success">Enterprise Edition</span>
+            </div>
+        </header>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Global Compliance Score</div>
+                <div class="kpi-value" style="color: #10b981;">94.92%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Target AI Tools</div>
+                <div class="kpi-value" style="color: var(--accent-blue);">21</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Installed on Host</div>
+                <div class="kpi-value" style="color: #a855f7;">3</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Checks Passed / Failed</div>
+                <div class="kpi-value" style="color: #fff;"><span style="color: var(--accent-green);">56</span> / <span style="color: var(--accent-red);">3</span></div>
+            </div>
+        </div>
+
+        <div class="section-title">📊 Tool Compliance Audit Matrix (21 Unified Tools)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>AI Tool / Product</th>
+                    <th>Host Status</th>
+                    <th>Compliance Score</th>
+                    <th>Audit Findings & Active Controls</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td><strong>augment/augment</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>tabnine/tabnine</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>amazon/amazon-q</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>aider/aider</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>continuedev/continue</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>codeium/windsurf</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>zai/zai</strong></td>
+                <td><span class="badge badge-success">Installed</span></td>
+                <td><span class="score-badge score-high">96.2%</span> (25/26)</td>
+                <td><ul class='findings-list'><li><strong>security.dangerous_paths_action</strong>: expected <code>ask</code>, found <code>block</code></li></ul></td>
+            </tr>
+            
+            <tr>
+                <td><strong>xai/grok</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>qoder/qoder</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>opencode/opencode</strong></td>
+                <td><span class="badge badge-success">Installed</span></td>
+                <td><span class="score-badge score-high">100.0%</span> (13/13)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>openai/codex</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>nousresearch/hermes-agent</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>moonshot/kimi</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>kilo/kilo-code</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>google/antigravity</strong></td>
+                <td><span class="badge badge-success">Installed</span></td>
+                <td><span class="score-badge score-high">90.0%</span> (18/20)</td>
+                <td><ul class='findings-list'><li><strong>toolPermissions</strong>: expected <code>request-review</code>, found <code>deny-critical</code></li><li><strong>security.dangerousPaths.action</strong>: expected <code>ask</code>, found <code>block</code></li></ul></td>
+            </tr>
+            
+            <tr>
+                <td><strong>github/copilot</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>codebuddy/codebuddy</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>clinepass/clinepass</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>cline/cline</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>anysphere/cursor</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            <tr>
+                <td><strong>anthropic/claude-code</strong></td>
+                <td><span class="badge badge-muted">Not Found</span></td>
+                <td><span class="score-badge score-low">0.0%</span> (0/0)</td>
+                <td><span class='all-passed'>All security controls verified</span></td>
+            </tr>
+            
+            </tbody>
+        </table>
+
+        <div class="section-title">🏛️ Governance Framework Compliance Mappings</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Security Control Domain</th>
+                    <th>OWASP Top 10 for LLM (2025)</th>
+                    <th>NIST AI RMF 1.0</th>
+                    <th>ISO/IEC 42001:2023</th>
+                    <th>Security Purpose</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+            <tr>
+                <td><strong>TELEMETRY</strong></td>
+                <td><code>LLM02: Sensitive Information Disclosure</code></td>
+                <td><code>GOVERN-1.1 / MEASURE-2.3</code></td>
+                <td><code>A.6.2 Data Security & Privacy Controls</code></td>
+                <td>Prevents unauthorized telemetry transmission and cloud metadata exfiltration.</td>
+            </tr>
+            
+            <tr>
+                <td><strong>SANDBOX</strong></td>
+                <td><code>LLM06: Excessive Agency & Uncontrolled Execution</code></td>
+                <td><code>MANAGE-1.2 Risk Treatment</code></td>
+                <td><code>A.8.4 AI System Boundary Isolation</code></td>
+                <td>Enforces execution boundaries, container namespaces, and dangerous syscall blocking.</td>
+            </tr>
+            
+            <tr>
+                <td><strong>MCP</strong></td>
+                <td><code>LLM01: Prompt Injection / Tool Exploitation</code></td>
+                <td><code>MAP-1.5 Third-Party Integrations</code></td>
+                <td><code>A.9.3 Access Control & Protocol Verification</code></td>
+                <td>Requires explicit operator consent before invoking external MCP server tools.</td>
+            </tr>
+            
+            <tr>
+                <td><strong>DLP</strong></td>
+                <td><code>LLM02: Sensitive Information Disclosure / LLM07: System Prompt Leakage</code></td>
+                <td><code>MEASURE-2.3 Privacy Safeguards</code></td>
+                <td><code>A.6.2 Sensitive Data Protection</code></td>
+                <td>Masks API keys, bearer tokens, private keys, and credential patterns before prompt dispatch.</td>
+            </tr>
+            
+            <tr>
+                <td><strong>SUBAGENTS</strong></td>
+                <td><code>LLM06: Excessive Agency & Uncontrolled Autonomy</code></td>
+                <td><code>GOVERN-1.1 Workload Governance</code></td>
+                <td><code>A.8.4 Process Orchestration & Guardrails</code></td>
+                <td>Restricts autonomous subagent spawning and mandates parent agent approval.</td>
+            </tr>
+            
+            <tr>
+                <td><strong>APPROVALS</strong></td>
+                <td><code>LLM06: Excessive Agency</code></td>
+                <td><code>MANAGE-1.2 Human-in-the-Loop Oversight</code></td>
+                <td><code>A.9.3 Human Authorization</code></td>
+                <td>Mandates explicit operator approval for write operations and command execution.</td>
+            </tr>
+            
+            <tr>
+                <td><strong>RATE_LIMITS</strong></td>
+                <td><code>LLM10: Unbounded Consumption & Denial of Service</code></td>
+                <td><code>MEASURE-2.3 Resource Governance</code></td>
+                <td><code>A.8.4 Availability Controls</code></td>
+                <td>Enforces request rate limits and command execution timeouts.</td>
+            </tr>
+            
+            </tbody>
+        </table>
+
+        <footer>
+            Hardening IA Framework | Autonomous Enterprise Security Suite for AI Development Environments
+        </footer>
+    </div>
+</body>
+</html>

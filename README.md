@@ -4,20 +4,20 @@
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey.svg)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An enterprise-grade, multi-platform framework for automating security hardening, runtime containment, DLP protection, and telemetry lockdown across AI-assisted development tools (CLIs, IDEs, and Autonomous Agents).
+An enterprise-grade, multi-platform framework for automating security hardening, runtime containment, DLP protection, compliance governance reporting, and telemetry lockdown across 21 AI-assisted development tools (CLIs, IDEs, and Autonomous Agents).
 
 ---
 
 ## 📑 Table of Contents
 
 - [Overview](#-overview)
-- [Supported AI Tools](#-supported-ai-tools)
-- [Repository Structure](#-repository-structure)
-- [Prerequisites & Installation](#-prerequisites--installation)
-- [Extra Containment: ai-jail](#-extra-containment-ai-jail)
+- [Supported AI Tools (21 Unified Tools)](#-supported-ai-tools-21-unified-tools)
+- [Enterprise Compliance & Governance](#-enterprise-compliance--governance)
+- [Real-time Security Watchdog](#-real-time-security-watchdog)
+- [Runtime Sandboxing & Seccomp-BPF](#-runtime-sandboxing--seccomp-bpf)
 - [Usage Guide](#-usage-guide)
-  - [1. Interactive Terminal UI (TUI with Textual)](#1-interactive-terminal-ui-tui-with-textual)
-  - [2. Headless CLI Automation Mode](#2-headless-cli-automation-mode)
+  - [1. Headless CLI Automation Mode](#1-headless-cli-automation-mode)
+  - [2. Interactive Terminal UI (TUI with Textual)](#2-interactive-terminal-ui-tui-with-textual)
 - [Logging & Security Auditing](#-logging--security-auditing)
 - [Documentation Index](#-documentation-index)
 
@@ -25,23 +25,22 @@ An enterprise-grade, multi-platform framework for automating security hardening,
 
 ## 🌟 Overview
 
-AI developer assistants introduce new threat surfaces: unintended command execution by agents, indirect prompt injection, sensitive secret exfiltration, and unconsented source code ingestion into cloud training sets.
+AI developer assistants introduce critical new threat vectors: unintended command execution by autonomous agents, indirect prompt injection, sensitive secret exfiltration, SSRF exfiltration against cloud metadata services, and unconsented source code ingestion into cloud training sets.
 
 **Hardening IA** provides a unified, declarative pipeline to enforce robust enterprise baselines:
-- **Runtime Sandboxing:** Contain autonomous subagents and shell tools.
-- **Human-in-the-Loop Controls:** Disallow unrestricted auto-approvals.
-- **Dangerous OS Paths Protection:** Detects host OS (Linux, Windows, macOS) and restricts sensitive paths (`/etc`, `C:\Windows`, `/System`, `~/.ssh`, `~/.aws`, `~/.kube`). In Standard Mode, always prompts before access; in Strict Mode, blocks access immediately without asking.
-- **Rate Limiting & Timeouts:** Enforces 30 requests/min (burst 10) and 30s/60s command & execution timeouts across supported tools.
-- **Strict Restrictive Mode:** One-click toggle in TUI and `--strict` in CLI enforcing explicit denied patterns for critical anti-patterns (`rm -rf /`, `mkfs`, `format`, `dd`, `diskpart`) with zero prompting.
-- **Data Loss Prevention (DLP):** Exclude credentials, tokens, and SSH/cloud keys from context pipelines.
-- **Zero-Telemetry Lockdown:** Enforce `DO_NOT_TRACK`, disable crash uploads and model training consent.
+- **Unified Product Architecture:** Hardens CLI, IDE, and ADE / Desktop extensions under a single coherent product interface.
+- **Automatic Post-Application Verification:** Immediately audits modified files on disk after applying policies and outputs a live compliance table.
+- **Prominent Visual Banners:** High-visibility yellow Dry Run and crimson Strict Mode alert panels.
+- **Runtime Sandboxing:** Seccomp-BPF filters denying dangerous syscalls, Bubblewrap namespace isolation, and Cloud Metadata SSRF guardrails.
+- **Enterprise Governance Reporting:** Multi-format exporters (**Interactive HTML**, **SARIF 2.1.0**, **JSON**, **Markdown**) mapped directly to **OWASP Top 10 for LLM (2025)**, **NIST AI RMF 1.0**, and **ISO/IEC 42001:2023**.
+- **Real-time Security Watchdog Daemon:** Continuous background monitoring for configuration drift, file tampering, and auto-remediation.
 - **Multi-OS Command Risk Classifier:** 390+ commands categorized across Linux, Windows, and macOS into LOW, MEDIUM, HIGH, and CRITICAL risk tiers.
-- **Dynamic Host Discovery:** Automatically detects active OS and installed AI tools before execution.
-- **Audit Logging:** Emits structured JSONL audit logs (`logs/audit.jsonl`) for enterprise SIEM/EDR ingestion.
+- **Data Loss Prevention (DLP):** Excludes credentials, tokens, and private keys from prompt context pipelines.
+- **Zero-Telemetry Lockdown:** Enforces `DO_NOT_TRACK`, disables telemetry, analytics, crash uploads, and training sharing.
 
 ---
 
-## 🤖 Supported AI Tools
+## 🤖 Supported AI Tools (21 Unified Tools)
 
 | Vendor | Tool | Category | Hardening Policy (YAML) | Tool Security Guide |
 |---|---|---|---|---|
@@ -69,235 +68,123 @@ AI developer assistants introduce new threat surfaces: unintended command execut
 
 ---
 
-## 📂 Repository Structure
+## 🏛️ Enterprise Compliance & Governance
 
+Export formal compliance audit reports in multiple standard formats:
+
+```bash
+# Interactive HTML Dashboard
+python main.py --report --format html --output reports/compliance.html
+
+# OASIS SARIF 2.1.0 for GitHub Security Tab / CI Code Scanning
+python main.py --report --format sarif --output reports/compliance.sarif
+
+# JSON format for DevSecOps pipelines
+python main.py --report --format json --output reports/compliance.json
+
+# Markdown format
+python main.py --report --format markdown --output reports/compliance.md
 ```
-hardening-ia/
-├── docs/                               # Comprehensive technical documentation
-│   ├── ARCHITECTURE.md                 # System architecture and execution flow
-│   ├── HARDENING_GUIDELINES.md         # Threat models and security pillars
-│   ├── CONFIG_SPEC.md                  # Declarative YAML policy specification
-│   ├── LINUX_COMMAND_POLICY.md         # Linux command execution risk matrix (390+ cmds)
-│   ├── WINDOWS_COMMAND_POLICY.md       # Windows command risk policy (PowerShell/CMD)
-│   ├── MACOS_COMMAND_POLICY.md         # macOS command risk policy (Darwin/BSD)
-│   └── tools/                          # Dedicated security guides for all 15 tools
-├── configs/                            # Declarative YAML policies
-│   ├── rules/                          # Deployed agent security rule files
-│   └── tools/<vendor>/<tool>/          # Per-tool hardening policy definitions
-├── scripts/                            # Platform execution automation
-│   ├── os/                             # Native OS scripts (Windows .ps1, Linux/macOS .sh)
-│   └── extra-tools/                    # Extra security tool installers (e.g. ai-jail)
-├── src/                                # Core application source code
-│   ├── core/                           # Engine, models, logger, parser, risk classifier
-│   ├── cli/                            # Headless CLI runner with Rich tables
-│   └── tui/                            # Interactive Terminal UI with Textual
-├── logs/                               # Rolling logs and JSONL audit trail (.gitignored)
-├── main.py                             # Unified CLI / TUI entrypoint
-├── pyproject.toml                      # Package configuration
-├── requirements.txt                    # Python dependencies
-├── LICENSE                             # MIT License
-├── .gitignore                          # Standardized ignore rules
-└── README.md                           # Project documentation
+
+### Framework Mappings Matrix:
+- **OWASP Top 10 for LLM (2025):** LLM01 (Prompt Injection), LLM02 (Sensitive Information Disclosure), LLM06 (Excessive Agency), LLM07 (System Prompt Leakage), LLM10 (Unbounded Consumption).
+- **NIST AI RMF 1.0:** GOVERN-1.1, MAP-1.5, MEASURE-2.3, MANAGE-1.2.
+- **ISO/IEC 42001:2023:** Clauses A.6.2 (Data Security), A.8.4 (System Boundary Isolation), A.9.3 (Access Authorization).
+
+---
+
+## 👁️ Real-time Security Watchdog
+
+Run the background watchdog daemon to monitor configuration files for unauthorized drift or tampering:
+
+```bash
+# Monitor configuration drift every 5 seconds
+python main.py --watch --interval 5
+
+# Monitor and automatically re-apply hardened policies upon detecting drift
+python main.py --watch --interval 5 --auto-remediate
 ```
 
 ---
 
-## 🚀 Prerequisites & Installation
+## 🛡️ Runtime Sandboxing & Seccomp-BPF
 
-### Prerequisites
-- **Python 3.9+**
-- **Windows:** PowerShell 5.1+ or PowerShell 7+
-- **Linux / macOS:** Bash or Zsh
-
-### Quickstart (1-Step Launchers)
-The repository includes native launchers for each platform that automatically detect/create the `.venv` and install dependencies:
+Inspect host kernel isolation features and runtime sandboxing capabilities:
 
 ```bash
-# On Linux / macOS:
-./main.sh
-
-# On Windows (PowerShell):
-.\main.ps1
-
-# On Windows (CMD):
-main.cmd
+python main.py --sandbox-diagnostics
 ```
 
-### Manual Virtual Environment Setup
-```bash
-# Create and activate virtual environment
-python3 -m venv .venv
-
-# On Linux/macOS:
-source .venv/bin/activate
-
-# On Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-
-# Install requirements
-pip install -r requirements.txt
-```
+Outputs live host diagnostics:
+- **Bubblewrap (`bwrap`):** User namespaces, rootfs read-only mounts, and isolated PID namespaces.
+- **Seccomp-BPF Syscall Filtering:** Blocks dangerous kernel calls (`ptrace`, `kexec_load`, `reboot`, `swapon`, raw socket creation).
+- **SSRF & Cloud Metadata Guard:** Blocks `169.254.169.254`, `metadata.google.internal`, and container metadata endpoints.
+- **`ai-jail` Wrapper:** Encapsulates CLI agents in dedicated sandboxed workspaces.
 
 ---
 
-## 🛡️ Extra Tools: Runtime Sandboxes & SAST Analysis
+## 🚀 Usage Guide
 
-The framework provides automated dependency resolution, installation, and integration for key ecosystem security tooling:
-
-### 1. [ai-jail](https://github.com/akitaonrails/ai-jail) (Runtime Containment)
-An open-source sandbox container written in Rust that isolates AI agent processes using `bubblewrap` (Linux / WSL2) or `sandbox-exec` (macOS).
+### 1. Headless CLI Automation Mode
 
 ```bash
-python main.py --install-extra ai-jail
-```
+# List all 21 tools and host detection status
+python main.py --list
 
-### 2. [OpenGrep](https://github.com/opengrep/opengrep) (AI Code SAST & Vulnerability Remediation)
-An enterprise-grade, fully open-source static analysis security scanner (fork of Semgrep CE) integrated with custom rules to identify and fix security flaws in AI-generated code (command injections, hardcoded credentials, insecure deserialization, SQLi, SSRF):
+# Apply hardening to all detected tools on the host with automatic verification
+python main.py --apply --installed-only
 
-```bash
-# Install OpenGrep binary and deploy rules:
-python main.py --install-extra opengrep
+# Apply STRICT zero-trust mode (immediate dangerous path rejection & critical command blocks)
+python main.py --apply --installed-only --strict
 
-# Scan the workspace or a target directory for code vulnerabilities:
-python main.py --scan-code
+# Simulate changes without modifying disk files (shows prominent Yellow Dry Run Banner)
+python main.py --apply --installed-only --dry-run
+
+# Audit and verify compliance on the host
+python main.py --verify --installed-only
+
+# Auto-remediate all detected discrepancies to 100% compliance
+python main.py --verify --fix
+
+# Scan workspace for AI-generated code vulnerabilities with OpenGrep
 python main.py --scan-code ./src
+
+# Test a shell command against the STRIDE risk matrix
+python main.py --check-command "rm -rf /etc/shadow" --strict
+
+# Run the complete automated test suite (64 unit & integration tests)
+python main.py --test
 ```
 
-### 3. Check Status & Uninstall Extras
-```bash
-# Query host installation and diagnostic status:
-python main.py --status-extra
+### 2. Interactive Terminal UI (TUI with Textual)
 
-# Install all components and run post-install diagnostics:
-python main.py --install-extra all
-
-# Uninstall and remove extra security components cleanly:
-python main.py --remove-extra all
-```
-
----
-
-## 💻 Usage Guide
-
-### 1. Interactive Terminal UI (TUI with Textual)
-Launch the modern full-screen terminal interface:
+Launch the modern Terminal User Interface:
 ```bash
 python main.py
-# or explicitly:
+# or explicitly
 python main.py -gui
 ```
 
-### 2. Headless CLI Automation Mode
-
-- **List all available tools and their live host installation status:**
-  ```bash
-  python main.py --list
-  ```
-
-- **List only tools detected/installed on the current machine:**
-  ```bash
-  python main.py --list --installed-only
-  ```
-
-- **Evaluate Command Risk Level (Low/Medium/High/Critical across Linux, Windows, macOS):**
-  ```bash
-  python main.py --check-command "ls -la"
-  python main.py --check-command "mkdir new_folder"
-  python main.py --check-command "sudo systemctl restart nginx"
-  python main.py --check-command "rm -rf /"
-  ```
-
-- **Apply hardening only to installed tools on the host:**
-  ```bash
-  python main.py --apply --installed-only
-  ```
-
-- **Verify that applied hardening configurations are active on the host:**
-  ```bash
-  python main.py --verify
-  python main.py --verify --installed-only
-  python main.py --tool cursor --verify
-  ```
-
-- **Run the automated unit and integration test suite:**
-  ```bash
-  python main.py --test
-  ```
-
-- **Scan workspace for security vulnerabilities (OpenGrep SAST & SCA):**
-  ```bash
-  python main.py --scan-code
-  python main.py --scan-code ./src
-  ```
-
-- **Provision & apply hardening across ALL 14 supported tools:**
-  ```bash
-  python main.py --apply
-  ```
-
-- **Revert/remove hardening configurations from detected tools:**
-  ```bash
-  python main.py --remove --installed-only
-  python main.py --tool cursor --remove
-  ```
-
-- **Auto-remediate any non-compliant tools to 100% compliance:**
-  ```bash
-  python main.py --verify --fix
-  python main.py --verify --installed-only --strict --fix
-  ```
-
-- **Enterprise Administrator System-Wide Hardening (Multi-User & Read-Only Locking):**
-  Enforces policies across ALL user accounts on the machine and sets file permissions to Read-Only so standard users can read the config but cannot alter or bypass it. Requires elevated privileges (Root/Administrator):
-  ```bash
-  # Linux & macOS (Run with sudo):
-  sudo python main.py --apply --admin --installed-only
-  sudo python main.py --apply --admin --strict
-  sudo python main.py --verify --admin
-
-  # Windows (Run in elevated PowerShell / Command Prompt as Administrator):
-  python main.py --apply --admin --installed-only
-  python main.py --apply --admin --strict
-  python main.py --verify --admin
-  ```
-
-- **Verbose / Debug output:**
-  ```bash
-  python main.py --apply --verbose
-  ```
+**TUI Features & Hotkeys:**
+- `Up` / `Down`: Navigate the 21-tool catalog.
+- `V`: Verify selected tool's compliance score.
+- `F`: 1-Click Auto-Remediate all installed tools to 100% compliance.
+- `D`: Open Data Loss Prevention (DLP) inspector dialog.
+- `R`: Open the interactive Command Risk Classifier playground.
+- `S`: Toggle Strict Restrictive Mode.
+- `H` / `?`: Toggle help dialog.
+- `Q`: Quit application.
 
 ---
 
 ## 📊 Logging & Security Auditing
 
-- **Execution Logs:** Written to `logs/hardening.log` with automatic rotation (10 MB per file, 5 backups).
-- **Structured Audit Records:** Every hardening execution produces an immutable record in `logs/audit.jsonl`:
-  ```json
-  {
-    "timestamp": "2026-08-19T16:15:00Z",
-    "event": "POLICY_APPLIED",
-    "tool": "antigravity",
-    "vendor": "google",
-    "status": "SUCCESS",
-    "details": {
-      "dry_run": false,
-      "os": "windows",
-      "modified_paths": ["C:\\Users\\dev\\.gemini\\antigravity-cli\\settings.json"],
-      "changes_count": 4
-    }
-  }
-  ```
+Hardening IA maintains comprehensive structured audit trails:
+- `logs/hardening.log`: Rolling framework execution logs with full debug traces.
+- `logs/audit.jsonl`: Structured JSONL audit events for SIEM/EDR ingestion.
 
 ---
 
-## 📖 Documentation Index
+## 📄 License
 
-- [CLI, Commands & Parameters Reference Manual](docs/CLI_REFERENCE.md)
-- [System Architecture](docs/ARCHITECTURE.md)
-- [Enterprise Hardening Guidelines & Threat Model](docs/HARDENING_GUIDELINES.md)
-- [YAML Policy Configuration Specification](docs/CONFIG_SPEC.md)
-- [Linux Command Execution Risk Matrix](docs/LINUX_COMMAND_POLICY.md)
-- [Windows Command Execution Risk Matrix](docs/WINDOWS_COMMAND_POLICY.md)
-- [macOS Command Execution Risk Matrix](docs/MACOS_COMMAND_POLICY.md)
-- [OpenGrep SAST & SCA Security Ruleset Specification](docs/OPENGREP_SECURITY_CONFIG.md)
-- [Tool Documentation Directory](docs/tools/)
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.

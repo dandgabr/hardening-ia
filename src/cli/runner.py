@@ -1,4 +1,4 @@
-"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, verification, rollback, and Rich reporting."""
+"""CLI runner for automated execution, tool discovery, command risk checking, SAST code scanning, verification, rollback, compliance reporting, and real-time watchdog."""
 
 import sys
 import argparse
@@ -20,38 +20,35 @@ from src.core.command_classifier import CommandRiskClassifier, RiskLevel
 from src.core.code_analyzer import CodeVulnerabilityScanner
 from src.core.verifier import HardeningVerifier
 from src.core.admin_manager import AdminManager
+from src.core.compliance_reporter import ComplianceReporter
+from src.core.watchdog import SecurityWatchdog
 
 logger = get_logger("cli")
 
 HELP_EPILOG = """
 [bold cyan]Practical Usage Examples:[/]
-  [green]python main.py[/]                              Launch interactive Textual Control Interface (TUI)
-  [green]python main.py --list[/]                       List all 21 supported AI tools and host detection status
-  [green]python main.py --list --installed-only[/]      List only AI tools currently installed on this machine
-  [green]python main.py --apply --installed-only[/]     Apply security hardening to detected tools
-  [green]python main.py --apply --strict[/]             Apply STRICT mode (explicit critical denials & zero prompting on dangerous paths)
-  [green]python main.py --apply[/]                      Provision & apply hardening across all 21 supported tools
-  [green]python main.py --tool cursor --apply[/]        Harden a specific tool (e.g. cursor, windsurf, antigravity)
-  [green]python main.py --remove --installed-only[/]    Revert/remove hardening from detected tools
-  [green]python main.py --tool cursor --remove[/]       Revert hardening from a specific tool
-  [green]python main.py --apply --dry-run[/]            Simulate policy enforcement without writing files
-  [green]python main.py --verify[/]                     Verify that hardening settings are functional on host
-  [green]python main.py --verify --installed-only[/]    Verify compliance only for installed tools
-  [green]python main.py --verify --fix[/]               Audit and auto-remediate all tools to 100%% compliance
-  [green]sudo python main.py --apply --admin --strict[/] [ADMIN] Enforce system-wide read-only hardening across ALL user accounts
-  [green]sudo python main.py --verify --admin[/]        [ADMIN] Audit compliance and read-only file permissions across all users
-  [green]python main.py --test[/]                       Execute automated unit and integration test suite
-  [green]python main.py --scan-code[/]                  Run OpenGrep SAST & SCA scan on current workspace
-  [green]python main.py --scan-code ./src[/]            Scan a specific directory for code vulnerabilities
-  [green]python main.py --check-command "ls -la"[/]     Evaluate command risk tier (LOW/MEDIUM/HIGH/CRITICAL)
+  [green]python main.py[/]                                  Launch interactive Textual Control Interface (TUI)
+  [green]python main.py --list[/]                           List all 21 supported AI tools and host detection status
+  [green]python main.py --list --installed-only[/]          List only AI tools currently installed on this machine
+  [green]python main.py --apply --installed-only[/]         Apply security hardening with automatic post-apply verification
+  [green]python main.py --apply --strict[/]                 Apply STRICT mode (zero-trust guardrails, immediate path blocking)
+  [green]python main.py --apply --dry-run[/]                Simulate policy enforcement with explicit warning banner
+  [green]python main.py --tool cursor --apply[/]            Harden a specific tool (e.g. cursor, windsurf, antigravity)
+  [green]python main.py --remove --installed-only[/]        Revert/remove hardening from detected tools
+  [green]python main.py --verify[/]                         Audit and verify that hardening settings are functional on host
+  [green]python main.py --verify --fix[/]                   Audit and auto-remediate all tools to 100%% compliance
+  [green]python main.py --report --format html[/]           Export interactive HTML compliance dashboard
+  [green]python main.py --report --format sarif[/]          Export SARIF 2.1.0 report for GitHub Security Tab
+  [green]python main.py --watch --auto-remediate[/]         Launch background watchdog monitoring file drift & tampering
+  [green]sudo python main.py --apply --admin --strict[/]     [ADMIN] Enforce system-wide read-only hardening across all user accounts
+  [green]python main.py --sandbox-diagnostics[/]            Inspect host process isolation, Seccomp, and Bubblewrap features
+  [green]python main.py --test[/]                           Execute automated unit and integration test suite
+  [green]python main.py --scan-code ./src[/]                Scan directory for code vulnerabilities with OpenGrep
   [green]python main.py --check-command "rm -rf /" --strict[/] Check command in strict restrictive mode
-  [green]python main.py --install-extra all[/]          Install runtime sandboxes (ai-jail) and OpenGrep
-  [green]python main.py --remove-extra all[/]           Remove extra security tools and integration wrappers
-  [green]python main.py --status-extra[/]               Inspect installation status and diagnostics for extra components
 """
 
 
-def _matches_tool_query(p: HardeningPolicy, query: str) -> bool:
+def _matches_tool_query(p, query: str) -> bool:
     query = query.lower()
     full_name = f"{p.tool.vendor}/{p.tool.name}".lower()
     if query in full_name or query == p.tool.name.lower():
@@ -86,7 +83,7 @@ def _matches_tool_query(p: HardeningPolicy, query: str) -> bool:
 def run_cli(args: List[str]):
     parser = argparse.ArgumentParser(
         prog="hardening-ia",
-        description="Enterprise AI Hardening Framework: Multi-OS Command Risk Matrix, SAST/SCA Code Analyzer & Tool Discovery.",
+        description="Enterprise AI Hardening Framework: Multi-OS Command Risk Matrix, SAST/SCA Code Analyzer, Compliance Reporting & Watchdog.",
         epilog=HELP_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -97,6 +94,13 @@ def run_cli(args: List[str]):
     parser.add_argument("--remove", "--revert", action="store_true", help="Revert/remove hardening policies and clean configuration overrides")
     parser.add_argument("--verify", action="store_true", help="Audit host configuration files to verify that hardening is active and functional")
     parser.add_argument("--fix", "--remediate", action="store_true", help="Automatically remediate and bring any non-compliant tools to 100%% compliance")
+    parser.add_argument("--no-verify", action="store_true", help="Skip automatic post-application verification audit when applying policies")
+    parser.add_argument("--report", action="store_true", help="Generate enterprise compliance and governance audit report")
+    parser.add_argument("--format", type=str, default="html", choices=["html", "sarif", "json", "markdown", "md"], help="Format for compliance report: html (default), sarif, json, or markdown")
+    parser.add_argument("--output", type=str, metavar="PATH", help="Destination file path for exported compliance report")
+    parser.add_argument("--watch", action="store_true", help="Start continuous security watchdog daemon monitoring configuration drift and file tampering")
+    parser.add_argument("--interval", type=float, default=5.0, metavar="SECS", help="Polling interval in seconds for the security watchdog daemon (default: 5.0s)")
+    parser.add_argument("--auto-remediate", action="store_true", help="Allow security watchdog daemon to automatically re-apply policies upon detecting configuration drift")
     parser.add_argument("--test", action="store_true", help="Run automated test suite for policies, classifier, verifier, and scanner")
     parser.add_argument("--list", action="store_true", help="List all available tools and their host installation status")
     parser.add_argument("--installed-only", action="store_true", help="Filter operations strictly to tools installed on this host")
@@ -134,6 +138,23 @@ def run_cli(args: List[str]):
         border_style="cyan"
     ))
 
+    # Prominent Visual Banners
+    if parsed.dry_run:
+        console.print(Panel(
+            "[bold yellow]⚠️  DRY RUN MODE ACTIVE (SIMULATION)[/bold yellow]\n"
+            "[white]No files or configuration settings will be modified on disk. The output below simulates policy enforcement.[/white]",
+            border_style="yellow",
+            title="[bold yellow]Dry Run Simulation[/bold yellow]"
+        ))
+
+    if parsed.strict:
+        console.print(Panel(
+            "[bold red]🛡️  STRICT RESTRICTIVE MODE ACTIVE (ZERO TRUST)[/bold red]\n"
+            "[white]Enforcing zero-trust guardrails: explicit blocking of critical destructive commands, immediate rejection of sensitive system paths, and mandatory human write approvals.[/white]",
+            border_style="red",
+            title="[bold red]Strict Security Lockdown[/bold red]"
+        ))
+
     # 1. Run Automated Test Suite
     if parsed.test:
         console.print("\n[bold cyan][*] Running Hardening IA Automated Test Suite...[/bold cyan]\n")
@@ -149,107 +170,243 @@ def run_cli(args: List[str]):
     # Runtime Sandbox Diagnostics
     if parsed.sandbox_diagnostics:
         from src.core.runtime_sandbox import RuntimeSandboxManager
-        sm = RuntimeSandboxManager()
-        diag = sm.get_sandbox_diagnostics()
+        diag = RuntimeSandboxManager.get_sandbox_diagnostics()
+
         table = Table(title="Host Runtime Sandboxing & Process Isolation Diagnostics", header_style="bold cyan")
         table.add_column("Security Isolation Feature", style="bold white", width=35)
         table.add_column("Host Status", width=25)
-        table.add_column("Details / Kernel Subsystem", style="yellow")
+        table.add_column("Details / Kernel Subsystem", style="dim")
 
-        table.add_row("Bubblewrap (bwrap)", "[bold green]AVAILABLE[/bold green]" if diag["bubblewrap_available"] else "[dim]Not Installed[/dim]", "User namespace & rootfs isolation")
-        table.add_row("ai-jail Runtime Sandbox", "[bold green]INSTALLED[/bold green]" if diag["ai_jail_available"] else "[dim]Not Installed[/dim]", "Encapsulated CLI agent containerization")
-        table.add_row("Seccomp-BPF Syscall Filtering", "[bold green]SUPPORTED[/bold green]" if diag["seccomp_supported"] else "[yellow]UNSUPPORTED / RESTRICTED[/yellow]", "Kernel dangerous syscall blocking")
-        table.add_row("Linux Landlock LSM", "[bold green]SUPPORTED[/bold green]" if diag["landlock_supported"] else "[dim]UNSUPPORTED[/dim]", "Unprivileged filesystem access control")
-        table.add_row("SSRF & Metadata IP Guard", "[bold green]ACTIVE (Rules Defined)[/bold green]", "Blocks 169.254.169.254 & cloud metadata")
+        table.add_row(
+            "Bubblewrap (bwrap)",
+            "[bold green]AVAILABLE[/bold green]" if diag["bubblewrap_available"] else "[bold red]NOT INSTALLED[/bold red]",
+            "User namespace & rootfs isolation"
+        )
+        table.add_row(
+            "ai-jail Runtime Sandbox",
+            "[bold green]INSTALLED[/bold green]" if diag["ai_jail_installed"] else "[dim]Not Installed[/dim]",
+            "Encapsulated CLI agent containerization"
+        )
+        table.add_row(
+            "Seccomp-BPF Syscall Filtering",
+            "[bold green]SUPPORTED[/bold green]" if diag["seccomp_supported"] else "[bold red]UNSUPPORTED[/bold red]",
+            "Kernel dangerous syscall blocking"
+        )
+        table.add_row(
+            "Linux Landlock LSM",
+            "[bold green]SUPPORTED[/bold green]" if diag["landlock_supported"] else "[dim]UNSUPPORTED[/dim]",
+            "Unprivileged filesystem access control"
+        )
+        table.add_row(
+            "SSRF & Metadata IP Guard",
+            "[bold green]ACTIVE (Rules Defined)[/bold green]",
+            "Blocks 169.254.169.254 & cloud metadata"
+        )
 
         console.print(table)
         return
 
-    # Admin Elevation Gate Check
-    if parsed.admin:
-        if not OSDetector.is_admin():
-            elevation_cmd = "sudo python main.py --admin ..." if os_name in ("LINUX", "MACOS") else "Run as Administrator in PowerShell / Command Prompt"
-            console.print(Panel(
-                f"[bold red]❌ ELEVATION REQUIRED: Administrator / Root privileges required.[/bold red]\n\n"
-                f"The [bold cyan]--admin[/bold cyan] option enforces system-wide security policies across all local user accounts\n"
-                f"and locks configuration files with Read-Only permissions so standard users cannot edit them.\n\n"
-                f"[bold yellow]How to execute with elevated privileges:[bold yellow]\n"
-                f"  • [bold white]{elevation_cmd}[/bold white]",
-                title="Access Denied: Insufficient Privileges",
-                border_style="red"
-            ))
-            return
+    # 2. Security Extra Tools Management (ai-jail, opengrep, all)
+    if parsed.install_extra:
+        engine = HardeningEngine()
+        target = parsed.install_extra.lower()
+        console.print(f"\n[*] Installing extra security component: [bold cyan]{target}[/bold cyan]...")
+        res = engine.install_extra_tool(target)
+        if res.get("success"):
+            console.print(f"[bold green][OK] {res.get('message')}[/bold green]")
         else:
-            console.print("[bold green]🔒 ADMIN PRIVILEGES VERIFIED: Running System-Wide Enforcement Mode[/bold green]")
-
-    # 2. Evaluate command risk if requested
-    if parsed.check_command:
-        risk, requires_approval, reason = CommandRiskClassifier.classify_command(
-            parsed.check_command,
-            strict_mode=parsed.strict
-        )
-        color = {
-            RiskLevel.LOW: "green",
-            RiskLevel.MEDIUM: "yellow",
-            RiskLevel.HIGH: "bright_red",
-            RiskLevel.CRITICAL: "bold red"
-        }.get(risk, "white")
-
-        approval_text = "[bold red]BLOCKED IMMEDIATELY (No Prompting)[/bold red]" if (parsed.strict and not requires_approval and risk == RiskLevel.CRITICAL) else (
-            '[bold yellow]YES (Operator Confirmation Required)[/bold yellow]' if requires_approval else '[bold green]NO (Auto-executable)[/bold green]'
-        )
-
-        mode_tag = " [STRICT RESTRICTIVE MODE]" if parsed.strict else " [STANDARD MODE]"
-
-        console.print(Panel(
-            f"[bold]Command:[/] `{parsed.check_command}`\n"
-            f"[bold]Risk Level:[/] [{color}]{risk.value}[/{color}]\n"
-            f"[bold]Execution Control:[/] {approval_text}\n"
-            f"[bold]Policy Rule:[/] {reason}",
-            title=f"{os_name} Command Risk Evaluation{mode_tag}",
-            border_style=color
-        ))
+            console.print(f"[bold red][ERROR] {res.get('message')}[/bold red]")
         return
 
-    # 3. SAST Code Vulnerability Scan
+    if parsed.remove_extra:
+        engine = HardeningEngine()
+        target = parsed.remove_extra.lower()
+        console.print(f"\n[*] Removing extra security component: [bold cyan]{target}[/bold cyan]...")
+        res = engine.remove_extra_tool(target)
+        if res.get("success"):
+            console.print(f"[bold green][OK] {res.get('message')}[/bold green]")
+        else:
+            console.print(f"[bold red][ERROR] {res.get('message')}[/bold red]")
+        return
+
+    if parsed.status_extra:
+        engine = HardeningEngine()
+        diag = engine.verify_extra_tools_diagnostics()
+        table = Table(title="Extra Security Tools Diagnostics & Host Status", header_style="bold cyan")
+        table.add_column("Security Component", style="bold white", width=20)
+        table.add_column("Status", width=16)
+        table.add_column("Path / Binary", style="dim", width=25)
+        table.add_column("Diagnostics Output", style="dim")
+
+        for tool_key, info in diag.items():
+            status_badge = "[bold green]INSTALLED[/bold green]" if info["installed"] else "[bold red]NOT INSTALLED[/bold red]"
+            table.add_row(
+                info["name"],
+                status_badge,
+                info.get("path") or "N/A",
+                info.get("diagnostic_output", "N/A")
+            )
+        console.print(table)
+        return
+
+    # 3. Check Command Risk Level
+    if parsed.check_command:
+        classifier = CommandRiskClassifier()
+        cmd = parsed.check_command
+        risk = classifier.classify(cmd, strict_mode=parsed.strict)
+
+        color = "green"
+        if risk.level == RiskLevel.MEDIUM:
+            color = "yellow"
+        elif risk.level == RiskLevel.HIGH:
+            color = "bright_red"
+        elif risk.level == RiskLevel.CRITICAL:
+            color = "bold red on black"
+
+        table = Table(title=f"Command Risk Evaluation{' [STRICT RESTRICTIVE MODE]' if parsed.strict else ''}")
+        table.add_column("Command", style="white")
+        table.add_column("Risk Tier", style=color)
+        table.add_column("Action Taken", style="bold")
+        table.add_column("Matched Patterns / Triggers", style="dim")
+
+        table.add_row(
+            cmd,
+            risk.level.name,
+            f"[{color}]{risk.recommended_action.upper()}[/{color}]",
+            ", ".join(risk.reasons) if risk.reasons else "Baseline command execution"
+        )
+        console.print(table)
+        return
+
+    # 4. OpenGrep SAST Code Scanning
     if parsed.scan_code:
-        scan_target = Path(parsed.scan_code)
-        console.print(f"\n[bold cyan][*] Running OpenGrep SAST & SCA Analysis on:[/] {scan_target.resolve()}\n")
+        target_path = Path(parsed.scan_code).resolve()
+        console.print(f"\n[bold cyan][*] Running OpenGrep SAST & SCA Code Security Scan on:[/] [white]{target_path}[/]\n")
+
         scanner = CodeVulnerabilityScanner()
-        findings = scanner.scan_path(scan_target)
+        findings = scanner.scan_directory(target_path)
 
         if not findings:
-            console.print("[bold green][OK] Zero vulnerabilities or secret leaks detected in codebase.[/bold green]\n")
+            console.print("[bold green][OK] No code vulnerabilities or hardcoded secrets detected in workspace.[/bold green]\n")
             return
 
-        table = Table(title="OpenGrep Security Findings", header_style="bold red")
-        table.add_column("Rule ID & Title", style="bold white", width=30)
-        table.add_column("Location", style="cyan", width=25)
-        table.add_column("Severity", width=12)
-        table.add_column("Remediation / Fix", style="yellow")
+        table = Table(title=f"OpenGrep SAST Security Findings ({len(findings)} issues detected)", header_style="bold red")
+        table.add_column("File", style="cyan", width=25)
+        table.add_column("Line", width=6)
+        table.add_column("Severity", width=10)
+        table.add_column("Rule ID", style="bold yellow", width=25)
+        table.add_column("Finding Summary", style="white")
 
         for f in findings:
-            sev = f.get("severity", "WARNING").upper()
-            sev_style = "bold red" if sev in ("CRITICAL", "HIGH", "ERROR") else "bold yellow"
-            loc = f"{f.get('file')}:{f.get('line')}"
+            sev_style = "bold red" if f.severity in ("CRITICAL", "ERROR", "HIGH") else "yellow"
+            rel_file = str(Path(f.file_path).relative_to(target_path) if target_path in Path(f.file_path).parents else f.file_path)
             table.add_row(
-                f"{f.get('rule_id')}\n[dim]{f.get('title', '')}[/dim]",
-                loc,
-                f"[{sev_style}]{sev}[/{sev_style}]",
-                f.get("remediation", "")
+                rel_file,
+                str(f.line),
+                f"[{sev_style}]{f.severity}[/{sev_style}]",
+                f.rule_id,
+                f.message
             )
 
         console.print(table)
-        console.print(f"\n[bold yellow][!] {len(findings)} vulnerability finding(s) recorded in logs/audit.jsonl[/bold yellow]\n")
+        console.print(f"\n[bold red][!] Found {len(findings)} security vulnerability(ies). Review findings above.[/bold red]\n")
         return
 
+    # 5. Core Policy Operations
     loader = ConfigLoader()
     engine = HardeningEngine()
     verifier = HardeningVerifier()
     admin_mgr = AdminManager()
-    policies = loader.discover_policies()
+    policies = loader.load_all_policies()
 
-    # 4. Verify Applied Configurations
+    # Continuous Security Watchdog Daemon
+    if parsed.watch:
+        console.print(f"\n[bold green]👁️ Starting Real-time Security Watchdog Daemon (Interval: {parsed.interval}s, Auto-Remediate: {parsed.auto_remediate})...[/bold green]\n")
+        watchdog = SecurityWatchdog(
+            config_loader=loader,
+            engine=engine,
+            verifier=verifier,
+            poll_interval=parsed.interval,
+            auto_remediate=parsed.auto_remediate,
+            strict_mode=parsed.strict,
+            installed_only=parsed.installed_only
+        )
+        try:
+            watchdog.run_forever()
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Watchdog stopped by user.[/yellow]")
+        return
+
+    # Compliance & Governance Report Export
+    if parsed.report:
+        console.print(f"\n[bold cyan]📊 Generating Enterprise Compliance Report (Format: {parsed.format.upper()})...[/bold cyan]\n")
+        target_policies = policies
+        if parsed.installed_only:
+            target_policies = [p for p in target_policies if p.is_installed]
+        if parsed.tool:
+            target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
+
+        reports = [verifier.verify_policy(p, strict_mode=parsed.strict) for p in target_policies]
+        reporter = ComplianceReporter(reports, target_policies)
+
+        out_ext = "md" if parsed.format in ("markdown", "md") else parsed.format
+        output_file = Path(parsed.output) if parsed.output else Path(f"reports/compliance_report.{out_ext}")
+        saved_path = reporter.export_report(output_file, parsed.format)
+
+        stats = reporter.calculate_overall_compliance()
+        console.print(f"[bold green][OK] Report successfully exported to:[/] [white]{saved_path}[/]")
+        console.print(f"Global Compliance Score: [bold green]{stats['global_score']}%[/bold green] across {stats['total_tools']} tools ({stats['installed_tools']} installed on host).\n")
+        return
+
+    # List Tools
+    if parsed.list:
+        table = Table(title="AI Tools Security Hardening Registry (21 Unified Tools)", header_style="bold cyan")
+        table.add_column("Status", width=16)
+        table.add_column("Category", width=12)
+        table.add_column("Tool / Product", style="bold white", width=30)
+        table.add_column("Description", style="dim")
+
+        for p in policies:
+            if parsed.installed_only and not p.is_installed:
+                continue
+
+            status_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT INSTALLED[/dim]"
+            table.add_row(
+                status_badge,
+                p.tool.category.upper(),
+                f"{p.tool.vendor}/{p.tool.name}",
+                p.tool.description
+            )
+        console.print(table)
+        return
+
+    # Auto-Remediate Discrepancies
+    if parsed.fix:
+        target_policies = policies
+        if parsed.installed_only:
+            target_policies = [p for p in target_policies if p.is_installed]
+        if parsed.tool:
+            target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
+
+        console.print(f"\n[*] [bold cyan]Auto-Remediating compliance discrepancies across {len(target_policies)} target tool(s)...[/bold cyan]\n")
+        remediation_table = Table(title="Automated Remediation Summary", header_style="bold green")
+        remediation_table.add_column("Tool", style="white", width=25)
+        remediation_table.add_column("Host Status", width=14)
+        remediation_table.add_column("Remediation Result", width=18)
+        remediation_table.add_column("Patched Keys", style="dim")
+
+        for p in target_policies:
+            res = verifier.remediate_policy(p, strict_mode=parsed.strict)
+            status_badge = "[bold green]100% COMPLIANT[/bold green]" if res.success else "[bold red]FAILED[/bold red]"
+            installed_badge = "[green]Installed[/green]" if p.is_installed else "[dim]Not Found[/dim]"
+            details = ", ".join([f"{d.key} -> {d.new_value}" for d in res.diffs]) if res.diffs else ("Already 100% Compliant" if res.success else res.message)
+            remediation_table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, status_badge, details)
+
+        console.print(remediation_table)
+        console.print("\n[bold green][OK] Remediation completed. Audit logs recorded in logs/audit.jsonl[/bold green]\n")
+        return
+
+    # Verify Hardening Compliance
     if parsed.verify:
         target_policies = policies
         if parsed.installed_only:
@@ -258,145 +415,43 @@ def run_cli(args: List[str]):
         if parsed.tool:
             target_policies = [p for p in target_policies if _matches_tool_query(p, parsed.tool)]
 
-        # System-Wide Admin Verification
-        if parsed.admin:
-            user_profiles = admin_mgr.get_all_user_profiles()
-            mode_str = " [STRICT MODE]" if parsed.strict else " [STANDARD MODE]"
-            console.print(f"\n[bold cyan][*] Auditing System-Wide Hardening & Read-Only Locks{mode_str} across {len(user_profiles)} User Account(s)...[/bold cyan]\n")
-
-            table = Table(title=f"System-Wide Multi-User Hardening Audit ({len(user_profiles)} Users)", header_style="bold magenta")
-            table.add_column("Tool", style="bold white", width=25)
-            table.add_column("Total Users Audited", width=20)
-            table.add_column("Read-Only Enforced", width=20)
-            table.add_column("Compliance Status", width=20)
-
-            for p in target_policies:
-                report = admin_mgr.verify_admin_system_wide_policy(p, strict_mode=parsed.strict)
-                all_ro = all(u.get("read_only_enforced", False) for u in report["users"])
-                all_comp = all(u.get("compliant", False) for u in report["users"])
-
-                ro_badge = "[bold green]YES (Root-Locked)[/bold green]" if all_ro else "[bold yellow]PARTIAL / UNLOCKED[/bold yellow]"
-                status_badge = "[bold green]100% COMPLIANT[/bold green]" if all_comp else "[bold yellow]AUDIT FINDINGS[/bold yellow]"
-
-                table.add_row(f"{p.tool.vendor}/{p.tool.name}", f"{report['total_users']} user profile(s)", ro_badge, status_badge)
-
-            console.print(table)
-            console.print("\n[bold green][OK] System-wide verification audit completed. Records written to logs/audit.jsonl[/bold green]\n")
+        if not target_policies:
+            console.print("[bold red][!] No matching tools found to verify.[/bold red]")
             return
 
-        mode_str = " [STRICT MODE]" if parsed.strict else " [STANDARD MODE]"
-        console.print(f"\n[bold cyan][*] Auditing Hardening Compliance{mode_str} across {len(target_policies)} target tool(s)...[/bold cyan]\n")
+        strict_desc = " [STRICT MODE]" if parsed.strict else ""
+        console.print(f"\n[*] Auditing Hardening Compliance{strict_desc} across [bold]{len(target_policies)}[/bold] target tool(s)...\n")
 
-        table = Table(title=f"Host Security Hardening Verification Report{mode_str}", header_style="bold magenta")
-        table.add_column("Tool", style="bold white", width=25)
-        table.add_column("Host Status", width=14)
-        table.add_column("Compliance Score", width=18)
-        table.add_column("Audit Findings & Discrepancies", style="dim")
+        report_table = Table(title=f"Host Security Hardening Verification Report{strict_desc}", header_style="bold cyan")
+        report_table.add_column("Tool", style="bold white", width=25)
+        report_table.add_column("Host Status", width=14)
+        report_table.add_column("Compliance Score", width=18)
+        report_table.add_column("Audit Findings & Discrepancies", style="dim")
 
         for p in target_policies:
             report = verifier.verify_policy(p, strict_mode=parsed.strict)
-
-            if parsed.fix and report.compliance_score < 100.0:
-                console.print(f"[*] Auto-remediating non-compliant baseline for {p.tool.vendor}/{p.tool.name}...")
-                verifier.remediate_policy(p, strict_mode=parsed.strict)
-                report = verifier.verify_policy(p, strict_mode=parsed.strict)
-
-            installed_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT FOUND[/dim]"
+            status_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT FOUND[/dim]"
 
             if report.compliance_score == 100.0:
-                score_badge = f"[bold green]100% ({report.passed_checks}/{report.total_checks})[/bold green]"
-            elif report.compliance_score > 0:
+                score_badge = f"[bold green]{report.compliance_score:.0f}% ({report.passed_checks}/{report.total_checks})[/bold green]"
+            elif report.compliance_score >= 80.0:
                 score_badge = f"[bold yellow]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks})[/bold yellow]"
             else:
-                score_badge = "[dim]N/A[/dim]" if not report.settings_file_exists else "[bold red]0% (0/0)[/bold red]"
+                score_badge = f"[bold red]{report.compliance_score:.1f}% ({report.passed_checks}/{report.total_checks})[/bold red]"
 
-            discrepancies = [f"Missing '{c.key}'" for c in report.checks if not c.passed]
-            details = ", ".join(discrepancies) if discrepancies else report.message
+            findings = []
+            for c in report.checks:
+                if not c.passed:
+                    findings.append(f"Missing '{c.key}'" if c.actual == "[MISSING]" else f"'{c.key}' expected {c.expected} (found {c.actual})")
 
-            table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, score_badge, details)
+            details = "\n".join(findings) if findings else report.message
+            report_table.add_row(f"{p.tool.vendor}/{p.tool.name}", status_badge, score_badge, details)
 
-        console.print(table)
+        console.print(report_table)
         console.print("\n[bold green][OK] Verification audit completed. Records written to logs/audit.jsonl[/bold green]\n")
         return
 
-    if parsed.list:
-        table = Table(title="AI Tools Catalog & Host Detection", header_style="bold magenta")
-        table.add_column("Status", width=15)
-        table.add_column("Category", style="cyan", width=10)
-        table.add_column("Vendor / Tool", style="bold white", width=28)
-        table.add_column("Description", style="dim")
-
-        for p in policies:
-            if parsed.installed_only and not p.is_installed:
-                continue
-
-            status = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT INSTALLED[/dim]"
-            table.add_row(
-                status,
-                p.tool.category.upper(),
-                f"{p.tool.vendor}/{p.tool.name}",
-                p.tool.description
-            )
-        console.print(table)
-        return
-
-    if parsed.status_extra:
-        console.print(f"\n[bold cyan][*] Security Extras & Isolation Tools Status ({os_name}):[/bold cyan]\n")
-        table = Table(title="Security Extras Diagnostic Status", header_style="bold magenta")
-        table.add_column("Component", style="bold white", width=16)
-        table.add_column("Role / Purpose", style="cyan", width=34)
-        table.add_column("Host Status", width=18)
-        table.add_column("Diagnostics", width=18)
-        table.add_column("Details", style="dim")
-
-        extras = [
-            ("ai-jail", "Process Sandbox & Namespace Isolation"),
-            ("opengrep", "Static AST Vulnerability & Secret Scanner")
-        ]
-
-        for tool_id, purpose in extras:
-            is_inst = engine.is_extra_tool_installed(tool_id)
-            diag = engine.verify_extra_tool_installation(tool_id)
-            diag_pass = all(c["passed"] for c in diag)
-            status_str = "[bold green]INSTALLED[/bold green]" if is_inst else "[dim]NOT INSTALLED[/dim]"
-            diag_str = "[bold green]PASSED (100%)[/bold green]" if (is_inst and diag_pass) else ("[yellow]WARNED[/yellow]" if is_inst else "[dim]N/A[/dim]")
-            details_list = [f"{c['name']}: {'PASS' if c['passed'] else 'WARN'}" for c in diag]
-            details_str = ", ".join(details_list) if is_inst else "Run --install-extra to configure"
-            table.add_row(tool_id, purpose, status_str, diag_str, details_str)
-
-        console.print(table)
-        console.print("")
-        return
-
-    if parsed.install_extra:
-        tools_to_install = ["ai-jail", "opengrep"] if parsed.install_extra.lower() == "all" else [parsed.install_extra]
-        for t in tools_to_install:
-            console.print(f"\n[bold cyan][*] Launching installation pipeline for:[/] [bold white]{t}[/bold white]...")
-            for item in engine.stream_install_extra_tool(t):
-                if item[0] == "log":
-                    console.print(f"  {item[1]}")
-                elif item[0] == "done":
-                    if item[1]:
-                        console.print(f"[bold green][OK] {item[2]}[/bold green]\n")
-                    else:
-                        console.print(f"[bold red][!] {item[2]}[/bold red]\n")
-        return
-
-    if parsed.remove_extra:
-        tools_to_remove = ["ai-jail", "opengrep"] if parsed.remove_extra.lower() == "all" else [parsed.remove_extra]
-        for t in tools_to_remove:
-            console.print(f"\n[bold yellow][*] Launching removal pipeline for:[/] [bold white]{t}[/bold white]...")
-            for item in engine.stream_remove_extra_tool(t):
-                if item[0] == "log":
-                    console.print(f"  {item[1]}")
-                elif item[0] == "done":
-                    if item[1]:
-                        console.print(f"[bold green][OK] {item[2]}[/bold green]\n")
-                    else:
-                        console.print(f"[bold red][!] {item[2]}[/bold red]\n")
-        return
-
-    # 5. Remove / Revert Policies
+    # Remove / Rollback Hardening Policies
     if parsed.remove:
         target_policies = policies
         if parsed.installed_only:
@@ -429,6 +484,7 @@ def run_cli(args: List[str]):
         console.print("\n[bold green][OK] Policy removal completed. Audit logs written to logs/audit.jsonl[/bold green]\n")
         return
 
+    # Apply Hardening Policies
     if parsed.apply:
         target_policies = policies
         if parsed.installed_only:
@@ -484,6 +540,25 @@ def run_cli(args: List[str]):
             summary_table.add_row(f"{p.tool.vendor}/{p.tool.name}", installed_badge, status_badge, details)
 
         console.print(summary_table)
-        console.print("\n[bold green][OK] Hardening execution completed. Audit logs written to logs/audit.jsonl[/bold green]\n")
+        console.print("\n[bold green][OK] Hardening execution completed. Audit logs written to logs/audit.jsonl[/bold green]")
+
+        # Automatic Post-Application Verification Audit
+        if not parsed.dry_run and not parsed.no_verify:
+            console.print("\n[bold cyan]🔍 Executing Automatic Post-Application Verification Audit...[/bold cyan]\n")
+            audit_table = Table(title=f"Post-Hardening Live Compliance Audit{' [STRICT MODE]' if parsed.strict else ''}", header_style="bold green")
+            audit_table.add_column("Tool", style="bold white", width=25)
+            audit_table.add_column("Host Status", width=14)
+            audit_table.add_column("Post-Apply Score", width=20)
+            audit_table.add_column("Audit Findings & Active Controls", style="dim")
+
+            for p in target_policies:
+                report = verifier.verify_policy(p, strict_mode=parsed.strict)
+                status_badge = "[bold green]INSTALLED[/bold green]" if p.is_installed else "[dim]NOT FOUND[/dim]"
+                score_badge = f"[bold green]{report.compliance_score:.0f}% ({report.passed_checks}/{report.total_checks})[/bold green]" if report.compliance_score == 100.0 else f"[bold yellow]{report.compliance_score:.1f}%[/bold yellow]"
+                findings = "[green]100% Compliant: All security controls active on disk[/green]" if report.compliance_score == 100.0 else f"[yellow]{report.failed_checks} check(s) need attention[/yellow]"
+                audit_table.add_row(f"{p.tool.vendor}/{p.tool.name}", status_badge, score_badge, findings)
+
+            console.print(audit_table)
+            console.print("\n[bold green][OK] Live post-hardening audit complete. All settings verified on disk.[/bold green]\n")
     else:
         parser.print_help()

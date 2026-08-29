@@ -1,0 +1,1061 @@
+{
+  "report_type": "Hardening IA Enterprise Compliance Audit",
+  "schema_version": "1.0",
+  "timestamp": "2026-08-29T18:45:29.522140+00:00",
+  "statistics": {
+    "total_tools": 21,
+    "installed_tools": 3,
+    "total_checks": 59,
+    "passed_checks": 56,
+    "failed_checks": 3,
+    "global_score": 94.92,
+    "generated_at": "2026-08-29T18:45:29.522140+00:00"
+  },
+  "framework_mappings": {
+    "telemetry": {
+      "owasp_llm": "LLM02: Sensitive Information Disclosure",
+      "nist_ai_rmf": "GOVERN-1.1 / MEASURE-2.3",
+      "iso_42001": "A.6.2 Data Security & Privacy Controls",
+      "description": "Prevents unauthorized telemetry transmission and cloud metadata exfiltration."
+    },
+    "sandbox": {
+      "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+      "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+      "iso_42001": "A.8.4 AI System Boundary Isolation",
+      "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+    },
+    "mcp": {
+      "owasp_llm": "LLM01: Prompt Injection / Tool Exploitation",
+      "nist_ai_rmf": "MAP-1.5 Third-Party Integrations",
+      "iso_42001": "A.9.3 Access Control & Protocol Verification",
+      "description": "Requires explicit operator consent before invoking external MCP server tools."
+    },
+    "dlp": {
+      "owasp_llm": "LLM02: Sensitive Information Disclosure / LLM07: System Prompt Leakage",
+      "nist_ai_rmf": "MEASURE-2.3 Privacy Safeguards",
+      "iso_42001": "A.6.2 Sensitive Data Protection",
+      "description": "Masks API keys, bearer tokens, private keys, and credential patterns before prompt dispatch."
+    },
+    "subagents": {
+      "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Autonomy",
+      "nist_ai_rmf": "GOVERN-1.1 Workload Governance",
+      "iso_42001": "A.8.4 Process Orchestration & Guardrails",
+      "description": "Restricts autonomous subagent spawning and mandates parent agent approval."
+    },
+    "approvals": {
+      "owasp_llm": "LLM06: Excessive Agency",
+      "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+      "iso_42001": "A.9.3 Human Authorization",
+      "description": "Mandates explicit operator approval for write operations and command execution."
+    },
+    "rate_limits": {
+      "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+      "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+      "iso_42001": "A.8.4 Availability Controls",
+      "description": "Enforces request rate limits and command execution timeouts."
+    }
+  },
+  "tools": [
+    {
+      "tool_name": "augment",
+      "vendor": "augment",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "tabnine",
+      "vendor": "tabnine",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "amazon-q",
+      "vendor": "amazon",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "aider",
+      "vendor": "aider",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "continue",
+      "vendor": "continuedev",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "windsurf",
+      "vendor": "codeium",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "zai",
+      "vendor": "zai",
+      "is_installed": true,
+      "compliance_score": 96.15384615384616,
+      "total_checks": 26,
+      "passed_checks": 25,
+      "failed_checks": 1,
+      "message": "Partially Compliant (96.2%) [STANDARD MODE]: 1 check(s) need remediation.",
+      "checks": [
+        {
+          "key": "telemetry",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'telemetry' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure",
+            "nist_ai_rmf": "GOVERN-1.1 / MEASURE-2.3",
+            "iso_42001": "A.6.2 Data Security & Privacy Controls",
+            "description": "Prevents unauthorized telemetry transmission and cloud metadata exfiltration."
+          }
+        },
+        {
+          "key": "telemetry.enabled",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'telemetry.enabled' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure",
+            "nist_ai_rmf": "GOVERN-1.1 / MEASURE-2.3",
+            "iso_42001": "A.6.2 Data Security & Privacy Controls",
+            "description": "Prevents unauthorized telemetry transmission and cloud metadata exfiltration."
+          }
+        },
+        {
+          "key": "analytics.enabled",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'analytics.enabled' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure",
+            "nist_ai_rmf": "GOVERN-1.1 / MEASURE-2.3",
+            "iso_42001": "A.6.2 Data Security & Privacy Controls",
+            "description": "Prevents unauthorized telemetry transmission and cloud metadata exfiltration."
+          }
+        },
+        {
+          "key": "privacy.data_retention",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'privacy.data_retention' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "agent.auto_execute_commands",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'agent.auto_execute_commands' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "agent.require_confirmation",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'agent.require_confirmation' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "agent.auto_apply_edits",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'agent.auto_apply_edits' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "terminal.auto_execute",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'terminal.auto_execute' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "terminal.sandbox",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'terminal.sandbox' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "composer.auto_apply",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'composer.auto_apply' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "composer.require_approval",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'composer.require_approval' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "sandbox.enabled",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'sandbox.enabled' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "sandbox.strict_mode",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'sandbox.strict_mode' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "dlp.mask_secrets",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'dlp.mask_secrets' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure / LLM07: System Prompt Leakage",
+            "nist_ai_rmf": "MEASURE-2.3 Privacy Safeguards",
+            "iso_42001": "A.6.2 Sensitive Data Protection",
+            "description": "Masks API keys, bearer tokens, private keys, and credential patterns before prompt dispatch."
+          }
+        },
+        {
+          "key": "dlp.block_sensitive_paths",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'dlp.block_sensitive_paths' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure / LLM07: System Prompt Leakage",
+            "nist_ai_rmf": "MEASURE-2.3 Privacy Safeguards",
+            "iso_42001": "A.6.2 Sensitive Data Protection",
+            "description": "Masks API keys, bearer tokens, private keys, and credential patterns before prompt dispatch."
+          }
+        },
+        {
+          "key": "mcp.requireConsent",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'mcp.requireConsent' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM01: Prompt Injection / Tool Exploitation",
+            "nist_ai_rmf": "MAP-1.5 Third-Party Integrations",
+            "iso_42001": "A.9.3 Access Control & Protocol Verification",
+            "description": "Requires explicit operator consent before invoking external MCP server tools."
+          }
+        },
+        {
+          "key": "mcp.require_consent",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'mcp.require_consent' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM01: Prompt Injection / Tool Exploitation",
+            "nist_ai_rmf": "MAP-1.5 Third-Party Integrations",
+            "iso_42001": "A.9.3 Access Control & Protocol Verification",
+            "description": "Requires explicit operator consent before invoking external MCP server tools."
+          }
+        },
+        {
+          "key": "mcp.allow_unsandboxed",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'mcp.allow_unsandboxed' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "security.dangerous_paths_action",
+          "expected": "ask",
+          "actual": "block",
+          "passed": false,
+          "description": "Configuration key 'security.dangerous_paths_action' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "timeout.command",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'timeout.command' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "timeout.request",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'timeout.request' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "timeout_seconds",
+          "expected": 60,
+          "actual": 60,
+          "passed": true,
+          "description": "Configuration key 'timeout_seconds' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "rate_limit.max_rpm",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'rate_limit.max_rpm' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "rate_limit_rpm",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'rate_limit_rpm' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "security_rules_deployed",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Agent security rules file deployed in /home/daniel/.config/zai/rules",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "env_do_not_track",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Environment and settings telemetry lockdown active",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        }
+      ]
+    },
+    {
+      "tool_name": "grok",
+      "vendor": "xai",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "qoder",
+      "vendor": "qoder",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "opencode",
+      "vendor": "opencode",
+      "is_installed": true,
+      "compliance_score": 100.0,
+      "total_checks": 13,
+      "passed_checks": 13,
+      "failed_checks": 0,
+      "message": "100% Compliant [STANDARD MODE]: All 13 security checks passed.",
+      "checks": [
+        {
+          "key": "analytics.enabled",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'analytics.enabled' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure",
+            "nist_ai_rmf": "GOVERN-1.1 / MEASURE-2.3",
+            "iso_42001": "A.6.2 Data Security & Privacy Controls",
+            "description": "Prevents unauthorized telemetry transmission and cloud metadata exfiltration."
+          }
+        },
+        {
+          "key": "agent.confirm_actions",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'agent.confirm_actions' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "agent.auto_apply_edits",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'agent.auto_apply_edits' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "permission_mode",
+          "expected": "prompt",
+          "actual": "prompt",
+          "passed": true,
+          "description": "Configuration key 'permission_mode' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "auto_approve_tools",
+          "expected": [],
+          "actual": [],
+          "passed": true,
+          "description": "Configuration key 'auto_approve_tools' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "sandbox.strict_mode",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'sandbox.strict_mode' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "network.isolate_agent",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'network.isolate_agent' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "dlp.mask_credentials",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'dlp.mask_credentials' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure / LLM07: System Prompt Leakage",
+            "nist_ai_rmf": "MEASURE-2.3 Privacy Safeguards",
+            "iso_42001": "A.6.2 Sensitive Data Protection",
+            "description": "Masks API keys, bearer tokens, private keys, and credential patterns before prompt dispatch."
+          }
+        },
+        {
+          "key": "mcp_consent_required",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'mcp_consent_required' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM01: Prompt Injection / Tool Exploitation",
+            "nist_ai_rmf": "MAP-1.5 Third-Party Integrations",
+            "iso_42001": "A.9.3 Access Control & Protocol Verification",
+            "description": "Requires explicit operator consent before invoking external MCP server tools."
+          }
+        },
+        {
+          "key": "timeout.command_seconds",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'timeout.command_seconds' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "timeout.request_seconds",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'timeout.request_seconds' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "rate_limit.requests_per_minute",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'rate_limit.requests_per_minute' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "env_do_not_track",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Environment and settings telemetry lockdown active",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        }
+      ]
+    },
+    {
+      "tool_name": "codex",
+      "vendor": "openai",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "hermes-agent",
+      "vendor": "nousresearch",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "kimi",
+      "vendor": "moonshot",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "kilo-code",
+      "vendor": "kilo",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "antigravity",
+      "vendor": "google",
+      "is_installed": true,
+      "compliance_score": 90.0,
+      "total_checks": 20,
+      "passed_checks": 18,
+      "failed_checks": 2,
+      "message": "Partially Compliant (90.0%) [STANDARD MODE]: 2 check(s) need remediation.",
+      "checks": [
+        {
+          "key": "telemetry.enabled",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'telemetry.enabled' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure",
+            "nist_ai_rmf": "GOVERN-1.1 / MEASURE-2.3",
+            "iso_42001": "A.6.2 Data Security & Privacy Controls",
+            "description": "Prevents unauthorized telemetry transmission and cloud metadata exfiltration."
+          }
+        },
+        {
+          "key": "crashReporting.enabled",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'crashReporting.enabled' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "toolPermissions",
+          "expected": "request-review",
+          "actual": "deny-critical",
+          "passed": false,
+          "description": "Configuration key 'toolPermissions' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "enableTerminalSandbox",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'enableTerminalSandbox' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "allowNonWorkspaceAccess",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'allowNonWorkspaceAccess' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "hooks.enforceGuardrails",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'hooks.enforceGuardrails' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "mcp.requireConsent",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'mcp.requireConsent' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM01: Prompt Injection / Tool Exploitation",
+            "nist_ai_rmf": "MAP-1.5 Third-Party Integrations",
+            "iso_42001": "A.9.3 Access Control & Protocol Verification",
+            "description": "Requires explicit operator consent before invoking external MCP server tools."
+          }
+        },
+        {
+          "key": "mcp.allowUnsandboxedServers",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'mcp.allowUnsandboxedServers' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "subagents.requireParentApproval",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'subagents.requireParentApproval' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Autonomy",
+            "nist_ai_rmf": "GOVERN-1.1 Workload Governance",
+            "iso_42001": "A.8.4 Process Orchestration & Guardrails",
+            "description": "Restricts autonomous subagent spawning and mandates parent agent approval."
+          }
+        },
+        {
+          "key": "subagents.allowAutonomousSpawning",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'subagents.allowAutonomousSpawning' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Autonomy",
+            "nist_ai_rmf": "GOVERN-1.1 Workload Governance",
+            "iso_42001": "A.8.4 Process Orchestration & Guardrails",
+            "description": "Restricts autonomous subagent spawning and mandates parent agent approval."
+          }
+        },
+        {
+          "key": "dlp.maskSecrets",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'dlp.maskSecrets' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM02: Sensitive Information Disclosure / LLM07: System Prompt Leakage",
+            "nist_ai_rmf": "MEASURE-2.3 Privacy Safeguards",
+            "iso_42001": "A.6.2 Sensitive Data Protection",
+            "description": "Masks API keys, bearer tokens, private keys, and credential patterns before prompt dispatch."
+          }
+        },
+        {
+          "key": "slashCommands.enforceApproval",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'slashCommands.enforceApproval' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "security.sandbox.default_enforced",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Configuration key 'security.sandbox.default_enforced' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "security.approvals.bypass_allowed",
+          "expected": false,
+          "actual": false,
+          "passed": true,
+          "description": "Configuration key 'security.approvals.bypass_allowed' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Human-in-the-Loop Oversight",
+            "iso_42001": "A.9.3 Human Authorization",
+            "description": "Mandates explicit operator approval for write operations and command execution."
+          }
+        },
+        {
+          "key": "timeout.command_timeout_seconds",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'timeout.command_timeout_seconds' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "timeout.execution_timeout_seconds",
+          "expected": 60,
+          "actual": 60,
+          "passed": true,
+          "description": "Configuration key 'timeout.execution_timeout_seconds' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "rate_limit.max_requests_per_minute",
+          "expected": 30,
+          "actual": 30,
+          "passed": true,
+          "description": "Configuration key 'rate_limit.max_requests_per_minute' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM10: Unbounded Consumption & Denial of Service",
+            "nist_ai_rmf": "MEASURE-2.3 Resource Governance",
+            "iso_42001": "A.8.4 Availability Controls",
+            "description": "Enforces request rate limits and command execution timeouts."
+          }
+        },
+        {
+          "key": "security.dangerousPaths.action",
+          "expected": "ask",
+          "actual": "block",
+          "passed": false,
+          "description": "Configuration key 'security.dangerousPaths.action' matches hardened baseline",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency & Uncontrolled Execution",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Treatment",
+            "iso_42001": "A.8.4 AI System Boundary Isolation",
+            "description": "Enforces execution boundaries, container namespaces, and dangerous syscall blocking."
+          }
+        },
+        {
+          "key": "security_rules_deployed",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Agent security rules file deployed in /home/daniel/.gemini/antigravity-cli/rules",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        },
+        {
+          "key": "env_do_not_track",
+          "expected": true,
+          "actual": true,
+          "passed": true,
+          "description": "Environment and settings telemetry lockdown active",
+          "framework": {
+            "owasp_llm": "LLM06: Excessive Agency",
+            "nist_ai_rmf": "MANAGE-1.2 Risk Mitigation",
+            "iso_42001": "A.8.4 Boundary Security",
+            "description": "Baseline hardening control."
+          }
+        }
+      ]
+    },
+    {
+      "tool_name": "copilot",
+      "vendor": "github",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "codebuddy",
+      "vendor": "codebuddy",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "clinepass",
+      "vendor": "clinepass",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "cline",
+      "vendor": "cline",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "cursor",
+      "vendor": "anysphere",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    },
+    {
+      "tool_name": "claude-code",
+      "vendor": "anthropic",
+      "is_installed": false,
+      "compliance_score": 0.0,
+      "total_checks": 0,
+      "passed_checks": 0,
+      "failed_checks": 0,
+      "message": "Tool is not installed on this host (skipping live verification).",
+      "checks": []
+    }
+  ]
+}
