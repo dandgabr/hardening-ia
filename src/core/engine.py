@@ -197,6 +197,22 @@ class HardeningEngine:
                                 target_rule_file.unlink(missing_ok=True)
                                 logger.info(f"Removed deployed rule file: {target_rule_file}")
                             modified_paths.append(str(target_rule_file))
+                    if not dry_run and rules_path.exists():
+                        try:
+                            if not any(rules_path.iterdir()):
+                                rules_path.rmdir()
+                        except Exception:
+                            pass
+
+                # 3. Clean up empty config directory if created by hardening
+                if not dry_run and os_paths.config_dir:
+                    cfg_path = OSDetector.expand_path(os_paths.config_dir)
+                    if cfg_path.exists():
+                        try:
+                            if not any(cfg_path.iterdir()):
+                                cfg_path.rmdir()
+                        except Exception:
+                            pass
 
             message = f"Hardening configurations successfully reverted for {vendor}/{tool_name}"
             log_audit_event(

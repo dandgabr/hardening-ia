@@ -3,7 +3,7 @@
 import logging
 import shutil
 import json
-from typing import List, Optional
+from typing import List, Optional, Any
 from pathlib import Path
 
 from textual.app import App, ComposeResult
@@ -24,6 +24,22 @@ from src.core.code_analyzer import CodeVulnerabilityScanner
 from src.core.verifier import HardeningVerifier
 from src.core.security_policy import SecurityPolicyManager
 from src.core.command_classifier import CommandRiskClassifier, RiskLevel
+
+
+def format_display_val(val: Any) -> str:
+    """Safely formats and escapes complex data types (lists, dicts) for Rich markup."""
+    if isinstance(val, list):
+        if len(val) == 0:
+            s = "[]"
+        elif len(val) <= 2:
+            s = ", ".join(str(x) for x in val)
+        else:
+            s = f"[{len(val)} itens: {str(val[0])}, {str(val[1])}...]"
+    elif isinstance(val, dict):
+        s = f"{{{len(val)} chaves}}"
+    else:
+        s = str(val)
+    return escape(s)
 
 
 class TextualLogHandler(logging.Handler):
@@ -72,9 +88,9 @@ class HelpModal(ModalScreen):
 [bold yellow]Button Actions Explained:[/]
   • [bold green]Apply[/]: Hardens the currently selected tool.
   • [bold blue]Apply Installed[/]: Automatically detects all installed AI tools on host and hardens them.
-  • [bold orange3]Apply All[/]: Provisions configurations and hardened baselines for all 21 tools.
   • [bold red]Remove Selected[/]: Reverts hardening overrides from the selected tool back to defaults.
   • [bold red]Remove Installed[/]: Reverts hardening overrides from all installed tools.
+  • [bold dark_red]Remove All[/]: Completely removes hardening and cleans configurations across all 21 tools.
 
 [dim]Press Escape or Click Close to return to the dashboard.[/dim]
 """
@@ -336,9 +352,9 @@ class HardeningTUIApp(App):
                 with Horizontal(id="action-buttons-bar"):
                     yield Button("Apply", id="btn-apply-selected", variant="success")
                     yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
-                    yield Button("Apply All", id="btn-apply-all-supported", variant="warning")
                     yield Button("Remove Selected", id="btn-remove-selected", variant="error")
                     yield Button("Remove Installed", id="btn-remove-installed", variant="error")
+                    yield Button("Remove All", id="btn-remove-all", variant="error")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
                 yield RichLog(id="log-view", highlight=True, markup=True)
         yield Footer()
@@ -354,14 +370,25 @@ class HardeningTUIApp(App):
         root_logger = setup_logging(enable_console=False)
         root_logger.addHandler(textual_handler)
 
-        self.policies = self.config_loader.discover_policies()
-        tools_list = self.query_one("#tools-list", ListView)
-        for p in self.policies:
-            tools_list.append(ToolItem(p))
+        self._reload_catalog()
 
         installed_count = sum(1 for p in self.policies if p.is_installed)
         log_view.write(f"[bold cyan][*] Host OS: {OSDetector.get_os_type().upper()} | Discovered {len(self.policies)} unified tools ({installed_count} installed).[/]")
         log_view.write("[dim]Shortcuts: [V] Verify | [D] DLP | [S] Strict Mode | [Y] Dry Run | [F] Auto-Fix All | [R] Risk Tester | [H] Help[/dim]")
+
+    def _reload_catalog(self) -> None:
+        """Reloads policy catalog and refreshes list view with live installation status."""
+        self.policies = self.config_loader.discover_policies()
+        tools_list = self.query_one("#tools-list", ListView)
+        tools_list.clear()
+        for p in self.policies:
+            tools_list.append(ToolItem(p))
+        if self.selected_policy:
+            for p in self.policies:
+                if p.tool.vendor == self.selected_policy.tool.vendor and p.tool.name == self.selected_policy.tool.name:
+                    self.selected_policy = p
+                    break
+        self._update_details()
 
     def _update_header_status(self) -> None:
         os_name = OSDetector.get_os_type().upper()
@@ -403,7 +430,7 @@ class HardeningTUIApp(App):
 """
         for c in report.checks:
             key_str = escape(str(c.key))
-            exp_str = escape(str(c.expected))
+            exp_str = format_display_val(c.expected)
             if c.passed:
                 info_text += f"  [bold green]✔[/bold green] [bold green]{key_str}:[/bold green] [white]{exp_str}[/white] [dim green](Conforme)[/dim green]\n"
             else:
@@ -411,8 +438,8 @@ class HardeningTUIApp(App):
                 if actual_val in ("[MISSING]", "[NOT INSTALLED / MISSING]"):
                     actual_desc = "Não Aplicado / Ausente"
                 else:
-                    actual_desc = f"Atual: {actual_val}"
-                actual_str = escape(actual_desc)
+                    actual_desc = f"Atual: {format_display_val(c.actual)}"
+                actual_str = actual_desc
                 info_text += f"  [bold red]✘[/bold red] [bold red]{key_str}:[/bold red] [white]{exp_str}[/white] [bold red](Não Conforme: {actual_str})[/bold red]\n"
 
         self.query_one("#policy-info", Static).update(info_text)
@@ -489,7 +516,7 @@ class HardeningTUIApp(App):
                     self._run_verification_on_selected()
             else:
                 log_view.write(f"  [bold red][ERROR] {res.message}[/bold red]")
-            self._update_details()
+            self._reload_catalog()
         elif btn_id == "btn-apply-installed":
             installed = [p for p in self.policies if p.is_installed]
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
@@ -498,21 +525,13 @@ class HardeningTUIApp(App):
                 res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=self.strict_mode)
                 status = "[bold green]OK[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
-            self._update_details()
-        elif btn_id == "btn-apply-all-supported":
-            mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
-            log_view.write(f"\n[*] {mode_badge}Applying hardening to ALL {len(self.policies)} supported tools...")
-            for p in self.policies:
-                res = self.engine.apply_policy(p, dry_run=dry_run, strict_mode=self.strict_mode)
-                status = "[bold green]OK[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
-                log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
-            self._update_details()
+            self._reload_catalog()
         elif btn_id == "btn-remove-selected" and self.selected_policy:
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
             log_view.write(f"\n[*] {mode_badge}Reverting hardening from [bold]{self.selected_policy.tool.vendor}/{self.selected_policy.tool.name}[/bold]...")
             res = self.engine.remove_policy(self.selected_policy, dry_run=dry_run)
             log_view.write(f"  [bold green][OK] Removed.[/bold green]" if res.success else f"  [bold red][ERROR] {res.message}[/bold red]")
-            self._update_details()
+            self._reload_catalog()
         elif btn_id == "btn-remove-installed":
             installed = [p for p in self.policies if p.is_installed]
             mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
@@ -521,7 +540,15 @@ class HardeningTUIApp(App):
                 res = self.engine.remove_policy(p, dry_run=dry_run)
                 status = "[bold green]REMOVED[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
                 log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
-            self._update_details()
+            self._reload_catalog()
+        elif btn_id == "btn-remove-all":
+            mode_badge = "[yellow][DRY RUN][/yellow] " if dry_run else ""
+            log_view.write(f"\n[*] {mode_badge}Reverting hardening from ALL {len(self.policies)} tools...")
+            for p in self.policies:
+                res = self.engine.remove_policy(p, dry_run=dry_run)
+                status = "[bold green]REMOVED[/bold green]" if res.success else "[bold red]FAIL[/bold red]"
+                log_view.write(f"  {status} {p.tool.vendor}/{p.tool.name}")
+            self._reload_catalog()
 
 
 def run_tui():
