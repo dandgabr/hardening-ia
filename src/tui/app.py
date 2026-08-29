@@ -73,7 +73,7 @@ class HelpModal(ModalScreen):
   • [bold green]Apply[/]: Hardens the currently selected tool.
   • [bold blue]Apply Installed[/]: Automatically detects all installed AI tools on host and hardens them.
   • [bold orange3]Apply All[/]: Provisions configurations and hardened baselines for all 21 tools.
-  • [bold red]Remove[/]: Reverts hardening overrides from the selected tool back to defaults.
+  • [bold red]Remove Selected[/]: Reverts hardening overrides from the selected tool back to defaults.
   • [bold red]Remove Installed[/]: Reverts hardening overrides from all installed tools.
 
 [dim]Press Escape or Click Close to return to the dashboard.[/dim]
@@ -334,7 +334,7 @@ class HardeningTUIApp(App):
                     yield Button("Apply", id="btn-apply-selected", variant="success")
                     yield Button("Apply Installed", id="btn-apply-installed", variant="primary")
                     yield Button("Apply All", id="btn-apply-all-supported", variant="warning")
-                    yield Button("Remove", id="btn-remove-selected", variant="error")
+                    yield Button("Remove Selected", id="btn-remove-selected", variant="error")
                     yield Button("Remove Installed", id="btn-remove-installed", variant="error")
                 yield Label("[b]Execution Logs & Audit Trail[/b]", classes="panel-title")
                 yield RichLog(id="log-view", highlight=True, markup=True)
